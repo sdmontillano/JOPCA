@@ -42,25 +42,7 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.bank_account.name} - {self.type} - {self.amount}"
-
-class DailyCashPosition(models.Model):
-    date = models.DateField(unique=True)
-    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    inflows = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    closing_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    def __str__(self):
-        return f"DCPR {self.date}"
-
-class MonthlyReport(models.Model):
-    month = models.CharField(max_length=20)   # e.g., "February 2026"
-    total_inflows = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    def __str__(self):
-        return f"Monthly Report {self.month}"
+    
     
 class DailyCashPosition(models.Model):
     date = models.DateField(unique=True)
@@ -73,9 +55,23 @@ class DailyCashPosition(models.Model):
         total_disbursements = sum(t.amount for t in transactions.filter(type="disbursement"))
         total_transfers = sum(t.amount for t in transactions.filter(type="transfer"))
 
-        self.ending_balance = self.beginning_balance + total_collections - total_disbursements + total_transfers
+        self.ending_balance = (
+            self.beginning_balance
+            + total_collections
+            - total_disbursements
+            + total_transfers
+        )
         self.save()
 
+
+class MonthlyReport(models.Model):
+    month = models.CharField(max_length=20)   # e.g., "February 2026"
+    total_inflows = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"Monthly Report {self.month}"
 
 @receiver(post_save, sender=Transaction)
 def update_balance_on_save(sender, instance, **kwargs):
@@ -84,3 +80,5 @@ def update_balance_on_save(sender, instance, **kwargs):
 @receiver(post_delete, sender=Transaction)
 def update_balance_on_delete(sender, instance, **kwargs):
     instance.bank_account.recalc_balance()
+
+

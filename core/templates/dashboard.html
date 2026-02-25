@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cash Position Dashboard</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+{% load humanize %}   <!-- ✅ load filters here -->
+
+<div class="container py-4">
+    <h1 class="mb-4">Daily Cash Position</h1>
+
+    {% if daily_report %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Beginning Balance</h5>
+                    <p class="card-text">{{ daily_report.beginning_balance|floatformat:2|intcomma }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Collections</h5>
+                    <p class="card-text">{{ collections_total|floatformat:2|intcomma }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-danger">
+                <div class="card-body">
+                    <h5 class="card-title">Disbursements</h5>
+                    <p class="card-text">{{ disbursements_total|floatformat:2|intcomma }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Ending Balance</h5>
+                    <p class="card-text">{{ daily_report.ending_balance|floatformat:2|intcomma }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h2>Transactions of the Day</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Bank Account</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.date }}</td>
+                <td>{{ t.type }}</td>
+                <td>{{ t.amount|floatformat:2|intcomma }}</td>
+                <td>{{ t.bank_account.name }}</td>
+                <td>{{ t.description }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No transactions today.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="mb-4">
+    <a href="/admin/core/transaction/add/" class="btn btn-primary">
+        + Add Transaction
+    </a>
+    <a href="/admin/core/dailycashposition/add/" class="btn btn-success">
+        + Add Daily Cash Position
+    </a>
+    <a href="/admin/core/monthlyreport/add/" class="btn btn-info">
+        + Add Monthly Report
+    </a>
+</div>
+
+</body>
+</html>
