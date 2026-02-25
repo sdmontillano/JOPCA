@@ -18,7 +18,7 @@
             <div class="card text-bg-primary">
                 <div class="card-body">
                     <h5 class="card-title">Beginning Balance</h5>
-                    <p class="card-text">{{ daily_report.beginning_balance|floatformat:2|intcomma }}</p>
+                    <p class="card-text">₱{{ daily_report.beginning_balance|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -26,7 +26,7 @@
             <div class="card text-bg-success">
                 <div class="card-body">
                     <h5 class="card-title">Collections</h5>
-                    <p class="card-text">{{ collections_total|floatformat:2|intcomma }}</p>
+                    <p class="card-text">₱{{ collections_total|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -34,7 +34,7 @@
             <div class="card text-bg-danger">
                 <div class="card-body">
                     <h5 class="card-title">Disbursements</h5>
-                    <p class="card-text">{{ disbursements_total|floatformat:2|intcomma }}</p>
+                    <p class="card-text">₱{{ disbursements_total|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -42,7 +42,7 @@
             <div class="card text-bg-dark">
                 <div class="card-body">
                     <h5 class="card-title">Ending Balance</h5>
-                    <p class="card-text">{{ daily_report.ending_balance|floatformat:2|intcomma }}</p>
+                    <p class="card-text">₱{{ daily_report.ending_balance|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -65,7 +65,7 @@
             <tr>
                 <td>{{ t.date }}</td>
                 <td>{{ t.type }}</td>
-                <td>{{ t.amount|floatformat:2|intcomma }}</td>
+                <td>₱{{ t.amount|floatformat:2|intcomma }}</td>
                 <td>{{ t.bank_account.name }}</td>
                 <td>{{ t.description }}</td>
             </tr>

@@ -2,7 +2,6 @@ from django.shortcuts import render
 from django.utils.timezone import now
 from django.db.models import Sum
 from .models import DailyCashPosition, Transaction
-from .forms import TransactionForm
 
 def dashboard(request):
     today = now().date()
