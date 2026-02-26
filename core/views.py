@@ -16,9 +16,7 @@ def dashboard(request):
     else:
         report_date = now().date()
 
-    # Get daily report for that date (if exists)
     daily_report = DailyCashPosition.objects.filter(date=report_date).first()
-
     bank_accounts = BankAccount.objects.all()
 
     cash_on_hand = {}
@@ -71,10 +69,13 @@ def dashboard(request):
             "ending_balance": ending_balance,
         }
 
+        # ✅ Show both name and account number
+        label = f"{account.name} ({account.account_number})"
+
         if "PCF" in account.name or "BDO SA-722" in account.name:
-            cash_on_hand[account.name.lower().replace("-", "_").replace(" ", "_")] = account_data
+            cash_on_hand[label] = account_data
         else:
-            cash_in_bank[account.name.lower().replace("-", "_").replace(" ", "_")] = account_data
+            cash_in_bank[label] = account_data
 
         total["beginning_balance"] += beginning_balance
         total["collections"] += collections
@@ -106,4 +107,4 @@ def dashboard(request):
         "pdc_on_hand": pdc_on_hand,
         "today": report_date,
     })
- 
+

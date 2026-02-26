@@ -7,8 +7,14 @@ from datetime import timedelta
 
 class BankAccount(models.Model):
     name = models.CharField(max_length=100, blank=True, null=True)
-    account_number = models.CharField(max_length=50, blank=True, null=True)
-    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    account_number = models.CharField(
+        max_length=50,
+        unique=True,   # ✅ enforce uniqueness
+        db_index=True, # ✅ faster lookups
+        blank=False,
+        null=False
+    )
+    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
@@ -20,15 +26,15 @@ class BankAccount(models.Model):
         ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         outflows = self.transaction_set.filter(
-            type__in=['disbursement', 'returned_checks', 'bank_charges']
+            type__in=['disbursement', 'bank_charges']
         ).aggregate(Sum('amount'))['amount__sum'] or 0
 
-        # Neutral transfers don’t change total balance
+        # Returned checks tracked separately, not subtracted here
         self.balance = (self.opening_balance or 0) + inflows - outflows
         super().save(update_fields=['balance'])
 
     def save(self, *args, **kwargs):
-        if not self.pk:  # only when creating new account
+        if not self.pk:
             if self.opening_balance is None:
                 self.opening_balance = 0
             self.balance = self.opening_balance
@@ -55,7 +61,7 @@ class Transaction(models.Model):
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.date} - {self.bank_account.name} - {self.type} - {self.amount}"
+        return f"{self.date} - {self.bank_account} - {self.type} - {self.amount}"
 
 
 class DailyCashPosition(models.Model):
@@ -64,33 +70,39 @@ class DailyCashPosition(models.Model):
     collections = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     transfers = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    returned_checks = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
-    def calculate_balances(self):
-        # Carry forward yesterday’s ending balance
-        yesterday = self.date - timedelta(days=1)
-        prev_day = DailyCashPosition.objects.filter(date=yesterday).first()
+    def save(self, *args, **kwargs):
+        # Carry forward from latest prior date
+        prev_day = DailyCashPosition.objects.filter(date__lt=self.date).order_by("-date").first()
         if prev_day:
             self.beginning_balance = prev_day.ending_balance
         else:
             self.beginning_balance = 0
 
-        # Get all transactions for the day
         transactions = Transaction.objects.filter(date=self.date)
 
-        # Calculate totals
-        self.collections = sum(t.amount for t in transactions.filter(type__in=["collections", "deposit", "local_deposits"]))
-        self.disbursements = sum(t.amount for t in transactions.filter(type__in=["disbursement", "returned_checks", "bank_charges"]))
-        self.transfers = sum(t.amount for t in transactions.filter(type__in=["transfer", "fund_transfers", "interbank_transfers"]))
+        self.collections = transactions.filter(
+            type__in=["collections", "deposit", "local_deposits"]
+        ).aggregate(Sum("amount"))["amount__sum"] or 0
 
-        # Calculate ending balance
-        self.ending_balance = (
-            self.beginning_balance
-            + self.collections
-            - self.disbursements
-            # transfers are neutral, so not added/subtracted here
-        )
-        self.save()
+        self.disbursements = transactions.filter(
+            type__in=["disbursement", "bank_charges"]
+        ).aggregate(Sum("amount"))["amount__sum"] or 0
+
+        self.transfers = transactions.filter(
+            type__in=["transfer", "fund_transfers", "interbank_transfers"]
+        ).aggregate(Sum("amount"))["amount__sum"] or 0
+
+        self.returned_checks = transactions.filter(
+            type="returned_checks"
+        ).aggregate(Sum("amount"))["amount__sum"] or 0
+
+        # Ending balance excludes transfers (neutral globally), returned checks tracked separately
+        self.ending_balance = self.beginning_balance + self.collections - self.disbursements
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Daily Cash Position - {self.date}"
@@ -102,6 +114,16 @@ class MonthlyReport(models.Model):
     total_disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
+    def save(self, *args, **kwargs):
+        from django.db.models.functions import TruncMonth
+        positions = DailyCashPosition.objects.annotate(month_val=TruncMonth("date")).filter(month_val=self.month)
+
+        self.total_inflows = sum(p.collections for p in positions)
+        self.total_disbursements = sum(p.disbursements for p in positions)
+        self.ending_balance = positions.order_by("-date").first().ending_balance if positions.exists() else 0
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Monthly Report {self.month}"
 
@@ -109,9 +131,12 @@ class MonthlyReport(models.Model):
 @receiver(post_save, sender=Transaction)
 def update_balance_on_save(sender, instance, **kwargs):
     instance.bank_account.recalc_balance()
+    # Auto-create DailyCashPosition if missing
+    DailyCashPosition.objects.get_or_create(date=instance.date)
 
 
 @receiver(post_delete, sender=Transaction)
 def update_balance_on_delete(sender, instance, **kwargs):
     instance.bank_account.recalc_balance()
+
     

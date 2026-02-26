@@ -3,7 +3,6 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport
 
 
-# Inline transactions inside BankAccount admin
 class TransactionInline(admin.TabularInline):
     model = Transaction
     extra = 0
@@ -30,11 +29,11 @@ class BankAccountAdmin(admin.ModelAdmin):
     inlines = [TransactionInline]
 
     def opening_balance_display(self, obj):
-        return f"₱{intcomma(f'{obj.opening_balance:.2f}')}"
+        return f"{obj.opening_balance:.2f}"
     opening_balance_display.short_description = "Opening Balance"
 
     def balance_display(self, obj):
-        return f"₱{intcomma(f'{obj.balance:.2f}')}"
+        return f"{obj.balance:.2f}"
     balance_display.short_description = "Current Balance"
 
 
@@ -42,48 +41,19 @@ class BankAccountAdmin(admin.ModelAdmin):
 class DailyCashPositionAdmin(admin.ModelAdmin):
     list_display = (
         "date",
-        "beginning_balance_display",
-        "ending_balance_display",
-        "total_collections",
-        "total_disbursements",
-        "total_transfers",
+        "beginning_balance",
+        "collections",
+        "disbursements",
+        "transfers",
+        "returned_checks",
+        "ending_balance",
     )
     ordering = ("-date",)
-    # ✅ Make beginning_balance read-only
-    readonly_fields = ("beginning_balance", "ending_balance")
-
-    def beginning_balance_display(self, obj):
-        return f"₱{intcomma(f'{obj.beginning_balance:.2f}')}"
-    beginning_balance_display.short_description = "Beginning Balance"
-
-    def ending_balance_display(self, obj):
-        return f"₱{intcomma(f'{obj.ending_balance:.2f}')}"
-    ending_balance_display.short_description = "Ending Balance"
-
-    def total_collections(self, obj):
-        return sum(t.amount for t in Transaction.objects.filter(date=obj.date, type__in=["collections", "deposit", "local_deposits"]))
-    
-    def total_disbursements(self, obj):
-        return sum(t.amount for t in Transaction.objects.filter(date=obj.date, type__in=["disbursement", "returned_checks", "bank_charges"]))
-    
-    def total_transfers(self, obj):
-        return sum(t.amount for t in Transaction.objects.filter(date=obj.date, type__in=["transfer", "fund_transfers", "interbank_transfers"]))
+    readonly_fields = ("beginning_balance", "collections", "disbursements", "transfers", "returned_checks", "ending_balance")
 
 
 @admin.register(MonthlyReport)
 class MonthlyReportAdmin(admin.ModelAdmin):
-    list_display = ('month', 'total_inflows_display', 'total_disbursements_display', 'ending_balance_display')
+    list_display = ('month', 'total_inflows', 'total_disbursements', 'ending_balance')
     ordering = ('-month',)
-
-    def total_inflows_display(self, obj):
-        return f"₱{intcomma(f'{obj.total_inflows:.2f}')}"
-    total_inflows_display.short_description = "Total Inflows"
-
-    def total_disbursements_display(self, obj):
-        return f"₱{intcomma(f'{obj.total_disbursements:.2f}')}"
-    total_disbursements_display.short_description = "Total Disbursements"
-
-    def ending_balance_display(self, obj):
-        return f"₱{intcomma(f'{obj.ending_balance:.2f}')}"
-    ending_balance_display.short_description = "Ending Balance"
-
+    readonly_fields = ('total_inflows', 'total_disbursements', 'ending_balance')
