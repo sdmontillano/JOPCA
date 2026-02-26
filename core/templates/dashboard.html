@@ -2,129 +2,159 @@
 <html>
 <head>
     <title>Daily Cash Position Report</title>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <style>
         table {
-            border-collapse: collapse;
             width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
         }
         th, td {
-            border: 1px solid black;
-            text-align: center;
+            border: 1px solid #ccc;
             padding: 8px;
+            text-align: right;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #f4f4f4;
         }
-        .header {
-            text-align: center;
-            font-weight: bold;
+        td:first-child, th:first-child {
+            text-align: left;
         }
-        .note {
-            background-color: #d4edda;
-            padding: 10px;
-            margin-top: 20px;
+        h2 {
+            margin-top: 2rem;
         }
     </style>
-    {% load humanize %}
 </head>
-<body class="bg-light">
+<body>
+    <h1>Daily Cash Position Report – {{ today }}</h1>
 
-<div class="container py-4">
-    <h1 class="text-center">JOPCA CORPORATION</h1>
-    <h2 class="text-center">DAILY CASH POSITION REPORT</h2>
-    <h4 class="text-center">CAGAYAN DE ORO MAIN OFFICE</h4>
-    <h5 class="text-center">FROM: {{ today|date:"d-M-Y" }} TO: {{ today|date:"d-M-Y" }}</h5>
+    <!-- Date picker -->
+    <form method="get" action="">
+        <label for="date">Select report date:</label>
+        <input type="date" id="date" name="date" value="{{ today }}">
+        <button type="submit">View Report</button>
+    </form>
 
+    <h2>Cash on Hand</h2>
     <table>
         <thead>
             <tr>
-                <th rowspan="2">PARTICULARS</th>
-                <th colspan="3">CASH ON HAND</th>
-                <th colspan="10">CASH IN BANK</th>
-                <th rowspan="2">TOTAL</th>
-                <th rowspan="2">PDC ON HAND</th>
+                <th>Account</th>
+                <th>Beginning Balance</th>
+                <th>Collections</th>
+                <th>Fund Transfers</th>
+                <th>Fund Transfer Receipts</th>
+                <th>Local Deposits</th>
+                <th>Disbursements</th>
+                <th>Ending Balance</th>
             </tr>
+        </thead>
+        <tbody>
+            {% for account, data in cash_on_hand.items %}
             <tr>
-                <th>PCF-OFFICE</th>
-                <th>PCF-QUARRY</th>
-                <th>BDO SA-722</th>
-                <th>MBTC-079</th>
-                <th>RCBC-5077</th>
-                <th>SB-893</th>
-                <th>BDO-722</th>
-                <th>CBC-248</th>
-                <th>MBTC-063</th>
-                <th>MBTC CA#</th>
-                <th>EWB-203</th>
-                <th>BPI-048</th>
-                <th>Returned Checks</th>
+                <td>{{ account }}</td>
+                <td>{{ data.beginning_balance|floatformat:2 }}</td>
+                <td>{{ data.collections|floatformat:2 }}</td>
+                <td>{{ data.fund_transfers|floatformat:2 }}</td>
+                <td>{{ data.fund_transfer_receipts|floatformat:2 }}</td>
+                <td>{{ data.local_deposits|floatformat:2 }}</td>
+                <td>{{ data.disbursements|floatformat:2 }}</td>
+                <td>{{ data.ending_balance|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Cash in Bank</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>Beginning Balance</th>
+                <th>Collections</th>
+                <th>Fund Transfers</th>
+                <th>Fund Transfer Receipts</th>
+                <th>Local Deposits</th>
+                <th>Disbursements</th>
+                <th>Ending Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account, data in cash_in_bank.items %}
+            <tr>
+                <td>{{ account }}</td>
+                <td>{{ data.beginning_balance|floatformat:2 }}</td>
+                <td>{{ data.collections|floatformat:2 }}</td>
+                <td>{{ data.fund_transfers|floatformat:2 }}</td>
+                <td>{{ data.fund_transfer_receipts|floatformat:2 }}</td>
+                <td>{{ data.local_deposits|floatformat:2 }}</td>
+                <td>{{ data.disbursements|floatformat:2 }}</td>
+                <td>{{ data.ending_balance|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Returned Checks</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Beginning Balance</th>
+                <th>Collections</th>
+                <th>Ending Balance</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>Beginning Balance</td>
-                <td>{{ cash_on_hand.pcf_office.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_on_hand.pcf_quarry.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_on_hand.bdo_sa_722.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_079.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.rcbc_5077.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.sb_893.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.bdo_722.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.cbc_248.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_063.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_ca.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.ewb_203.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.bpi_048.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ returned_checks.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ total.beginning_balance|floatformat:2|intcomma }}</td>
-                <td>{{ pdc_on_hand.total|floatformat:2|intcomma }}</td>
-            </tr>
-            <tr>
-                <td>Collections</td>
-                <td>{{ cash_on_hand.pcf_office.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_on_hand.pcf_quarry.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_on_hand.bdo_sa_722.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_079.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.rcbc_5077.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.sb_893.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.bdo_722.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.cbc_248.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_063.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_ca.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.ewb_203.collections|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.bpi_048.collections|floatformat:2|intcomma }}</td>
-                <td>{{ returned_checks.collections|floatformat:2|intcomma }}</td>
-                <td>{{ total.collections|floatformat:2|intcomma }}</td>
-                <td>{{ pdc_on_hand.collections|floatformat:2|intcomma }}</td>
-            </tr>
-            <tr>
-                <td>Ending Balance</td>
-                <td>{{ cash_on_hand.pcf_office.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_on_hand.pcf_quarry.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_on_hand.bdo_sa_722.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_079.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.rcbc_5077.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.sb_893.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.bdo_722.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.cbc_248.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_063.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.mbtc_ca.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.ewb_203.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ cash_in_bank.bpi_048.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ returned_checks.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ total.ending_balance|floatformat:2|intcomma }}</td>
-                <td>{{ pdc_on_hand.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ returned_checks.beginning_balance|floatformat:2 }}</td>
+                <td>{{ returned_checks.collections|floatformat:2 }}</td>
+                <td>{{ returned_checks.ending_balance|floatformat:2 }}</td>
             </tr>
         </tbody>
     </table>
 
-    <div class="note">
-        <h5>Note:</h5>
-        <p>Additional notes or remarks can be added here.</p>
-    </div>
-</div>
+    <h2>PDC on Hand</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Total</th>
+                <th>Collections</th>
+                <th>Ending Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ pdc_on_hand.total|floatformat:2 }}</td>
+                <td>{{ pdc_on_hand.collections|floatformat:2 }}</td>
+                <td>{{ pdc_on_hand.ending_balance|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
 
+    <h2>Totals</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Beginning Balance</th>
+                <th>Collections</th>
+                <th>Fund Transfers</th>
+                <th>Fund Transfer Receipts</th>
+                <th>Local Deposits</th>
+                <th>Disbursements</th>
+                <th>Ending Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ total.beginning_balance|floatformat:2 }}</td>
+                <td>{{ total.collections|floatformat:2 }}</td>
+                <td>{{ total.fund_transfers|floatformat:2 }}</td>
+                <td>{{ total.fund_transfer_receipts|floatformat:2 }}</td>
+                <td>{{ total.local_deposits|floatformat:2 }}</td>
+                <td>{{ total.disbursements|floatformat:2 }}</td>
+                <td>{{ total.ending_balance|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
 </body>
 </html>
+

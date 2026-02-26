@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from datetime import timedelta
 
 
 class BankAccount(models.Model):
@@ -14,8 +15,15 @@ class BankAccount(models.Model):
         return f"{self.name} ({self.account_number})"
 
     def recalc_balance(self):
-        inflows = self.transaction_set.filter(type__in=['deposit', 'collections']).aggregate(Sum('amount'))['amount__sum'] or 0
-        outflows = self.transaction_set.exclude(type__in=['deposit', 'collections']).aggregate(Sum('amount'))['amount__sum'] or 0
+        inflows = self.transaction_set.filter(
+            type__in=['deposit', 'collections', 'local_deposits']
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        outflows = self.transaction_set.filter(
+            type__in=['disbursement', 'returned_checks', 'bank_charges']
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        # Neutral transfers don’t change total balance
         self.balance = (self.opening_balance or 0) + inflows - outflows
         super().save(update_fields=['balance'])
 
@@ -30,14 +38,14 @@ class BankAccount(models.Model):
 class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ('deposit', 'Deposit'),
-        ('transfer', 'Transfer'),
-        ('disbursement', 'Disbursement'),
         ('collections', 'Collections'),
         ('local_deposits', 'Local Deposits'),
-        ('fund_transfers', 'Fund Transfers'),
+        ('disbursement', 'Disbursement'),
         ('returned_checks', 'Returned Checks'),
         ('bank_charges', 'Bank Charges'),
         ('adjustments', 'Adjustments'),
+        ('transfer', 'Transfer'),
+        ('fund_transfers', 'Fund Transfers'),
         ('interbank_transfers', 'Interbank Transfers'),
     ]
     bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE)
@@ -59,20 +67,28 @@ class DailyCashPosition(models.Model):
     ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def calculate_balances(self):
+        # Carry forward yesterday’s ending balance
+        yesterday = self.date - timedelta(days=1)
+        prev_day = DailyCashPosition.objects.filter(date=yesterday).first()
+        if prev_day:
+            self.beginning_balance = prev_day.ending_balance
+        else:
+            self.beginning_balance = 0
+
         # Get all transactions for the day
         transactions = Transaction.objects.filter(date=self.date)
 
         # Calculate totals
-        self.collections = sum(t.amount for t in transactions.filter(type="collections"))
-        self.disbursements = sum(t.amount for t in transactions.filter(type="disbursement"))
-        self.transfers = sum(t.amount for t in transactions.filter(type="transfer"))
+        self.collections = sum(t.amount for t in transactions.filter(type__in=["collections", "deposit", "local_deposits"]))
+        self.disbursements = sum(t.amount for t in transactions.filter(type__in=["disbursement", "returned_checks", "bank_charges"]))
+        self.transfers = sum(t.amount for t in transactions.filter(type__in=["transfer", "fund_transfers", "interbank_transfers"]))
 
         # Calculate ending balance
         self.ending_balance = (
             self.beginning_balance
             + self.collections
             - self.disbursements
-            + self.transfers
+            # transfers are neutral, so not added/subtracted here
         )
         self.save()
 
