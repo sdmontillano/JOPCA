@@ -61,8 +61,8 @@ class DailyCashPositionAdmin(admin.ModelAdmin):
     ending_balance_display.short_description = "Ending Balance"
 
     def total_collections(self, obj):
-        return sum(t.amount for t in Transaction.objects.filter(date=obj.date, type="collection"))
-
+        return sum(t.amount for t in Transaction.objects.filter(date=obj.date, type="collections"))
+    
     def total_disbursements(self, obj):
         return sum(t.amount for t in Transaction.objects.filter(date=obj.date, type="disbursement"))
 
@@ -85,5 +85,4 @@ class MonthlyReportAdmin(admin.ModelAdmin):
     def ending_balance_display(self, obj):
         return f"{intcomma(f'{obj.ending_balance:.2f}')}"
     ending_balance_display.short_description = "Ending Balance"
-
-
+    

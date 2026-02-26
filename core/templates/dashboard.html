@@ -1,91 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cash Position Dashboard</title>
+    <title>Daily Cash Position Report</title>
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            text-align: center;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+        }
+        .note {
+            background-color: #d4edda;
+            padding: 10px;
+            margin-top: 20px;
+        }
+    </style>
+    {% load humanize %}
 </head>
 <body class="bg-light">
 
-{% load humanize %}   <!-- ✅ load filters here -->
-
 <div class="container py-4">
-    <h1 class="mb-4">Daily Cash Position</h1>
+    <h1 class="text-center">JOPCA CORPORATION</h1>
+    <h2 class="text-center">DAILY CASH POSITION REPORT</h2>
+    <h4 class="text-center">CAGAYAN DE ORO MAIN OFFICE</h4>
+    <h5 class="text-center">FROM: {{ today|date:"d-M-Y" }} TO: {{ today|date:"d-M-Y" }}</h5>
 
-    {% if daily_report %}
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-bg-primary">
-                <div class="card-body">
-                    <h5 class="card-title">Beginning Balance</h5>
-                    <p class="card-text">₱{{ daily_report.beginning_balance|floatformat:2|intcomma }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-bg-success">
-                <div class="card-body">
-                    <h5 class="card-title">Collections</h5>
-                    <p class="card-text">₱{{ collections_total|floatformat:2|intcomma }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-bg-danger">
-                <div class="card-body">
-                    <h5 class="card-title">Disbursements</h5>
-                    <p class="card-text">₱{{ disbursements_total|floatformat:2|intcomma }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-bg-dark">
-                <div class="card-body">
-                    <h5 class="card-title">Ending Balance</h5>
-                    <p class="card-text">₱{{ daily_report.ending_balance|floatformat:2|intcomma }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <h2>Transactions of the Day</h2>
-    <table class="table table-striped">
+    <table>
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Bank Account</th>
-                <th>Description</th>
+                <th rowspan="2">PARTICULARS</th>
+                <th colspan="3">CASH ON HAND</th>
+                <th colspan="10">CASH IN BANK</th>
+                <th rowspan="2">TOTAL</th>
+                <th rowspan="2">PDC ON HAND</th>
+            </tr>
+            <tr>
+                <th>PCF-OFFICE</th>
+                <th>PCF-QUARRY</th>
+                <th>BDO SA-722</th>
+                <th>MBTC-079</th>
+                <th>RCBC-5077</th>
+                <th>SB-893</th>
+                <th>BDO-722</th>
+                <th>CBC-248</th>
+                <th>MBTC-063</th>
+                <th>MBTC CA#</th>
+                <th>EWB-203</th>
+                <th>BPI-048</th>
+                <th>Returned Checks</th>
             </tr>
         </thead>
         <tbody>
-            {% for t in transactions %}
             <tr>
-                <td>{{ t.date }}</td>
-                <td>{{ t.type }}</td>
-                <td>₱{{ t.amount|floatformat:2|intcomma }}</td>
-                <td>{{ t.bank_account.name }}</td>
-                <td>{{ t.description }}</td>
+                <td>Beginning Balance</td>
+                <td>{{ cash_on_hand.pcf_office.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_on_hand.pcf_quarry.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_on_hand.bdo_sa_722.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_079.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.rcbc_5077.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.sb_893.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.bdo_722.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.cbc_248.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_063.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_ca.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.ewb_203.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.bpi_048.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ returned_checks.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ total.beginning_balance|floatformat:2|intcomma }}</td>
+                <td>{{ pdc_on_hand.total|floatformat:2|intcomma }}</td>
             </tr>
-            {% empty %}
-            <tr><td colspan="5">No transactions today.</td></tr>
-            {% endfor %}
+            <tr>
+                <td>Collections</td>
+                <td>{{ cash_on_hand.pcf_office.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_on_hand.pcf_quarry.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_on_hand.bdo_sa_722.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_079.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.rcbc_5077.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.sb_893.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.bdo_722.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.cbc_248.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_063.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_ca.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.ewb_203.collections|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.bpi_048.collections|floatformat:2|intcomma }}</td>
+                <td>{{ returned_checks.collections|floatformat:2|intcomma }}</td>
+                <td>{{ total.collections|floatformat:2|intcomma }}</td>
+                <td>{{ pdc_on_hand.collections|floatformat:2|intcomma }}</td>
+            </tr>
+            <tr>
+                <td>Ending Balance</td>
+                <td>{{ cash_on_hand.pcf_office.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_on_hand.pcf_quarry.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_on_hand.bdo_sa_722.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_079.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.rcbc_5077.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.sb_893.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.bdo_722.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.cbc_248.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_063.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.mbtc_ca.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.ewb_203.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ cash_in_bank.bpi_048.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ returned_checks.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ total.ending_balance|floatformat:2|intcomma }}</td>
+                <td>{{ pdc_on_hand.ending_balance|floatformat:2|intcomma }}</td>
+            </tr>
         </tbody>
     </table>
-</div>
 
-<div class="mb-4">
-    <a href="/admin/core/transaction/add/" class="btn btn-primary">
-        + Add Transaction
-    </a>
-    <a href="/admin/core/dailycashposition/add/" class="btn btn-success">
-        + Add Daily Cash Position
-    </a>
-    <a href="/admin/core/monthlyreport/add/" class="btn btn-info">
-        + Add Monthly Report
-    </a>
+    <div class="note">
+        <h5>Note:</h5>
+        <p>Additional notes or remarks can be added here.</p>
+    </div>
 </div>
 
 </body>
