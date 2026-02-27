@@ -1,118 +1,105 @@
-from django.shortcuts import render
 from django.utils.timezone import now
 from django.db.models import Sum
-from datetime import timedelta, datetime
-from .models import Transaction, BankAccount, DailyCashPosition
-from .serializers import BankAccountSerializer
-from rest_framework import viewsets   # ✅ correct import
+from datetime import datetime
+from rest_framework import viewsets
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport
+from .serializers import (
+    BankAccountSerializer,
+    TransactionSerializer,
+    DailyCashPositionSerializer,
+    MonthlyReportSerializer,
+    DailySummarySerializer,
+    CashPositionSummarySerializer,
+)
+
+# -----------------------------
+# ViewSets (CRUD endpoints)
+# -----------------------------
+
+class MonthlyReportViewSet(viewsets.ModelViewSet):
+    queryset = MonthlyReport.objects.all().order_by('-month')
+    serializer_class = MonthlyReportSerializer
 
 class BankAccountViewSet(viewsets.ModelViewSet):
     queryset = BankAccount.objects.all()
     serializer_class = BankAccountSerializer
 
+class TransactionViewSet(viewsets.ModelViewSet):
+    queryset = Transaction.objects.all().order_by('-date')
+    serializer_class = TransactionSerializer
 
+class DailyCashPositionViewSet(viewsets.ModelViewSet):
+    queryset = DailyCashPosition.objects.all().order_by('-date')
+    serializer_class = DailyCashPositionSerializer
 
-def dashboard(request):
-    # Allow user to pick a date, default to today
+# -----------------------------
+# Summary Endpoints
+# -----------------------------
+
+@api_view(["GET"])
+def daily_summary(request):
+    """Return totals for a given date (default today)."""
     date_str = request.GET.get("date")
-    if date_str:
-        try:
-            report_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        except ValueError:
-            report_date = now().date()
-    else:
-        report_date = now().date()
+    report_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else now().date()
 
-    daily_report = DailyCashPosition.objects.filter(date=report_date).first()
-    bank_accounts = BankAccount.objects.all()
+    daily = DailyCashPosition.objects.filter(date=report_date).first()
+    if not daily:
+        return Response({"detail": "No daily cash position found."}, status=404)
 
-    cash_on_hand = {}
-    cash_in_bank = {}
-    returned_checks = {"beginning_balance": 0, "collections": 0, "ending_balance": 0}
-    total = {
-        "beginning_balance": 0,
-        "collections": 0,
-        "fund_transfers": 0,
-        "fund_transfer_receipts": 0,
-        "local_deposits": 0,
-        "disbursements": 0,
-        "ending_balance": 0,
+    data = {
+        "date": daily.date,
+        "total_collections": daily.collections,
+        "total_disbursements": daily.disbursements,
+        "ending_balance": daily.ending_balance,
+        "pdc": daily.pdc,  # ✅ include PDC
     }
+    serializer = DailySummarySerializer(data)
+    return Response(serializer.data)
 
-    for account in bank_accounts:
-        yesterday = report_date - timedelta(days=1)
-        prev_day = DailyCashPosition.objects.filter(date=yesterday).first()
-        beginning_balance = prev_day.ending_balance if prev_day else (account.opening_balance or 0)
 
-        collections = Transaction.objects.filter(
-            bank_account=account, date=report_date, type__in=["collections"]
-        ).aggregate(total=Sum("amount"))["total"] or 0
+@api_view(["GET"])
+def monthly_summary(request):
+    """Return totals for a given month (YYYY-MM)."""
+    month_str = request.GET.get("month")
+    if not month_str:
+        return Response({"detail": "Month parameter required (YYYY-MM)."}, status=400)
 
-        fund_transfers = Transaction.objects.filter(
-            bank_account=account, date=report_date, type__in=["fund_transfer"]
-        ).aggregate(total=Sum("amount"))["total"] or 0
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date()
+    except ValueError:
+        return Response({"detail": "Invalid month format."}, status=400)
 
-        fund_transfer_receipts = Transaction.objects.filter(
-            bank_account=account, date=report_date, type__in=["fund_transfer_receipt"]
-        ).aggregate(total=Sum("amount"))["total"] or 0
+    monthly = MonthlyReport.objects.filter(month=month_date).first()
+    if not monthly:
+        return Response({"detail": "No monthly report found."}, status=404)
 
-        local_deposits = Transaction.objects.filter(
-            bank_account=account, date=report_date, type__in=["local_deposits"]
-        ).aggregate(total=Sum("amount"))["total"] or 0
+    serializer = MonthlyReportSerializer(monthly)
+    return Response(serializer.data)
 
-        disbursements = Transaction.objects.filter(
-            bank_account=account, date=report_date, type__in=["disbursement", "returned_checks", "bank_charges"]
-        ).aggregate(total=Sum("amount"))["total"] or 0
 
-        ending_balance = beginning_balance + collections + fund_transfer_receipts + local_deposits - (fund_transfers + disbursements)
+@api_view(["GET"])
+def cash_position_summary(request):
+    """Return balances grouped by area for a given date."""
+    date_str = request.GET.get("date")
+    report_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else now().date()
 
-        account_data = {
-            "beginning_balance": beginning_balance,
-            "collections": collections,
-            "fund_transfers": fund_transfers,
-            "fund_transfer_receipts": fund_transfer_receipts,
-            "local_deposits": local_deposits,
-            "disbursements": disbursements,
-            "ending_balance": ending_balance,
-        }
+    accounts = BankAccount.objects.all()
+    results = []
+    for area in BankAccount.AREAS:
+        area_key = area[0]
+        area_accounts = accounts.filter(area=area_key)
 
-        # ✅ Show both name and account number
-        label = f"{account.name} ({account.account_number})"
+        # Sum balances for accounts in this area
+        total_balance = sum(
+            DailyCashPosition.objects.filter(date=report_date, transaction__bank_account__in=area_accounts)
+            .values_list("ending_balance", flat=True)
+        ) or 0
 
-        if "PCF" in account.name or "BDO SA-722" in account.name:
-            cash_on_hand[label] = account_data
-        else:
-            cash_in_bank[label] = account_data
+        results.append({"area": area[1], "total_balance": total_balance})
 
-        total["beginning_balance"] += beginning_balance
-        total["collections"] += collections
-        total["fund_transfers"] += fund_transfers
-        total["fund_transfer_receipts"] += fund_transfer_receipts
-        total["local_deposits"] += local_deposits
-        total["disbursements"] += disbursements
-        total["ending_balance"] += ending_balance
-
-    returned_checks_transactions = Transaction.objects.filter(date=report_date, type="returned_checks")
-    returned_checks = {
-        "beginning_balance": 0,
-        "collections": returned_checks_transactions.aggregate(total=Sum("amount"))["total"] or 0,
-        "ending_balance": returned_checks_transactions.aggregate(total=Sum("amount"))["total"] or 0,
-    }
-
-    pdc_on_hand = {
-        "total": 0,
-        "collections": 0,
-        "ending_balance": 0,
-    }
-
-    return render(request, "dashboard.html", {
-        "daily_report": daily_report,
-        "cash_on_hand": cash_on_hand,
-        "cash_in_bank": cash_in_bank,
-        "returned_checks": returned_checks,
-        "total": total,
-        "pdc_on_hand": pdc_on_hand,
-        "today": report_date,
-    })
+    serializer = CashPositionSummarySerializer(results, many=True)
+    return Response(serializer.data)
 
