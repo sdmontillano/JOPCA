@@ -35,7 +35,6 @@ class BankAccount(models.Model):
             type__in=['disbursement', 'bank_charges', 'returned_check']
         ).aggregate(Sum('amount'))['amount__sum'] or 0
 
-        # ✅ PDCs are tracked separately, not subtracted here
         self.balance = (self.opening_balance or 0) + inflows - outflows
         super().save(update_fields=['balance'])
 
@@ -59,7 +58,7 @@ class Transaction(models.Model):
         ('transfer', 'Transfer'),
         ('fund_transfer', 'Fund Transfer'),
         ('interbank_transfer', 'Interbank Transfer'),
-        ('post_dated_check', 'Post-Dated Check'),  # ✅ NEW
+        ('post_dated_check', 'Post-Dated Check'),
     ]
     bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE)
     date = models.DateField()
@@ -78,7 +77,7 @@ class DailyCashPosition(models.Model):
     disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     transfers = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     returned_checks = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    pdc = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # ✅ NEW
+    pdc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def save(self, *args, **kwargs):
@@ -115,11 +114,11 @@ class DailyCashPosition(models.Model):
 
 
 class MonthlyReport(models.Model):
-    month = models.DateField()  # store first day of month
+    month = models.DateField()
     total_inflows = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_pdc = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # ✅ NEW
+    total_pdc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def save(self, *args, **kwargs):
         from django.db.models.functions import TruncMonth
@@ -127,7 +126,7 @@ class MonthlyReport(models.Model):
 
         self.total_inflows = sum(p.collections for p in positions)
         self.total_disbursements = sum(p.disbursements for p in positions)
-        self.total_pdc = sum(p.pdc for p in positions)  # ✅ NEW
+        self.total_pdc = sum(p.pdc for p in positions)
         self.ending_balance = positions.order_by("-date").first().ending_balance if positions.exists() else 0
 
         super().save(*args, **kwargs)
@@ -145,4 +144,5 @@ def update_balance_on_save(sender, instance, **kwargs):
 @receiver(post_delete, sender=Transaction)
 def update_balance_on_delete(sender, instance, **kwargs):
     instance.bank_account.recalc_balance()
+
     
