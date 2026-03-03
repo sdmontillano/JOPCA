@@ -1,7 +1,12 @@
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BankAccount(models.Model):
     AREAS = [
@@ -12,13 +17,7 @@ class BankAccount(models.Model):
     ]
 
     name = models.CharField(max_length=100, blank=True, null=True)
-    account_number = models.CharField(
-        max_length=50,
-        unique=True,
-        db_index=True,
-        blank=False,
-        null=False
-    )
+    account_number = models.CharField(max_length=50, unique=True, db_index=True)
     area = models.CharField(max_length=50, choices=AREAS, default='main_office')
     opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -28,20 +27,23 @@ class BankAccount(models.Model):
 
     def recalc_balance(self):
         inflows = self.transaction_set.filter(
-            type__in=['deposit', 'collections', 'local_deposits']
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
+            type__in=['deposit', 'collections', 'local_deposits', 'fund_transfer', 'interbank_transfer']
+        ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
         outflows = self.transaction_set.filter(
-            type__in=['disbursement', 'bank_charges', 'returned_check']
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
+            type__in=['disbursement', 'bank_charges', 'returned_check', 'adjustments']
+        ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
-        self.balance = (self.opening_balance or 0) + inflows - outflows
+        new_balance = (self.opening_balance or Decimal('0.00')) + inflows - outflows
+        if new_balance < 0:
+            raise ValidationError("Bank account balance cannot be negative.")
+        self.balance = new_balance
         super().save(update_fields=['balance'])
 
     def save(self, *args, **kwargs):
         if not self.pk:
             if self.opening_balance is None:
-                self.opening_balance = 0
+                self.opening_balance = Decimal('0.00')
             self.balance = self.opening_balance
         super().save(*args, **kwargs)
 
@@ -69,6 +71,38 @@ class Transaction(models.Model):
     def __str__(self):
         return f"{self.date} - {self.bank_account} - {self.type} - {self.amount}"
 
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+
+        amount = Decimal(self.amount or 0)
+        tx_type = (self.type or "").lower()
+
+        # Use DB lock to avoid race conditions
+        with transaction.atomic():
+            bank = BankAccount.objects.select_for_update().get(pk=self.bank_account.pk)
+            current_balance = Decimal(bank.balance or 0)
+
+            if 'disbursement' in tx_type:
+                ending = current_balance - amount
+            else:
+                ending = current_balance + amount
+
+            logger.debug(
+                "Transaction.save: bank=%s amount=%s type=%s current_balance=%s ending=%s",
+                bank.pk, amount, self.type, current_balance, ending
+            )
+
+            if ending < 0:
+                raise ValidationError("Ending balance cannot be negative.")
+
+            # update bank balance and save both inside the same transaction
+            bank.balance = ending
+            bank.save(update_fields=['balance'])
+
+            # ensure instance references the locked bank object
+            self.bank_account = bank
+            super().save(*args, **kwargs)
+
 
 class DailyCashPosition(models.Model):
     date = models.DateField(unique=True)
@@ -82,31 +116,36 @@ class DailyCashPosition(models.Model):
 
     def save(self, *args, **kwargs):
         prev_day = DailyCashPosition.objects.filter(date__lt=self.date).order_by("-date").first()
-        self.beginning_balance = prev_day.ending_balance if prev_day else 0
+        self.beginning_balance = prev_day.ending_balance if prev_day else Decimal('0.00')
 
         transactions = Transaction.objects.filter(date=self.date)
 
         self.collections = transactions.filter(
             type__in=["collections", "deposit", "local_deposits"]
-        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         self.disbursements = transactions.filter(
             type__in=["disbursement", "bank_charges"]
-        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         self.transfers = transactions.filter(
             type__in=["transfer", "fund_transfer", "interbank_transfer"]
-        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         self.returned_checks = transactions.filter(
             type="returned_check"
-        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         self.pdc = transactions.filter(
             type="post_dated_check"
-        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        self.ending_balance = self.beginning_balance + self.collections - self.disbursements
+        self.ending_balance = (
+            self.beginning_balance + self.collections
+            - self.disbursements - self.returned_checks - self.transfers
+        )
+        if self.ending_balance < 0:
+            raise ValidationError("Ending balance cannot be negative.")
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -127,7 +166,7 @@ class MonthlyReport(models.Model):
         self.total_inflows = sum(p.collections for p in positions)
         self.total_disbursements = sum(p.disbursements for p in positions)
         self.total_pdc = sum(p.pdc for p in positions)
-        self.ending_balance = positions.order_by("-date").first().ending_balance if positions.exists() else 0
+        self.ending_balance = positions.order_by("-date").first().ending_balance if positions.exists() else Decimal('0.00')
 
         super().save(*args, **kwargs)
 
@@ -137,12 +176,19 @@ class MonthlyReport(models.Model):
 
 @receiver(post_save, sender=Transaction)
 def update_balance_on_save(sender, instance, **kwargs):
-    instance.bank_account.recalc_balance()
-    DailyCashPosition.objects.get_or_create(date=instance.date)
+    try:
+        DailyCashPosition.objects.update_or_create(date=instance.date)
+    except Exception:
+        logger.exception("Non-fatal error in post_save handler for Transaction")
 
 
 @receiver(post_delete, sender=Transaction)
 def update_balance_on_delete(sender, instance, **kwargs):
-    instance.bank_account.recalc_balance()
-
-    
+    try:
+        try:
+            instance.bank_account.recalc_balance()
+        except ValidationError:
+            logger.warning("recalc_balance raised ValidationError on delete for bank %s", instance.bank_account_id)
+        DailyCashPosition.objects.update_or_create(date=instance.date)
+    except Exception:
+        logger.exception("Non-fatal error in post_delete handler for Transaction")

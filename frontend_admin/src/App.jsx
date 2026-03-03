@@ -1,45 +1,58 @@
-import { useState, useEffect } from "react";
-import { Box, CssBaseline, Toolbar } from "@mui/material";
-import Sidebar from "./components/Sidebar";
-import Dashboard from "./components/Dashboard";
-import Transactions from "./components/Transactions";
-import MonthlyReport from "./components/MonthlyReport";
-import Login from "./components/Login";
-import AddTransaction from "./components/AddTransaction";
-import AddBankAccount from "./components/AddBankAccount";
-import AddDailyCashPosition from "./components/AddDailyCashPosition";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./components/Login.jsx";
+import Dashboard from "./components/Dashboard.jsx";
+import AddBankAccount from "./components/AddBankAccount.jsx";
+import AddTransaction from "./components/AddTransaction.jsx";
+import Transactions from "./components/Transactions.jsx";
+import MonthlyReport from "./components/MonthlyReport.jsx";
+import Banks from "./components/Banks.jsx";
+import BankDetail from "./components/BankDetail.jsx";
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPage, setCurrentPage] = useState("Dashboard");
-
-  // Check token on page load
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
-  }
+export default function App() {
+  // ✅ Simple auth check: if token exists, user is logged in
+  const isAuthenticated = !!localStorage.getItem("token");
 
   return (
-    <Box sx={{ display: "flex" }}>
-      <CssBaseline />
-      <Sidebar setCurrentPage={setCurrentPage} setIsAuthenticated={setIsAuthenticated} />
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: "#f4f6f8", minHeight: "100vh" }}>
-        <Toolbar />
-        {currentPage === "Dashboard" && <Dashboard />}
-        {currentPage === "Transactions" && <Transactions />}
-        {currentPage === "AddTransaction" && <AddTransaction />}
-        {currentPage === "AddBankAccount" && <AddBankAccount />}
-        {currentPage === "AddDailyCashPosition" && <AddDailyCashPosition />}
-        {currentPage === "MonthlyReport" && <MonthlyReport />}
-      </Box>
-    </Box>
+    <Router>
+      <Routes>
+        {/* Public route */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Protected routes */}
+        <Route
+          path="/dashboard"
+          element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/add-bank"
+          element={isAuthenticated ? <AddBankAccount /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/add-transaction"
+          element={isAuthenticated ? <AddTransaction /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/transactions"
+          element={isAuthenticated ? <Transactions /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/monthly-report"
+          element={isAuthenticated ? <MonthlyReport /> : <Navigate to="/login" />}
+        />
+
+        {/* Banks list and bank detail */}
+        <Route
+          path="/banks"
+          element={isAuthenticated ? <Banks /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/banks/:id"
+          element={isAuthenticated ? <BankDetail /> : <Navigate to="/login" />}
+        />
+
+        {/* Default redirect */}
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+      </Routes>
+    </Router>
   );
 }
-
-export default App;

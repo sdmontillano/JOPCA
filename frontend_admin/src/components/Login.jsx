@@ -1,30 +1,49 @@
 import { useState } from "react";
-import { Box, Button, TextField, Typography, Paper } from "@mui/material";
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  CircularProgress,
+} from "@mui/material";
+import axios from "axios";
+import { setAccessToken } from "../services/tokenService";
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  async function handleLogin(e) {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
     try {
-      const res = await fetch("http://localhost:8000/auth/login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+      // ✅ Authtoken login endpoint
+      const res = await axios.post("http://localhost:8000/api-token-auth/", {
+        username,
+        password,
       });
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem("token", data.access); // store JWT access token
-        onLogin();
+
+      if (res.status === 200) {
+        // Save the authtoken
+        setAccessToken(res.data.token);
+
+        // ✅ Redirect to dashboard
+        window.location.href = "/dashboard";
       } else {
-        setError(data.detail || "Login failed");
+        setError("Login failed");
       }
     } catch (err) {
-      setError("Server error. Please try again.");
+      console.error("Login error", err);
+      setError("Invalid credentials or server error");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
     <Box
@@ -33,40 +52,42 @@ export default function Login({ onLogin }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        bgcolor: "#0f172a",
+        bgcolor: "#f9fafb",
       }}
     >
       <Paper
-        elevation={6}
+        elevation={3}
         sx={{
           p: 4,
-          width: 350,
-          textAlign: "center",
+          width: 400,
           borderRadius: 3,
-          bgcolor: "#1e293b",
-          color: "#fff",
+          textAlign: "center",
         }}
       >
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
-          Banking DCPR Login
+        <Typography
+          variant="h4"
+          sx={{ mb: 3, fontWeight: "bold", color: "#0ea5e9" }}
+        >
+          Banking Admin
         </Typography>
-        <form onSubmit={handleSubmit}>
+        <Typography sx={{ mb: 3, color: "text.secondary" }}>
+          Sign in to continue
+        </Typography>
+        <form onSubmit={handleLogin}>
           <TextField
-            fullWidth
-            variant="outlined"
             label="Username"
+            fullWidth
+            sx={{ mb: 2 }}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            sx={{ mb: 2, bgcolor: "#fff", borderRadius: 1 }}
           />
           <TextField
-            fullWidth
-            type="password"
-            variant="outlined"
             label="Password"
+            type="password"
+            fullWidth
+            sx={{ mb: 2 }}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 2, bgcolor: "#fff", borderRadius: 1 }}
           />
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
@@ -77,9 +98,16 @@ export default function Login({ onLogin }) {
             type="submit"
             variant="contained"
             fullWidth
-            sx={{ bgcolor: "#0ea5e9", "&:hover": { bgcolor: "#0284c7" } }}
+            sx={{
+              bgcolor: "#0ea5e9",
+              "&:hover": { bgcolor: "#0284c7" },
+              borderRadius: 2,
+              py: 1.2,
+              fontWeight: "bold",
+            }}
+            disabled={loading}
           >
-            Login
+            {loading ? <CircularProgress size={24} /> : "Login"}
           </Button>
         </form>
       </Paper>

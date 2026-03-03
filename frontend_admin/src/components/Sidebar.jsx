@@ -1,52 +1,93 @@
-import { Drawer, List, ListItemButton, ListItemText, Toolbar, Typography, Button } from "@mui/material";
+import { Box, Button, Typography, Divider } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
-export default function Sidebar({ setCurrentPage, setIsAuthenticated }) {
+export default function Sidebar() {
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setIsAuthenticated(false);
+    navigate("/login");
   };
 
-  const menuItems = [
-    { label: "Dashboard", page: "Dashboard" },
-    { label: "Transactions", page: "Transactions" },
-    { label: "Add Transaction", page: "AddTransaction" },
-    { label: "Add Bank Account", page: "AddBankAccount" },
-    { label: "Add Daily Cash Position", page: "AddDailyCashPosition" },
-    { label: "Monthly Report", page: "MonthlyReport" },
-  ];
-
   return (
-    <Drawer
-      variant="permanent"
+    <Box
       sx={{
         width: 240,
-        flexShrink: 0,
-        [`& .MuiDrawer-paper`]: { width: 240, boxSizing: "border-box", bgcolor: "#1e293b", color: "#fff" },
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        borderRight: "1px solid #e5e7eb",
+        display: "flex",
+        flexDirection: "column",
+        p: 2,
       }}
     >
-      <Toolbar>
-        <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-          Banking DCPR
-        </Typography>
-      </Toolbar>
-      <List>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.page}
-            onClick={() => setCurrentPage(item.page)}
-            sx={{ "&:hover": { bgcolor: "#334155" } }}
-          >
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Button
-        onClick={handleLogout}
-        variant="contained"
-        sx={{ bgcolor: "#ef4444", "&:hover": { bgcolor: "#dc2626" }, m: 2 }}
+      <Typography
+        variant="h5"
+        sx={{ mb: 3, fontWeight: "bold", color: "primary.main", textAlign: "center" }}
       >
-        Logout
+        Banking Admin
+      </Typography>
+
+      <Button
+        variant="text"
+        sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
+        onClick={() => navigate("/dashboard")}
+      >
+        🏠 Home
       </Button>
-    </Drawer>
+
+      {/* Banks / Bank Info button */}
+      <Button
+        variant="text"
+        sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
+        onClick={() => navigate("/banks")}
+      >
+        🏦 Banks
+      </Button>
+
+      <Button
+        variant="text"
+        sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
+        onClick={() => navigate("/add-bank")}
+      >
+        ➕ Add Bank
+      </Button>
+      <Button
+        variant="text"
+        sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
+        onClick={() => navigate("/add-transaction")}
+      >
+        ➕ Add Transaction
+      </Button>
+      <Button
+        variant="text"
+        sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
+        onClick={() => navigate("/transactions")}
+      >
+        📜 Transactions
+      </Button>
+      <Button
+        variant="text"
+        sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
+        onClick={() => navigate("/monthly-report")}
+      >
+        📊 Monthly Report
+      </Button>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Button
+        variant="contained"
+        sx={{
+          bgcolor: "error.main",
+          "&:hover": { bgcolor: "#dc2626" },
+          borderRadius: 2,
+          fontWeight: "bold",
+        }}
+        onClick={handleLogout}
+      >
+        🚪 Logout
+      </Button>
+    </Box>
   );
 }
