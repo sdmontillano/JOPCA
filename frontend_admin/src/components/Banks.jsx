@@ -9,6 +9,7 @@ import {
   ListItemText,
   CircularProgress,
   Button,
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import api from "../services/tokenService"; // axios instance with auth header
@@ -27,7 +28,7 @@ export default function Banks() {
         if (mounted) setAccounts(res.data);
       } catch (err) {
         console.error("Error fetching bank accounts", err);
-        if (mounted) setError("Failed to load bank accounts.");
+        if (mounted) setError("❌ Failed to load bank accounts.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -55,8 +56,12 @@ export default function Banks() {
   return (
     <Box sx={{ display: "flex", p: 3 }}>
       <Paper sx={{ width: "100%", p: 2 }}>
-        {/* Always-available back button */}
-        <Button variant="text" onClick={() => navigate("/dashboard")} sx={{ mb: 2 }}>
+        {/* Back button */}
+        <Button
+          variant="text"
+          onClick={() => navigate("/dashboard")}
+          sx={{ mb: 2 }}
+        >
           ← Back to Dashboard
         </Button>
 
@@ -65,14 +70,14 @@ export default function Banks() {
         </Typography>
 
         {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Typography>
+          </Alert>
         )}
 
         <List>
           {accounts.length === 0 && (
-            <Typography>No bank accounts found.</Typography>
+            <Typography sx={{ p: 2 }}>No bank accounts found.</Typography>
           )}
 
           {accounts.map((acc) => (

@@ -24,6 +24,7 @@ export default function AddTransaction() {
   const [message, setMessage] = useState(null);
   const navigate = useNavigate();
 
+  // ✅ Transaction types aligned with Django model
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
     { value: "collections", label: "Collections" },
@@ -63,18 +64,15 @@ export default function AddTransaction() {
     setMessage(null);
     const token = localStorage.getItem("token");
 
-    // Build payload matching backend expectations:
+    // ✅ Payload matches backend expectations
     const payload = {
       amount: form.amount === "" ? null : parseFloat(form.amount),
       type: form.type,
       date: form.date,
       bank_account_id:
         form.bank_account === "" ? null : parseInt(form.bank_account, 10),
+      description: form.description?.trim() || null,
     };
-
-    // Only include description if provided; otherwise send null
-    const desc = form.description && form.description.trim();
-    payload.description = desc ? desc : null;
 
     try {
       const res = await fetch("http://localhost:8000/transactions-crud/", {
@@ -142,7 +140,6 @@ export default function AddTransaction() {
           required
         />
 
-        {/* Description is now optional (no required prop) */}
         <TextField
           label="Description (optional)"
           name="description"
@@ -150,7 +147,13 @@ export default function AddTransaction() {
           onChange={handleChange}
         />
 
-        <TextField select label="Type" name="type" value={form.type} onChange={handleChange}>
+        <TextField
+          select
+          label="Type"
+          name="type"
+          value={form.type}
+          onChange={handleChange}
+        >
           {transactionTypes.map((t) => (
             <MenuItem key={t.value} value={t.value}>
               {t.label}
@@ -192,7 +195,11 @@ export default function AddTransaction() {
             Save Transaction
           </Button>
 
-          <Button variant="outlined" color="primary" onClick={() => navigate("/dashboard")}>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate("/dashboard")}
+          >
             Back to Dashboard
           </Button>
         </Box>

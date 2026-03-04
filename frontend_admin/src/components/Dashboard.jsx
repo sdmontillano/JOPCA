@@ -9,16 +9,16 @@ import {
   TableCell,
   TableBody,
   CircularProgress,
+  Alert,
 } from "@mui/material";
-import api from "../services/tokenService"; // axios instance
+import api from "../services/tokenService";
 import Sidebar from "./Sidebar.jsx";
-import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const [dailyReport, setDailyReport] = useState(null);
   const [monthlyReport, setMonthlyReport] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -36,6 +36,7 @@ export default function Dashboard() {
         setMonthlyReport(monthlyRes.data);
       } catch (err) {
         console.error("Error fetching dashboard data", err);
+        setError("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -50,14 +51,12 @@ export default function Dashboard() {
       maximumFractionDigits: 2,
     })}`;
 
-  if (loading) return <CircularProgress />;
+  if (loading) return <CircularProgress sx={{ m: 3 }} />;
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box sx={{ display: "flex" }}>
-      {/* Sidebar on the left */}
       <Sidebar />
-
-      {/* Main content on the right */}
       <Box sx={{ flexGrow: 1, p: 3 }}>
         <Typography
           variant="h4"
@@ -66,12 +65,9 @@ export default function Dashboard() {
           Banking Dashboard
         </Typography>
 
-        {/* Removed top action buttons (Add Bank, Add Transaction, Transactions, Monthly Report)
-            These are now only available via the Sidebar. */}
-
         {/* Daily Report Section */}
         <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold" }}>
-          Daily Cash Position Report ({dailyReport?.date})
+          Daily Cash Position Report ({dailyReport?.date || "No Data"})
         </Typography>
 
         <Paper sx={{ p: 3, mb: 3 }}>
@@ -81,17 +77,30 @@ export default function Dashboard() {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>Account</TableCell>
                 <TableCell>Type</TableCell>
                 <TableCell align="right">Total (₱)</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {dailyReport?.line_items.map((item, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>{item.type}</TableCell>
-                  <TableCell align="right">{formatPeso(item.total)}</TableCell>
+              {dailyReport?.line_items?.length > 0 ? (
+                dailyReport.line_items.map((item, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      {item.bank_account__name} (
+                      {item.bank_account__account_number})
+                    </TableCell>
+                    <TableCell>{item.type}</TableCell>
+                    <TableCell align="right">{formatPeso(item.total)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    No transactions for this date
+                  </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </Paper>
@@ -108,20 +117,34 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {dailyReport?.accounts.map((acc, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    {acc.name} ({acc.account_number})
+              {dailyReport?.accounts?.length > 0 ? (
+                dailyReport.accounts.map((acc, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      {acc.name} ({acc.account_number})
+                    </TableCell>
+                    <TableCell align="right">{formatPeso(acc.balance)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2} align="center">
+                    No accounts available
                   </TableCell>
-                  <TableCell align="right">{formatPeso(acc.balance)}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </Paper>
 
         <Paper
-          sx={{ p: 3, bgcolor: "#22c55e", color: "white", textAlign: "center", mb: 5 }}
+          sx={{
+            p: 3,
+            bgcolor: "#22c55e",
+            color: "white",
+            textAlign: "center",
+            mb: 5,
+          }}
         >
           <Typography variant="h6">Daily Grand Total Ending Balance</Typography>
           <Typography variant="h4">
@@ -131,7 +154,7 @@ export default function Dashboard() {
 
         {/* Monthly Report Section */}
         <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold" }}>
-          Monthly Cash Position Report ({monthlyReport?.month})
+          Monthly Cash Position Report ({monthlyReport?.month || "No Data"})
         </Typography>
 
         <Paper sx={{ p: 3, mb: 3 }}>
@@ -141,17 +164,30 @@ export default function Dashboard() {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>Account</TableCell>
                 <TableCell>Type</TableCell>
                 <TableCell align="right">Total (₱)</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {monthlyReport?.line_items.map((item, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>{item.type}</TableCell>
-                  <TableCell align="right">{formatPeso(item.total)}</TableCell>
+              {monthlyReport?.line_items?.length > 0 ? (
+                monthlyReport.line_items.map((item, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      {item.bank_account__name} (
+                      {item.bank_account__account_number})
+                    </TableCell>
+                    <TableCell>{item.type}</TableCell>
+                    <TableCell align="right">{formatPeso(item.total)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    No transactions for this month
+                  </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </Paper>
@@ -168,19 +204,34 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {monthlyReport?.accounts.map((acc, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    {acc.name} ({acc.account_number})
+              {monthlyReport?.accounts?.length > 0 ? (
+                monthlyReport.accounts.map((acc, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      {acc.name} ({acc.account_number})
+                    </TableCell>
+                    <TableCell align="right">{formatPeso(acc.balance)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2} align="center">
+                    No accounts available
                   </TableCell>
-                  <TableCell align="right">{formatPeso(acc.balance)}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </Paper>
 
-        <Paper sx={{ p: 3, bgcolor: "#0ea5e9", color: "white", textAlign: "center" }}>
+        <Paper
+          sx={{
+            p: 3,
+            bgcolor: "#0ea5e9",
+            color: "white",
+            textAlign: "center",
+          }}
+        >
           <Typography variant="h6">Monthly Grand Total Ending Balance</Typography>
           <Typography variant="h4">
             {formatPeso(monthlyReport?.grand_total || 0)}

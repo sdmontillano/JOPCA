@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from .models import MonthlyReport, DailyCashPosition, Transaction, BankAccount
 
+
 class BankAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankAccount
@@ -35,6 +36,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'type',
             'amount',
             'description',
+            'created_at',  # ✅ NEW FIELD for frontend sorting
         ]
 
     def validate(self, data):
@@ -49,7 +51,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         amount = Decimal(amount)
         current_balance = Decimal(bank.balance or 0)
 
-        if 'disbursement' in tx_type:
+        # ✅ Balance validation
+        if 'disbursement' in tx_type or 'returned_check' in tx_type or 'bank_charges' in tx_type or 'adjustments' in tx_type:
             resulting_balance = current_balance - amount
         else:
             resulting_balance = current_balance + amount
@@ -57,6 +60,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         if resulting_balance < 0:
             raise serializers.ValidationError("Insufficient funds: this transaction would make the bank balance negative.")
 
+        # ✅ Daily ending balance validation
         if date:
             txs_for_date = Transaction.objects.filter(date=date)
             if self.instance:
@@ -70,7 +74,7 @@ class TransactionSerializer(serializers.ModelSerializer):
                 type__in=['disbursement', 'bank_charges', 'returned_check', 'adjustments']
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
-            if 'disbursement' in tx_type:
+            if 'disbursement' in tx_type or 'returned_check' in tx_type or 'bank_charges' in tx_type or 'adjustments' in tx_type:
                 outflows += amount
             else:
                 inflows += amount

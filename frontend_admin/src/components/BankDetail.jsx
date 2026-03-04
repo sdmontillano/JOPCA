@@ -1,4 +1,3 @@
-// src/components/BankDetail.jsx
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -12,17 +11,25 @@ import {
   CircularProgress,
   Button,
   Stack,
+  Alert,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
 
 export default function BankDetail() {
-  const { id } = useParams();
+  const { id } = useParams(); // bank id from route
+  const navigate = useNavigate();
+
   const [bank, setBank] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
+
+  const formatPeso = (value) =>
+    `₱${Number(value ?? 0).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
 
   useEffect(() => {
     let mounted = true;
@@ -32,58 +39,23 @@ export default function BankDetail() {
         setLoading(true);
         setError(null);
 
-        // Try to fetch bank details
+        // Fetch bank details
         const bankRes = await api.get(`/bankaccounts/${id}/`);
         if (!mounted) return;
         setBank(bankRes.data);
 
-        // Preferred: ask backend to filter by bank id
-        // Try common query param names in order
-        const queries = [
-          `/transactions/?bank_account_id=${id}`,
-          `/transactions/?bank=${id}`,
-          `/transactions/?account=${id}`,
-        ];
-
-        let txRes = null;
-        for (const q of queries) {
-          try {
-            const res = await api.get(q);
-            // If the response looks like it's filtered (array or results with same bank id), accept it
-            const data = Array.isArray(res.data) ? res.data : res.data.results ?? [];
-            // quick heuristic: if all returned txs belong to this bank or array is empty, accept
-            const allMatch = data.length === 0 || data.every((t) => {
-              const bankId = t.bank_account_id ?? t.bank_account ?? t.account ?? null;
-              return bankId === null || String(bankId) === String(id);
-            });
-            if (allMatch) {
-              txRes = res;
-              break;
-            }
-            // otherwise try next query param
-          } catch (e) {
-            // ignore and try next query
-          }
-        }
-
-        // If none of the filtered queries returned, fetch all transactions and filter client-side
-        if (!txRes) {
-          const res = await api.get("/transactions/");
-          txRes = res;
-        }
-
+        // Fetch transactions filtered by bank_account_id
+        const txRes = await api.get(`/transactions/?bank_account_id=${id}`);
         if (!mounted) return;
-        const rawTx = Array.isArray(txRes.data) ? txRes.data : txRes.data.results ?? [];
-        // Final filter client-side to ensure only this bank's transactions are shown
-        const filtered = rawTx.filter((t) => {
-          const bankId = t.bank_account_id ?? t.bank_account ?? t.account ?? null;
-          return String(bankId) === String(id);
-        });
 
-        setTransactions(filtered);
+        const rawTx = Array.isArray(txRes.data)
+          ? txRes.data
+          : txRes.data.results ?? [];
+
+        setTransactions(rawTx);
       } catch (err) {
         console.error("Error fetching bank detail", err);
-        if (mounted) setError("Failed to load bank details or transactions.");
+        if (mounted) setError("❌ Failed to load bank details or transactions.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -94,12 +66,6 @@ export default function BankDetail() {
       mounted = false;
     };
   }, [id]);
-
-  const formatPeso = (value) =>
-    `₱${Number(value ?? 0).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
 
   if (loading) {
     return (
@@ -116,9 +82,9 @@ export default function BankDetail() {
       </Button>
 
       {error && (
-        <Typography color="error" sx={{ mt: 2 }}>
+        <Alert severity="error" sx={{ mt: 2 }}>
           {error}
-        </Typography>
+        </Alert>
       )}
 
       <Stack
@@ -157,7 +123,7 @@ export default function BankDetail() {
             {transactions.length > 0 ? (
               transactions.map((t) => (
                 <TableRow key={t.id}>
-                  <TableCell>{t.date ?? t.created_at ?? "-"}</TableCell>
+                  <TableCell>{t.date ?? "-"}</TableCell>
                   <TableCell>{t.type ?? "-"}</TableCell>
                   <TableCell align="right">{formatPeso(t.amount)}</TableCell>
                   <TableCell>{t.description || "-"}</TableCell>
@@ -165,7 +131,9 @@ export default function BankDetail() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4}>No transactions found for this account.</TableCell>
+                <TableCell colSpan={4} align="center">
+                  No transactions found for this account.
+                </TableCell>
               </TableRow>
             )}
           </TableBody>

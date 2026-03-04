@@ -27,7 +27,10 @@ export default function AddBankAccount() {
     fetch("http://localhost:8000/bankaccounts/", {
       headers: { Authorization: `Token ${token}` },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch accounts");
+        return res.json();
+      })
       .then((data) => setAccounts(data))
       .catch(() =>
         setMessage({ type: "error", text: "❌ Error fetching accounts." })
@@ -75,7 +78,18 @@ export default function AddBankAccount() {
         // ✅ redirect back to dashboard after short delay
         setTimeout(() => navigate("/dashboard"), 1000);
       } else {
-        setMessage({ type: "error", text: "❌ Failed to add bank account." });
+        let errMsg = "❌ Failed to add bank account.";
+        try {
+          const errJson = await res.json();
+          const details = Object.entries(errJson)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+            .join(" | ");
+          if (details) errMsg += ` ${details}`;
+        } catch {
+          const text = await res.text().catch(() => null);
+          if (text) errMsg += ` ${text}`;
+        }
+        setMessage({ type: "error", text: errMsg });
       }
     } catch {
       setMessage({ type: "error", text: "❌ Error connecting to server." });
@@ -84,7 +98,10 @@ export default function AddBankAccount() {
 
   return (
     <Paper sx={{ p: 3, m: 3 }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold", color: "primary.main" }}>
+      <Typography
+        variant="h5"
+        sx={{ mb: 2, fontWeight: "bold", color: "primary.main" }}
+      >
         Add Bank Account
       </Typography>
       <Box
@@ -124,7 +141,7 @@ export default function AddBankAccount() {
           type="number"
           value={form.opening_balance}
           onChange={handleChange}
-          inputProps={{ min: 0 }}
+          inputProps={{ min: 0, step: "0.01" }}
           required
         />
 

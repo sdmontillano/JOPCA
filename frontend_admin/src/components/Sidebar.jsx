@@ -5,8 +5,8 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+    localStorage.removeItem("token"); // ✅ clear auth token
+    navigate("/login"); // ✅ redirect to login
   };
 
   return (
@@ -21,13 +21,20 @@ export default function Sidebar() {
         p: 2,
       }}
     >
+      {/* App Title */}
       <Typography
         variant="h5"
-        sx={{ mb: 3, fontWeight: "bold", color: "primary.main", textAlign: "center" }}
+        sx={{
+          mb: 3,
+          fontWeight: "bold",
+          color: "primary.main",
+          textAlign: "center",
+        }}
       >
         Banking Admin
       </Typography>
 
+      {/* Navigation Buttons */}
       <Button
         variant="text"
         sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
@@ -36,7 +43,6 @@ export default function Sidebar() {
         🏠 Home
       </Button>
 
-      {/* Banks / Bank Info button */}
       <Button
         variant="text"
         sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
@@ -52,6 +58,7 @@ export default function Sidebar() {
       >
         ➕ Add Bank
       </Button>
+
       <Button
         variant="text"
         sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
@@ -59,6 +66,7 @@ export default function Sidebar() {
       >
         ➕ Add Transaction
       </Button>
+
       <Button
         variant="text"
         sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
@@ -66,6 +74,7 @@ export default function Sidebar() {
       >
         📜 Transactions
       </Button>
+
       <Button
         variant="text"
         sx={{ mb: 1, justifyContent: "flex-start", fontWeight: "bold" }}
@@ -76,6 +85,7 @@ export default function Sidebar() {
 
       <Divider sx={{ my: 2 }} />
 
+      {/* Logout Button */}
       <Button
         variant="contained"
         sx={{

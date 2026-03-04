@@ -5,8 +5,12 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 import logging
+from django.utils import timezone
+
+
 
 logger = logging.getLogger(__name__)
+
 
 class BankAccount(models.Model):
     AREAS = [
@@ -27,11 +31,17 @@ class BankAccount(models.Model):
 
     def recalc_balance(self):
         inflows = self.transaction_set.filter(
-            type__in=['deposit', 'collections', 'local_deposits', 'fund_transfer', 'interbank_transfer']
+            type__in=[
+                'deposit', 'collections', 'local_deposits',
+                'fund_transfer', 'interbank_transfer'
+            ]
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
         outflows = self.transaction_set.filter(
-            type__in=['disbursement', 'bank_charges', 'returned_check', 'adjustments']
+            type__in=[
+                'disbursement', 'bank_charges',
+                'returned_check', 'adjustments'
+            ]
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
         new_balance = (self.opening_balance or Decimal('0.00')) + inflows - outflows
@@ -62,44 +72,37 @@ class Transaction(models.Model):
         ('interbank_transfer', 'Interbank Transfer'),
         ('post_dated_check', 'Post-Dated Check'),
     ]
+
     bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE)
     date = models.DateField()
     type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
     def __str__(self):
         return f"{self.date} - {self.bank_account} - {self.type} - {self.amount}"
 
     def save(self, *args, **kwargs):
-        from decimal import Decimal
-
         amount = Decimal(self.amount or 0)
         tx_type = (self.type or "").lower()
 
-        # Use DB lock to avoid race conditions
         with transaction.atomic():
             bank = BankAccount.objects.select_for_update().get(pk=self.bank_account.pk)
             current_balance = Decimal(bank.balance or 0)
 
-            if 'disbursement' in tx_type:
+            if 'disbursement' in tx_type or 'returned_check' in tx_type or 'bank_charges' in tx_type or 'adjustments' in tx_type:
                 ending = current_balance - amount
             else:
                 ending = current_balance + amount
 
-            logger.debug(
-                "Transaction.save: bank=%s amount=%s type=%s current_balance=%s ending=%s",
-                bank.pk, amount, self.type, current_balance, ending
-            )
-
             if ending < 0:
                 raise ValidationError("Ending balance cannot be negative.")
 
-            # update bank balance and save both inside the same transaction
             bank.balance = ending
             bank.save(update_fields=['balance'])
 
-            # ensure instance references the locked bank object
             self.bank_account = bank
             super().save(*args, **kwargs)
 
@@ -177,9 +180,11 @@ class MonthlyReport(models.Model):
 @receiver(post_save, sender=Transaction)
 def update_balance_on_save(sender, instance, **kwargs):
     try:
-        DailyCashPosition.objects.update_or_create(date=instance.date)
+        instance.bank_account.recalc_balance()
+        daily, _ = DailyCashPosition.objects.get_or_create(date=instance.date)
+        daily.save()  # trigger recalculation
     except Exception:
-        logger.exception("Non-fatal error in post_save handler for Transaction")
+        logger.exception("Error in post_save handler for Transaction")
 
 
 @receiver(post_delete, sender=Transaction)
@@ -189,6 +194,7 @@ def update_balance_on_delete(sender, instance, **kwargs):
             instance.bank_account.recalc_balance()
         except ValidationError:
             logger.warning("recalc_balance raised ValidationError on delete for bank %s", instance.bank_account_id)
-        DailyCashPosition.objects.update_or_create(date=instance.date)
+        daily, _ = DailyCashPosition.objects.get_or_create(date=instance.date)
+        daily.save()  # trigger recalculation
     except Exception:
-        logger.exception("Non-fatal error in post_delete handler for Transaction")
+        logger.exception("Error in post_delete handler for Transaction")
