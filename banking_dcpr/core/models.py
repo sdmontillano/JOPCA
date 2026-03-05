@@ -1,3 +1,4 @@
+# core/models.py
 from django.db import models, transaction
 from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
@@ -7,13 +8,8 @@ from decimal import Decimal
 import logging
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.db import models
-
-
-
 
 logger = logging.getLogger(__name__)
-
 
 class BankAccount(models.Model):
     AREAS = [
@@ -82,7 +78,6 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     description = models.TextField(blank=True, null=True)
 
-    # ✅ Audit trail
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_transactions"
     )
@@ -190,7 +185,7 @@ def update_balance_on_save(sender, instance, **kwargs):
     try:
         instance.bank_account.recalc_balance()
         daily, _ = DailyCashPosition.objects.get_or_create(date=instance.date)
-        daily.save()  # trigger recalculation
+        daily.save()
     except Exception:
         logger.exception("Error in post_save handler for Transaction")
 
@@ -203,6 +198,56 @@ def update_balance_on_delete(sender, instance, **kwargs):
         except ValidationError:
             logger.warning("recalc_balance raised ValidationError on delete for bank %s", instance.bank_account_id)
         daily, _ = DailyCashPosition.objects.get_or_create(date=instance.date)
-        daily.save()  # trigger recalculation
+        daily.save()
     except Exception:
         logger.exception("Error in post_delete handler for Transaction")
+
+
+class Pdc(models.Model):
+    STATUS_OUTSTANDING = "outstanding"
+    STATUS_MATURED = "matured"
+    STATUS_DEPOSITED = "deposited"
+    STATUS_RETURNED = "returned"
+    STATUS_CHOICES = [
+        (STATUS_OUTSTANDING, "Outstanding"),
+        (STATUS_MATURED, "Matured"),
+        (STATUS_DEPOSITED, "Deposited"),
+        (STATUS_RETURNED, "Returned"),
+    ]
+
+    customer_name = models.CharField(max_length=255, blank=True, null=True)
+    check_no = models.CharField(max_length=128, blank=True, null=True)
+    maturity_date = models.DateField(blank=True, null=True)
+    amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default=STATUS_OUTSTANDING)
+
+    deposit_bank = models.ForeignKey(
+        BankAccount,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="pdc_deposits",
+    )
+    date_deposited = models.DateField(blank=True, null=True)
+    returned_date = models.DateField(blank=True, null=True)
+    returned_reason = models.TextField(blank=True, null=True)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_pdcs",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-maturity_date", "-id"]
+        verbose_name = "Post Dated Check"
+        verbose_name_plural = "Post Dated Checks"
+
+    def __str__(self):
+        label = f"{self.customer_name or 'Unknown'} - {self.check_no or 'No#'}"
+        return f"{label} ₱{self.amount:.2f} ({self.status})"

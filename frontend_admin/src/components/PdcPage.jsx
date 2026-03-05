@@ -1,5 +1,5 @@
 // src/components/PdcPage.jsx
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Paper,
@@ -28,19 +28,61 @@ export default function PdcPage() {
   const [toDate, setToDate] = useState("");
   const navigate = useNavigate();
 
+  /**
+   * Fetch transactions from the backend and filter client-side for PDCs.
+   * Uses the existing transactions-crud/ endpoint (present in your Django URLconf).
+   *
+   * If your backend supports server-side filtering (e.g., ?type=post_dated_check),
+   * you can replace the GET URL with that query to reduce payload.
+   */
   const fetchPdc = async () => {
     setError(null);
     setLoading(true);
     try {
-      const params = [];
-      if (filterStatus) params.push(`status=${encodeURIComponent(filterStatus)}`);
-      if (fromDate) params.push(`from=${encodeURIComponent(fromDate)}`);
-      if (toDate) params.push(`to=${encodeURIComponent(toDate)}`);
-      const q = params.length ? `?${params.join("&")}` : "";
-      const res = await api.get(`/pdc/${q}`);
-      setPdcList(res.data || []);
+      // Build query params for transactions endpoint if you want server-side filtering
+      // const params = "?type=post_dated_check"; // uncomment if backend supports it
+      const res = await api.get(`/transactions-crud/`); // use transactions-crud instead of /pdc/
+      // backend may return wrapper {results: [...]} or raw array
+      const raw = Array.isArray(res.data) ? res.data : res.data?.results ?? res.data?.data ?? [];
+      // Filter for post_dated_check type (adjust the type string if your backend uses a different value)
+      let pdcs = raw.filter((r) => {
+        const t = (r.type || r.txn_type || "").toString().toLowerCase();
+        return t === "post_dated_check" || t === "postdated" || t.includes("post");
+      });
+
+      // Optional: apply client-side date/status filters
+      if (filterStatus) {
+        pdcs = pdcs.filter((p) => (p.status || "").toString().toLowerCase() === filterStatus.toLowerCase());
+      }
+      if (fromDate) {
+        pdcs = pdcs.filter((p) => {
+          const m = p.maturity_date || p.matured_at || p.mat_date || p.maturity;
+          return m ? new Date(m) >= new Date(fromDate) : false;
+        });
+      }
+      if (toDate) {
+        pdcs = pdcs.filter((p) => {
+          const m = p.maturity_date || p.matured_at || p.mat_date || p.maturity;
+          return m ? new Date(m) <= new Date(toDate) : false;
+        });
+      }
+
+      // Normalize minimal fields used by the UI
+      const normalized = pdcs.map((p) => ({
+        id: p.id ?? p.pk ?? p.transaction_id,
+        client_name: p.client_name ?? p.customer ?? p.company ?? p.payee ?? p.customer_name,
+        check_number: p.check_number ?? p.check_no ?? p.check ?? p.reference,
+        bank: p.bank_account__name ?? p.bank_name ?? p.bank ?? null,
+        amount: p.amount ?? p.total ?? p.value ?? 0,
+        maturity_date: p.maturity_date ?? p.matured_at ?? p.mat_date ?? p.maturity ?? null,
+        status: (p.status || "").toString().toLowerCase() || "outstanding",
+        deposit_bank_id: p.deposit_bank_id ?? p.bank_account_id ?? null,
+        raw: p,
+      }));
+
+      setPdcList(normalized);
     } catch (err) {
-      console.error("Error fetching PDCs", err);
+      console.error("Error fetching PDCs (via transactions-crud)", err);
       setError(err?.response?.data || err?.message || "Failed to load PDCs");
     } finally {
       setLoading(false);
@@ -122,12 +164,12 @@ export default function PdcPage() {
             {pdcList.length > 0 ? (
               pdcList.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell>{p.client_name ?? p.client ?? "-"}</TableCell>
-                  <TableCell>{p.check_number ?? p.check_no ?? "-"}</TableCell>
+                  <TableCell>{p.client_name ?? "-"}</TableCell>
+                  <TableCell>{p.check_number ?? "-"}</TableCell>
                   <TableCell>{p.bank ?? "-"}</TableCell>
-                  <TableCell align="right">{formatPeso(p.amount ?? p.value)}</TableCell>
+                  <TableCell align="right">{formatPeso(p.amount)}</TableCell>
                   <TableCell>{p.issue_date ?? p.issued_at ?? "-"}</TableCell>
-                  <TableCell>{p.maturity_date ?? p.matured_at ?? "-"}</TableCell>
+                  <TableCell>{p.maturity_date ?? "-"}</TableCell>
                   <TableCell>
                     <Chip
                       label={p.status ?? "unknown"}
@@ -145,7 +187,7 @@ export default function PdcPage() {
                           variant="contained"
                           onClick={async () => {
                             try {
-                              await api.patch(`/pdc/${p.id}/`, { status: "matured" });
+                              await api.patch(`/transactions-crud/${p.id}/`, { status: "matured" });
                               fetchPdc();
                             } catch (err) {
                               console.error(err);
@@ -163,7 +205,9 @@ export default function PdcPage() {
                           variant="contained"
                           onClick={async () => {
                             try {
-                              await api.post(`/pdc/${p.id}/deposit/`, { bank_account_id: p.deposit_bank_id ?? null });
+                              // If your backend exposes a deposit endpoint for transactions, use it.
+                              // Otherwise, you may need to create a deposit transaction via transactions-crud.
+                              await api.post(`/transactions-crud/${p.id}/deposit/`, { bank_account_id: p.deposit_bank_id ?? null });
                               fetchPdc();
                             } catch (err) {
                               console.error(err);

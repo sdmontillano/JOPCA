@@ -1,23 +1,28 @@
+# core/views.py
 from django.utils.timezone import now
 from django.db.models import Sum
 from datetime import datetime
 from rest_framework import viewsets, generics, permissions, status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+from django.utils.dateparse import parse_date
+
 from .serializers import (
     BankAccountSerializer,
     TransactionSerializer,
     DailyCashPositionSerializer,
     MonthlyReportSerializer,
+    PdcSerializer,
 )
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
 
 
 # -----------------------------
 # ViewSets (CRUD endpoints)
 # -----------------------------
-
 class MonthlyReportViewSet(viewsets.ModelViewSet):
     queryset = MonthlyReport.objects.all().order_by('-month')
     serializer_class = MonthlyReportSerializer
@@ -31,7 +36,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
-    queryset = Transaction.objects.all().order_by('-created_at')  # ✅ newest first by timestamp
+    queryset = Transaction.objects.all().order_by('-created_at')  # newest first by timestamp
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -111,7 +116,6 @@ class TransactionListCreate(generics.ListCreateAPIView):
 # -----------------------------
 # Summary Endpoints
 # -----------------------------
-
 @api_view(["GET"])
 def detailed_daily_report(request):
     """Return detailed breakdown of transactions by account + type + ending balances."""
@@ -172,3 +176,127 @@ def detailed_monthly_report(request):
         "grand_total": ending_balance
     })
 
+
+# -----------------------------
+# PDC ViewSet (new)
+# -----------------------------
+class PdcViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Post Dated Checks (PDC).
+    Provides:
+      - list/retrieve/update via standard ModelViewSet
+      - mark_matured: POST /pdc/{id}/mark_matured/
+      - deposit: POST /pdc/{id}/deposit/
+      - record_returned: POST /pdc/{id}/record_returned/
+    """
+    queryset = Pdc.objects.all().order_by("-id")
+    serializer_class = PdcSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def mark_matured(self, request, pk=None):
+        """
+        Mark a PDC as matured.
+        Payload (optional): { "maturity_date": "YYYY-MM-DD" }
+        """
+        pdc = get_object_or_404(Pdc, pk=pk)
+        maturity_date = request.data.get("maturity_date")
+        if maturity_date:
+            parsed = parse_date(maturity_date)
+            if parsed is None:
+                return Response({"detail": "invalid maturity_date format, expected YYYY-MM-DD"},
+                                status=status.HTTP_400_BAD_REQUEST)
+            pdc.maturity_date = parsed
+
+        pdc.status = Pdc.STATUS_MATURED
+        pdc.save(update_fields=["status", "maturity_date"] if maturity_date else ["status"])
+
+        serializer = self.get_serializer(pdc)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def deposit(self, request, pk=None):
+        """
+        Deposit a matured PDC into a bank account.
+        Expected payload:
+          { "bank_account_id": 123, "deposit_date": "YYYY-MM-DD", "reference": "DEP-001" }
+        """
+        pdc = get_object_or_404(Pdc, pk=pk)
+        bank_account_id = request.data.get("bank_account_id")
+        deposit_date = request.data.get("deposit_date")
+        reference = request.data.get("reference", "")
+
+        if not bank_account_id:
+            return Response({"detail": "bank_account_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bank = BankAccount.objects.get(pk=bank_account_id)
+        except BankAccount.DoesNotExist:
+            return Response({"detail": "bank account not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        deposit_date_parsed = None
+        if deposit_date:
+            deposit_date_parsed = parse_date(deposit_date)
+            if deposit_date_parsed is None:
+                return Response({"detail": "invalid deposit_date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create a Transaction record for the deposit so bank balances and daily positions update
+        Transaction.objects.create(
+            bank_account=bank,
+            date=deposit_date_parsed or now().date(),
+            type="deposit",
+            amount=pdc.amount,
+            description=f"PDC deposit ref:{reference} pdc_id:{pdc.id}",
+            created_by=request.user if request.user.is_authenticated else None
+        )
+
+        pdc.deposit_bank = bank
+        pdc.date_deposited = deposit_date_parsed
+        pdc.status = Pdc.STATUS_DEPOSITED
+        pdc.save(update_fields=["deposit_bank", "date_deposited", "status"])
+
+        serializer = self.get_serializer(pdc)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def record_returned(self, request, pk=None):
+        """
+        Mark a PDC as returned.
+        Expected payload:
+          { "returned_date": "YYYY-MM-DD", "returned_reason": "Insufficient funds" }
+        """
+        pdc = get_object_or_404(Pdc, pk=pk)
+        returned_date = request.data.get("returned_date")
+        returned_reason = request.data.get("returned_reason", "")
+
+        returned_date_parsed = None
+        if returned_date:
+            returned_date_parsed = parse_date(returned_date)
+            if returned_date_parsed is None:
+                return Response({"detail": "invalid returned_date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Choose a bank for the returned transaction: prefer deposit_bank, otherwise first bank
+        bank_for_return = pdc.deposit_bank if pdc.deposit_bank else BankAccount.objects.first()
+
+        if bank_for_return is None:
+            return Response({"detail": "no bank account available to record returned check"}, status=status.HTTP_400_BAD_REQUEST)
+
+        Transaction.objects.create(
+            bank_account=bank_for_return,
+            date=returned_date_parsed or now().date(),
+            type="returned_check",
+            amount=pdc.amount,
+            description=f"PDC returned pdc_id:{pdc.id} reason:{returned_reason}",
+            created_by=request.user if request.user.is_authenticated else None
+        )
+
+        pdc.status = Pdc.STATUS_RETURNED
+        pdc.returned_date = returned_date_parsed
+        pdc.returned_reason = returned_reason
+        pdc.save(update_fields=["status", "returned_date", "returned_reason"])
+
+        serializer = self.get_serializer(pdc)
+        return Response(serializer.data, status=status.HTTP_200_OK)

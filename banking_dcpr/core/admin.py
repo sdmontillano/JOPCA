@@ -1,6 +1,7 @@
+# core/admin.py
 from django.contrib import admin
 from django.db.models import Sum
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
 
 
 class TransactionInline(admin.TabularInline):
@@ -59,9 +60,8 @@ class DailyCashPositionAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        obj.save()  # ✅ forces recalculation before saving
+        obj.save()  # forces recalculation before saving
 
-    # ✅ Bulk admin action
     actions = ["recalculate_positions", "recalculate_all_positions"]
 
     def recalculate_positions(self, request, queryset):
@@ -83,4 +83,12 @@ class MonthlyReportAdmin(admin.ModelAdmin):
     list_display = ('month', 'total_inflows', 'total_disbursements', 'ending_balance')
     ordering = ('-month',)
     readonly_fields = ('total_inflows', 'total_disbursements', 'ending_balance')
-    
+
+
+@admin.register(Pdc)
+class PdcAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer_name", "check_no", "maturity_date", "amount", "status", "deposit_bank", "date_deposited")
+    search_fields = ("customer_name", "check_no")
+    list_filter = ("status", "maturity_date")
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("-maturity_date", "-id")
