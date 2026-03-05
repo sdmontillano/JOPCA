@@ -29,7 +29,7 @@ export default function Transactions() {
   const todayIsoDate = new Date().toISOString().slice(0, 10);
 
   const [filters, setFilters] = useState({
-    bank_account_id: "",
+    account_number: "",
     type: "",
     date: todayIsoDate,
   });
@@ -67,8 +67,8 @@ export default function Transactions() {
       setError(null);
 
       const params = new URLSearchParams();
-      if (filters.bank_account_id.trim()) {
-        params.append("account_number", filters.bank_account_id.trim());
+      if (filters.account_number.trim()) {
+        params.append("account_number", filters.account_number.trim());
       }
       if (filters.type) params.append("type", filters.type);
       if (filters.date) params.append("date", filters.date);
@@ -127,11 +127,11 @@ export default function Transactions() {
       {/* ✅ Filters with Apply button */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
         <TextField
-          label="Bank Account ID"
-          name="bank_account_id"
-          value={filters.bank_account_id}
+          label="Account Number"
+          name="account_number"
+          value={filters.account_number}
           onChange={handleFilterChange}
-          placeholder="e.g. 1"
+          placeholder="e.g. 099"
           sx={{ minWidth: 180 }}
         />
         <TextField
@@ -177,6 +177,8 @@ export default function Transactions() {
               <TableCell align="right">Amount (₱)</TableCell>
               <TableCell>Description</TableCell>
               <TableCell>Bank</TableCell>
+              <TableCell>Added By</TableCell>   {/* NEW */}
+              <TableCell>Created At</TableCell> {/* NEW */}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -190,11 +192,15 @@ export default function Transactions() {
                   <TableCell>
                     {t.bank_account?.name} ({t.bank_account?.account_number})
                   </TableCell>
+                  <TableCell>{t.created_by_username || "-"}</TableCell> {/* NEW */}
+                  <TableCell>
+                    {t.created_at ? new Date(t.created_at).toLocaleString() : "-"}
+                  </TableCell> {/* NEW */}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={7} align="center">
                   No transactions found.
                 </TableCell>
               </TableRow>

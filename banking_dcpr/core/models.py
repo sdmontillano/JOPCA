@@ -6,6 +6,9 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 import logging
 from django.utils import timezone
+from django.contrib.auth.models import User
+from django.db import models
+
 
 
 
@@ -78,8 +81,13 @@ class Transaction(models.Model):
     type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
+    # ✅ Audit trail
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_transactions"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.date} - {self.bank_account} - {self.type} - {self.amount}"
@@ -92,7 +100,7 @@ class Transaction(models.Model):
             bank = BankAccount.objects.select_for_update().get(pk=self.bank_account.pk)
             current_balance = Decimal(bank.balance or 0)
 
-            if 'disbursement' in tx_type or 'returned_check' in tx_type or 'bank_charges' in tx_type or 'adjustments' in tx_type:
+            if tx_type in ['disbursement', 'returned_check', 'bank_charges', 'adjustments']:
                 ending = current_balance - amount
             else:
                 ending = current_balance + amount
