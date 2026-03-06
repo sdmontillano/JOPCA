@@ -1,16 +1,36 @@
-import { useState, useEffect } from "react";
+// src/components/AddBankAccount.jsx
+import React, { useEffect, useState } from "react";
 import {
-  Paper,
-  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
   Button,
   Box,
   MenuItem,
   Alert,
+  CircularProgress,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 
-export default function AddBankAccount() {
+/**
+ * AddBankAccount
+ * - If `open` prop is provided, acts as a modal (Dialog).
+ * - If `open` is not provided, renders as a standalone page (Paper-like layout).
+ * - Opening balance is optional now: if left empty, payload sends null.
+ */
+export default function AddBankAccount({ open: openProp = undefined, onClose = undefined, onCreated = undefined }) {
+  const isControlled = typeof openProp !== "undefined";
+  const [open, setOpen] = useState(Boolean(openProp));
+  useEffect(() => {
+    if (isControlled) setOpen(Boolean(openProp));
+  }, [openProp, isControlled]);
+
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     account_number: "",
@@ -19,156 +39,216 @@ export default function AddBankAccount() {
   });
   const [accounts, setAccounts] = useState([]);
   const [message, setMessage] = useState(null);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  // ✅ Fetch existing accounts for duplicate check
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    fetch("http://localhost:8000/bankaccounts/", {
-      headers: { Authorization: `Token ${token}` },
-    })
+    let mounted = true;
+    api
+      .get("/bankaccounts/")
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch accounts");
-        return res.json();
+        if (!mounted) return;
+        const data = res.data ?? res;
+        setAccounts(Array.isArray(data) ? data : data.results ?? []);
       })
-      .then((data) => setAccounts(data))
-      .catch(() =>
-        setMessage({ type: "error", text: "❌ Error fetching accounts." })
-      );
+      .catch((err) => {
+        console.error("Failed to fetch accounts", err);
+        if (!mounted) return;
+        setMessage({ type: "error", text: "❌ Error fetching accounts." });
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const resetForm = () =>
+    setForm({
+      name: "",
+      account_number: "",
+      area: "main_office",
+      opening_balance: "",
+    });
+
+  const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const closeLocal = () => {
+    resetForm();
+    setMessage(null);
+    if (isControlled) {
+      if (typeof onClose === "function") onClose();
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("token");
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setMessage(null);
 
-    // ✅ Check if account number already exists
-    const exists = accounts.some(
-      (acc) => acc.account_number === form.account_number
-    );
+    // duplicate check
+    const exists = accounts.some((acc) => String(acc.account_number) === String(form.account_number));
     if (exists) {
       setMessage({ type: "error", text: "❌ Account number already exists!" });
       return;
     }
 
+    setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/bankaccounts/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
+      const payload = {
+        name: form.name?.trim(),
+        account_number: form.account_number?.trim(),
+        area: form.area,
+        // opening_balance optional: send null when empty
+        opening_balance: form.opening_balance === "" ? null : parseFloat(form.opening_balance),
+      };
 
-      if (res.ok) {
-        setMessage({
-          type: "success",
-          text: "✅ Bank account added successfully!",
-        });
-        setForm({
-          name: "",
-          account_number: "",
-          area: "main_office",
-          opening_balance: "",
-        });
-        // ✅ redirect back to dashboard after short delay
-        setTimeout(() => navigate("/dashboard"), 1000);
-      } else {
-        let errMsg = "❌ Failed to add bank account.";
+      const res = await api.post("/bankaccounts/", payload);
+      const created = res.data ?? res;
+
+      setMessage({ type: "success", text: "✅ Bank account added successfully!" });
+      resetForm();
+
+      if (typeof onCreated === "function") {
         try {
-          const errJson = await res.json();
-          const details = Object.entries(errJson)
+          onCreated(created);
+        } catch (err) {
+          console.error("onCreated callback threw", err);
+        }
+      }
+
+      setTimeout(() => {
+        if (isControlled) {
+          if (typeof onClose === "function") onClose();
+        } else {
+          navigate("/dashboard");
+        }
+      }, 700);
+    } catch (err) {
+      console.error("Failed to add bank account", err);
+      let errMsg = "❌ Failed to add bank account.";
+      try {
+        const data = err?.response?.data;
+        if (data && typeof data === "object") {
+          const details = Object.entries(data)
             .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
             .join(" | ");
           if (details) errMsg += ` ${details}`;
-        } catch {
-          const text = await res.text().catch(() => null);
-          if (text) errMsg += ` ${text}`;
+        } else if (err?.message) {
+          errMsg += ` ${err.message}`;
         }
-        setMessage({ type: "error", text: errMsg });
+      } catch {
+        // ignore
       }
-    } catch {
-      setMessage({ type: "error", text: "❌ Error connecting to server." });
+      setMessage({ type: "error", text: errMsg });
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Modal rendering when controlled
+  if (isControlled) {
+    return (
+      <Dialog
+        open={Boolean(open)}
+        onClose={closeLocal}
+        fullWidth
+        maxWidth="sm"
+        BackdropProps={{
+          sx: {
+            backgroundColor: "rgba(0,0,0,0.36)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+          },
+        }}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Add Bank Account</span>
+          <IconButton size="small" onClick={closeLocal} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Box component="form" id="add-bank-form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField label="Bank Name" name="name" value={form.name} onChange={handleChange} required fullWidth />
+            <TextField label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} required fullWidth />
+            <TextField select label="Area" name="area" value={form.area} onChange={handleChange} fullWidth>
+              <MenuItem value="main_office">Main Office</MenuItem>
+              <MenuItem value="tagoloan_parts">Tagoloan Parts</MenuItem>
+              <MenuItem value="midsayap_parts">Midsayap Parts</MenuItem>
+              <MenuItem value="valencia_parts">Valencia Parts</MenuItem>
+            </TextField>
+
+            {/* Opening balance is optional now (no required attribute) */}
+            <TextField
+              label="Opening Balance (₱) (optional)"
+              name="opening_balance"
+              type="number"
+              value={form.opening_balance}
+              onChange={handleChange}
+              inputProps={{ min: 0, step: "0.01" }}
+              fullWidth
+            />
+
+            {message && (
+              <Alert severity={message.type} sx={{ mt: 1 }}>
+                {message.text}
+              </Alert>
+            )}
+          </Box>
+        </DialogContent>
+
+        <DialogActions>
+          <Button type="button" onClick={closeLocal}>
+            Cancel
+          </Button>
+          <Button type="submit" form="add-bank-form" variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={18} /> : "Save Bank Account"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  // Standalone page rendering (original behavior)
   return (
-    <Paper sx={{ p: 3, m: 3 }}>
-      <Typography
-        variant="h5"
-        sx={{ mb: 2, fontWeight: "bold", color: "primary.main" }}
-      >
-        Add Bank Account
-      </Typography>
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <TextField
-          label="Bank Name"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          required
-        />
-        <TextField
-          label="Account Number"
-          name="account_number"
-          value={form.account_number}
-          onChange={handleChange}
-          required
-        />
-        <TextField
-          select
-          label="Area"
-          name="area"
-          value={form.area}
-          onChange={handleChange}
-        >
-          <MenuItem value="main_office">Main Office</MenuItem>
-          <MenuItem value="tagoloan_parts">Tagoloan Parts</MenuItem>
-          <MenuItem value="midsayap_parts">Midsayap Parts</MenuItem>
-          <MenuItem value="valencia_parts">Valencia Parts</MenuItem>
-        </TextField>
-        <TextField
-          label="Opening Balance (₱)"
-          name="opening_balance"
-          type="number"
-          value={form.opening_balance}
-          onChange={handleChange}
-          inputProps={{ min: 0, step: "0.01" }}
-          required
-        />
+    <Box sx={{ p: 3, m: 3 }}>
+      <Paper sx={{ p: 3 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField label="Bank Name" name="name" value={form.name} onChange={handleChange} required />
+          <TextField label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} required />
+          <TextField select label="Area" name="area" value={form.area} onChange={handleChange}>
+            <MenuItem value="main_office">Main Office</MenuItem>
+            <MenuItem value="tagoloan_parts">Tagoloan Parts</MenuItem>
+            <MenuItem value="midsayap_parts">Midsayap Parts</MenuItem>
+            <MenuItem value="valencia_parts">Valencia Parts</MenuItem>
+          </TextField>
 
-        {/* ✅ Save + Back buttons */}
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" } }}
-          >
-            Save Bank Account
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => navigate("/dashboard")}
-          >
-            Back to Dashboard
-          </Button>
+          <TextField
+            label="Opening Balance (₱) (optional)"
+            name="opening_balance"
+            type="number"
+            value={form.opening_balance}
+            onChange={handleChange}
+            inputProps={{ min: 0, step: "0.01" }}
+          />
+
+          <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+            <Button type="submit" variant="contained" sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" } }} disabled={loading}>
+              {loading ? <CircularProgress size={18} /> : "Save Bank Account"}
+            </Button>
+            <Button variant="outlined" color="primary" onClick={() => navigate("/dashboard")}>
+              Back to Dashboard
+            </Button>
+          </Box>
+
+          {message && (
+            <Alert severity={message.type} sx={{ mt: 2 }}>
+              {message.text}
+            </Alert>
+          )}
         </Box>
-      </Box>
-
-      {message && (
-        <Alert severity={message.type} sx={{ mt: 2 }}>
-          {message.text}
-        </Alert>
-      )}
-    </Paper>
+      </Paper>
+    </Box>
   );
 }

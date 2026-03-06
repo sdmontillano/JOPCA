@@ -1,4 +1,3 @@
-// src/components/PdcPage.jsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -16,7 +15,7 @@ import {
   TextField,
   Chip,
 } from "@mui/material";
-import api from "../services/tokenService";
+import pdcService from "../services/pdcService";   // <-- use the service
 import { useNavigate } from "react-router-dom";
 
 export default function PdcPage() {
@@ -28,61 +27,33 @@ export default function PdcPage() {
   const [toDate, setToDate] = useState("");
   const navigate = useNavigate();
 
-  /**
-   * Fetch transactions from the backend and filter client-side for PDCs.
-   * Uses the existing transactions-crud/ endpoint (present in your Django URLconf).
-   *
-   * If your backend supports server-side filtering (e.g., ?type=post_dated_check),
-   * you can replace the GET URL with that query to reduce payload.
-   */
-  const fetchPdc = async () => {
+  const fetchPdcs = async () => {
     setError(null);
     setLoading(true);
     try {
-      // Build query params for transactions endpoint if you want server-side filtering
-      // const params = "?type=post_dated_check"; // uncomment if backend supports it
-      const res = await api.get(`/transactions-crud/`); // use transactions-crud instead of /pdc/
-      // backend may return wrapper {results: [...]} or raw array
-      const raw = Array.isArray(res.data) ? res.data : res.data?.results ?? res.data?.data ?? [];
-      // Filter for post_dated_check type (adjust the type string if your backend uses a different value)
-      let pdcs = raw.filter((r) => {
-        const t = (r.type || r.txn_type || "").toString().toLowerCase();
-        return t === "post_dated_check" || t === "postdated" || t.includes("post");
-      });
-
-      // Optional: apply client-side date/status filters
-      if (filterStatus) {
-        pdcs = pdcs.filter((p) => (p.status || "").toString().toLowerCase() === filterStatus.toLowerCase());
-      }
-      if (fromDate) {
-        pdcs = pdcs.filter((p) => {
-          const m = p.maturity_date || p.matured_at || p.mat_date || p.maturity;
-          return m ? new Date(m) >= new Date(fromDate) : false;
-        });
-      }
-      if (toDate) {
-        pdcs = pdcs.filter((p) => {
-          const m = p.maturity_date || p.matured_at || p.mat_date || p.maturity;
-          return m ? new Date(m) <= new Date(toDate) : false;
-        });
-      }
-
-      // Normalize minimal fields used by the UI
-      const normalized = pdcs.map((p) => ({
-        id: p.id ?? p.pk ?? p.transaction_id,
-        client_name: p.client_name ?? p.customer ?? p.company ?? p.payee ?? p.customer_name,
-        check_number: p.check_number ?? p.check_no ?? p.check ?? p.reference,
-        bank: p.bank_account__name ?? p.bank_name ?? p.bank ?? null,
-        amount: p.amount ?? p.total ?? p.value ?? 0,
-        maturity_date: p.maturity_date ?? p.matured_at ?? p.mat_date ?? p.maturity ?? null,
-        status: (p.status || "").toString().toLowerCase() || "outstanding",
-        deposit_bank_id: p.deposit_bank_id ?? p.bank_account_id ?? null,
-        raw: p,
+      const res = await pdcService.listPdcs();
+      const raw = Array.isArray(res.data) ? res.data : res.data?.results ?? [];
+      const normalized = raw.map((p) => ({
+        id: p.id,
+        client_name: p.customer ?? "-",
+        check_number: p.check_number ?? "-",
+        bank: p.deposit_bank?.name ?? "-",
+        deposit_bank_id: p.deposit_bank?.id ?? null,
+        amount: p.amount ?? 0,
+        issue_date: p.issue_date ?? null,
+        maturity_date: p.maturity_date ?? null,
+        status: (p.status || "outstanding").toLowerCase(),
       }));
 
-      setPdcList(normalized);
+      // apply filters
+      let filtered = normalized;
+      if (filterStatus) filtered = filtered.filter((x) => x.status === filterStatus.toLowerCase());
+      if (fromDate) filtered = filtered.filter((x) => (x.maturity_date ? new Date(x.maturity_date) >= new Date(fromDate) : false));
+      if (toDate) filtered = filtered.filter((x) => (x.maturity_date ? new Date(x.maturity_date) <= new Date(toDate) : false));
+
+      setPdcList(filtered);
     } catch (err) {
-      console.error("Error fetching PDCs (via transactions-crud)", err);
+      console.error("Error fetching PDCs", err);
       setError(err?.response?.data || err?.message || "Failed to load PDCs");
     } finally {
       setLoading(false);
@@ -90,12 +61,32 @@ export default function PdcPage() {
   };
 
   useEffect(() => {
-    fetchPdc();
+    fetchPdcs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatPeso = (value) =>
     `₱${Number(value ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const handleMarkMatured = async (id) => {
+    try {
+      await pdcService.markPdcMatured(id);
+      fetchPdcs();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark matured");
+    }
+  };
+
+  const handleDeposit = async (id, bankId) => {
+    try {
+      await pdcService.depositPdc(id, bankId, new Date().toISOString().slice(0, 10), "WEB-DEPOSIT");
+      fetchPdcs();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to deposit PDC");
+    }
+  };
 
   if (loading)
     return (
@@ -118,31 +109,11 @@ export default function PdcPage() {
         </Box>
 
         <Stack direction="row" spacing={1} alignItems="center">
-          <TextField
-            size="small"
-            label="From (YYYY-MM-DD)"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
-          <TextField
-            size="small"
-            label="To (YYYY-MM-DD)"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-          />
-          <TextField
-            size="small"
-            label="Status"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            placeholder="outstanding|matured|returned"
-          />
-          <Button variant="contained" onClick={fetchPdc}>
-            Filter
-          </Button>
-          <Button variant="outlined" onClick={() => navigate(-1)}>
-            Back
-          </Button>
+          <TextField size="small" label="From (YYYY-MM-DD)" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          <TextField size="small" label="To (YYYY-MM-DD)" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          <TextField size="small" label="Status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} placeholder="outstanding|matured|returned" />
+          <Button variant="contained" onClick={fetchPdcs}>Filter</Button>
+          <Button variant="outlined" onClick={() => navigate(-1)}>Back</Button>
         </Stack>
       </Stack>
 
@@ -164,68 +135,32 @@ export default function PdcPage() {
             {pdcList.length > 0 ? (
               pdcList.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell>{p.client_name ?? "-"}</TableCell>
-                  <TableCell>{p.check_number ?? "-"}</TableCell>
-                  <TableCell>{p.bank ?? "-"}</TableCell>
+                  <TableCell>{p.client_name}</TableCell>
+                  <TableCell>{p.check_number}</TableCell>
+                  <TableCell>{p.bank}</TableCell>
                   <TableCell align="right">{formatPeso(p.amount)}</TableCell>
-                  <TableCell>{p.issue_date ?? p.issued_at ?? "-"}</TableCell>
+                  <TableCell>{p.issue_date ?? "-"}</TableCell>
                   <TableCell>{p.maturity_date ?? "-"}</TableCell>
                   <TableCell>
                     <Chip
-                      label={p.status ?? "unknown"}
+                      label={p.status}
                       size="small"
-                      color={
-                        p.status === "outstanding" ? "warning" : p.status === "matured" ? "success" : "default"
-                      }
+                      color={p.status === "outstanding" ? "warning" : p.status === "matured" ? "success" : "default"}
                     />
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={1}>
                       {p.status === "outstanding" && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={async () => {
-                            try {
-                              await api.patch(`/transactions-crud/${p.id}/`, { status: "matured" });
-                              fetchPdc();
-                            } catch (err) {
-                              console.error(err);
-                              alert("Failed to update PDC status");
-                            }
-                          }}
-                        >
+                        <Button size="small" variant="contained" onClick={() => handleMarkMatured(p.id)}>
                           Mark Matured
                         </Button>
                       )}
-
                       {p.status === "matured" && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={async () => {
-                            try {
-                              // If your backend exposes a deposit endpoint for transactions, use it.
-                              // Otherwise, you may need to create a deposit transaction via transactions-crud.
-                              await api.post(`/transactions-crud/${p.id}/deposit/`, { bank_account_id: p.deposit_bank_id ?? null });
-                              fetchPdc();
-                            } catch (err) {
-                              console.error(err);
-                              alert("Failed to deposit PDC");
-                            }
-                          }}
-                        >
+                        <Button size="small" variant="contained" onClick={() => handleDeposit(p.id, p.deposit_bank_id)}>
                           Deposit
                         </Button>
                       )}
-
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          navigate(`/pdc/${p.id}`);
-                        }}
-                      >
+                      <Button size="small" variant="outlined" onClick={() => navigate(`/pdc/${p.id}`)}>
                         View
                       </Button>
                     </Stack>
@@ -234,9 +169,7 @@ export default function PdcPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} align="center">
-                  No PDC records
-                </TableCell>
+                <TableCell colSpan={8} align="center">No PDC records</TableCell>
               </TableRow>
             )}
           </TableBody>

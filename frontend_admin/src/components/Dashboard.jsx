@@ -36,10 +36,17 @@ import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
 
+// Modal-capable components (must exist and accept open/onClose/onCreated)
+import AddBankAccount from "./AddBankAccount";
+import AddTransaction from "./AddTransaction";
+import PdcCreateModal from "./PdcCreateModal";
+
 /* ---------------------------
    Sidebar (embedded)
+   - Minimal changes only: navy blue background and handler support
+   - Keep layout and behavior identical otherwise
    --------------------------- */
-function Sidebar({ sx = {} }) {
+function Sidebar({ sx = {}, onOpenAddBank = null, onOpenAddPdc = null, onOpenAddTransaction = null }) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -51,6 +58,7 @@ function Sidebar({ sx = {} }) {
     { key: "transactions", label: "Transactions", icon: <ReceiptLongIcon />, to: "/transactions" },
     { key: "monthly", label: "Monthly Report", icon: <BarChartIcon />, to: "/monthly-report" },
     { key: "pdc", label: "PDC Management", icon: <ReceiptLongIcon />, to: "/pdc" },
+    { key: "add-pdc", label: "Add PDC", icon: <AddCircleOutlineIcon />, to: "/pdc-create" },
     { key: "debug", label: "Debug", icon: <InfoOutlinedIcon />, to: "/debug" },
   ];
 
@@ -65,8 +73,9 @@ function Sidebar({ sx = {} }) {
       sx={{
         width: collapsed ? { xs: 64, sm: 72 } : { xs: 72, sm: 200 },
         minHeight: "100vh",
-        bgcolor: "background.paper",
-        borderRight: "1px solid rgba(0,0,0,0.06)",
+        bgcolor: "#0b3d91", // navy blue
+        color: "common.white",
+        borderRight: "1px solid rgba(255,255,255,0.06)",
         display: "flex",
         flexDirection: "column",
         p: 1,
@@ -76,48 +85,52 @@ function Sidebar({ sx = {} }) {
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 1 }}>
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 700, fontSize: 16, display: collapsed ? "none" : "block" }}
-        >
+        <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 16, display: collapsed ? "none" : "block", color: "common.white" }}>
           Banking Admin
         </Typography>
-        <IconButton
-          size="small"
-          onClick={() => setCollapsed((s) => !s)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
+        <IconButton size="small" onClick={() => setCollapsed((s) => !s)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} sx={{ color: "common.white" }}>
           <MenuIcon />
         </IconButton>
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.06)" }} />
 
       <List sx={{ flexGrow: 1, px: 0 }}>
         {navItems.map((item) => (
-          <Tooltip key={item.key} title={collapsed ? item.label : ""} placement="right">
-            <ListItemButton
-              onClick={() => navigate(item.to)}
-              sx={{
-                py: 1,
-                px: 1.25,
-                borderRadius: 1,
-                justifyContent: collapsed ? "center" : "flex-start",
-                "&:hover": { bgcolor: "action.hover" },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 1.5, justifyContent: "center" }}>
-                {item.icon}
-              </ListItemIcon>
-              {!collapsed && (
-                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 700 }} />
-              )}
-            </ListItemButton>
-          </Tooltip>
+          <ListItemButton
+            key={item.key}
+            onClick={() => {
+              // call modal handlers when provided for add actions
+              if (item.key === "add-bank" && typeof onOpenAddBank === "function") {
+                onOpenAddBank();
+                return;
+              }
+              if (item.key === "add-pdc" && typeof onOpenAddPdc === "function") {
+                onOpenAddPdc();
+                return;
+              }
+              if (item.key === "add-tx" && typeof onOpenAddTransaction === "function") {
+                onOpenAddTransaction();
+                return;
+              }
+              navigate(item.to);
+            }}
+            sx={{
+              py: 1,
+              px: 1.25,
+              borderRadius: 1,
+              justifyContent: collapsed ? "center" : "flex-start",
+              "&:hover": { bgcolor: "rgba(255,255,255,0.04)" },
+              color: "common.white",
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 1.5, justifyContent: "center", color: "common.white" }}>{item.icon}</ListItemIcon>
+            {!collapsed && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 700, color: "common.white" }} />}
+          </ListItemButton>
         ))}
       </List>
 
-      <Divider />
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.06)" }} />
 
       <Box sx={{ px: 1, pb: 1 }}>
         <Button
@@ -125,13 +138,16 @@ function Sidebar({ sx = {} }) {
           color="error"
           fullWidth={!collapsed}
           onClick={handleLogout}
-          startIcon={!collapsed ? <LogoutIcon /> : null}
+          startIcon={!collapsed ? <LogoutIcon sx={{ color: "common.white" }} /> : null}
           sx={{
             borderRadius: 1.5,
             py: collapsed ? 1 : 0.75,
             minWidth: 0,
             justifyContent: collapsed ? "center" : "flex-start",
             fontWeight: 700,
+            background: "linear-gradient(90deg,#ef4444,#dc2626)",
+            color: "common.white",
+            "&:hover": { opacity: 0.95 },
           }}
         >
           {!collapsed ? "Logout" : ""}
@@ -153,18 +169,20 @@ export default function Dashboard() {
   const [manualMonth, setManualMonth] = useState("");
   const navigate = useNavigate();
 
+  // modal states
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [pdcModalOpen, setPdcModalOpen] = useState(false);
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+
   const fetchAll = async (monthOverride = null) => {
     setError(null);
     setRefreshing(true);
     try {
       const dailyRes = await api.get("/summary/detailed-daily/");
       const today = new Date();
-      const monthStr =
-        monthOverride ||
-        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      const monthStr = monthOverride || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
       const monthlyRes = await api.get(`/summary/detailed-monthly/?month=${monthStr}`);
 
-      // map responses using the tailored mappers
       const mappedDaily = mapDailyResponse(dailyRes.data ?? dailyRes);
       const mappedMonthly = mapMonthlyResponse(monthlyRes.data ?? monthlyRes);
 
@@ -172,11 +190,7 @@ export default function Dashboard() {
       setMonthlyReport(mappedMonthly);
     } catch (err) {
       console.error("Error fetching dashboard data", err);
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data ||
-        err?.message ||
-        "Failed to load dashboard data";
+      const msg = err?.response?.data?.detail || err?.response?.data || err?.message || "Failed to load dashboard data";
       setError(String(msg));
     } finally {
       setLoading(false);
@@ -199,62 +213,62 @@ export default function Dashboard() {
   const cashOnHand = Array.isArray(dailyReport?.cash_on_hand) ? dailyReport.cash_on_hand : [];
 
   // Cash in bank should show bank-grouped transaction rows (deposits/collections/disbursements)
-  const cashInBank = Array.isArray(dailyReport?.cash_in_bank) && dailyReport.cash_in_bank.length > 0
-    ? dailyReport.cash_in_bank
-    : // fallback: group transactions by bank if mapper didn't produce cash_in_bank
-      (dailyReport?.transactions || []).reduce((acc, t) => {
-        const bank = t.particulars || "Unknown Bank";
-        let row = acc.find((r) => r.particulars === bank);
-        if (!row) {
-          row = {
-            particulars: bank,
-            beginning: 0,
-            collections: 0,
-            local_deposits: 0,
-            disbursements: 0,
-            fund_transfers: 0,
-            returned_checks: 0,
-            adjustments: 0,
-            ending: 0,
-            raw_rows: [],
-            account_number: t.account_number || null,
-          };
-          acc.push(row);
-        }
-        const total = Number(t.total ?? t.amount ?? 0) || 0;
-        const type = (t.type || "").toString().toLowerCase();
-        if (type.includes("deposit")) row.local_deposits += total;
-        else if (type.includes("collect")) row.collections += total;
-        else if (type.includes("disburse")) row.disbursements += total;
-        else row.collections += total;
-        row.raw_rows.push(t.raw || t);
-        row.ending =
-          (row.beginning || 0) +
-          (row.collections || 0) +
-          (row.local_deposits || 0) -
-          (row.disbursements || 0) +
-          (row.fund_transfers || 0) -
-          (row.returned_checks || 0) +
-          (row.adjustments || 0);
-        // keep account number if available
-        if (!row.account_number && t.account_number) row.account_number = t.account_number;
-        return acc;
-      }, []);
+  const cashInBank =
+    Array.isArray(dailyReport?.cash_in_bank) && dailyReport.cash_in_bank.length > 0
+      ? dailyReport.cash_in_bank
+      : (dailyReport?.transactions || []).reduce((acc, t) => {
+          const bank = t.particulars || "Unknown Bank";
+          let row = acc.find((r) => r.particulars === bank);
+          if (!row) {
+            row = {
+              particulars: bank,
+              beginning: 0,
+              collections: 0,
+              local_deposits: 0,
+              disbursements: 0,
+              fund_transfers: 0,
+              returned_checks: 0,
+              adjustments: 0,
+              ending: 0,
+              raw_rows: [],
+              account_number: t.account_number || null,
+            };
+            acc.push(row);
+          }
+          const total = Number(t.total ?? t.amount ?? 0) || 0;
+          const type = (t.type || "").toString().toLowerCase();
+          if (type.includes("deposit")) row.local_deposits += total;
+          else if (type.includes("collect")) row.collections += total;
+          else if (type.includes("disburse")) row.disbursements += total;
+          else row.collections += total;
+          row.raw_rows.push(t.raw || t);
+          row.ending =
+            (row.beginning || 0) +
+            (row.collections || 0) +
+            (row.local_deposits || 0) -
+            (row.disbursements || 0) +
+            (row.fund_transfers || 0) -
+            (row.returned_checks || 0) +
+            (row.adjustments || 0);
+          if (!row.account_number && t.account_number) row.account_number = t.account_number;
+          return acc;
+        }, []);
 
   // Banks list: prefer accounts array (name + account_number), otherwise derive from cashInBank rows
-  const banksList = Array.isArray(dailyReport?.accounts) && dailyReport.accounts.length > 0
-    ? dailyReport.accounts.map((a) => ({
-        name: a.name || a.bank_name || a.particulars || "Unknown",
-        account_number: a.account_number || a.account_no || a.number || null,
-        balance: a.balance ?? a.amount ?? 0,
-        raw: a,
-      }))
-    : cashInBank.map((b) => ({
-        name: b.particulars,
-        account_number: b.account_number || b.raw_rows?.[0]?.bank_account__account_number || null,
-        balance: b.ending ?? 0,
-        raw: b,
-      }));
+  const banksList =
+    Array.isArray(dailyReport?.accounts) && dailyReport.accounts.length > 0
+      ? dailyReport.accounts.map((a) => ({
+          name: a.name || a.bank_name || a.particulars || "Unknown",
+          account_number: a.account_number || a.account_no || a.number || null,
+          balance: a.balance ?? a.amount ?? 0,
+          raw: a,
+        }))
+      : cashInBank.map((b) => ({
+          name: b.particulars,
+          account_number: b.account_number || b.raw_rows?.[0]?.bank_account__account_number || null,
+          balance: b.ending ?? 0,
+          raw: b,
+        }));
 
   if (loading)
     return (
@@ -279,7 +293,7 @@ export default function Dashboard() {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#f6f8fa" }}>
-      <Sidebar />
+      <Sidebar onOpenAddBank={() => setBankModalOpen(true)} onOpenAddPdc={() => setPdcModalOpen(true)} onOpenAddTransaction={() => setTransactionModalOpen(true)} />
 
       <Box sx={{ flexGrow: 1, p: { xs: 2, md: 4 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
@@ -294,22 +308,12 @@ export default function Dashboard() {
 
           <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="Refresh data from server">
-              <IconButton
-                color="primary"
-                onClick={() => fetchAll(manualMonth || null)}
-                disabled={refreshing}
-              >
+              <IconButton color="primary" onClick={() => fetchAll(manualMonth || null)} disabled={refreshing}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
 
-            <TextField
-              size="small"
-              label="Month (YYYY-MM)"
-              value={manualMonth}
-              onChange={(e) => setManualMonth(e.target.value)}
-              placeholder="2026-03"
-            />
+            <TextField size="small" label="Month (YYYY-MM)" value={manualMonth} onChange={(e) => setManualMonth(e.target.value)} placeholder="2026-03" />
 
             <Button variant="outlined" onClick={() => navigate("/pdc")}>
               Open PDC Management
@@ -471,6 +475,10 @@ export default function Dashboard() {
               <Button variant="contained" onClick={() => navigate("/pdc")}>
                 View Details
               </Button>
+
+              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => setPdcModalOpen(true)}>
+                Add PDC
+              </Button>
             </Stack>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -542,6 +550,41 @@ export default function Dashboard() {
           </Table>
         </Paper>
       </Box>
+
+      {/* Floating modals (render only if components exist) */}
+      <AddBankAccount
+        open={bankModalOpen}
+        onClose={() => setBankModalOpen(false)}
+        onCreated={(newBank) => {
+          setDailyReport((prev) => {
+            if (!prev) return prev;
+            const accounts = Array.isArray(prev.accounts) ? [newBank, ...prev.accounts] : [newBank];
+            return { ...prev, accounts };
+          });
+        }}
+      />
+
+      <PdcCreateModal
+        open={pdcModalOpen}
+        onClose={() => setPdcModalOpen(false)}
+        onCreated={(newPdc) => {
+          setDailyReport((prev) => {
+            if (!prev) return prev;
+            const thisMonth = Number(prev.pdc_summary?.this_month ?? 0) + Number(newPdc.amount ?? 0);
+            const total = Number(prev.pdc_summary?.total ?? 0) + Number(newPdc.amount ?? 0);
+            return { ...prev, pdc_summary: { ...(prev.pdc_summary || {}), this_month: thisMonth, total } };
+          });
+        }}
+      />
+
+      <AddTransaction
+        open={transactionModalOpen}
+        onClose={() => setTransactionModalOpen(false)}
+        onCreated={(txn) => {
+          // conservative approach: refetch summary to keep data consistent
+          fetchAll(manualMonth || null);
+        }}
+      />
     </Box>
   );
 }

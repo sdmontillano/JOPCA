@@ -94,15 +94,16 @@ class MonthlyReportSerializer(serializers.ModelSerializer):
 class PdcSerializer(serializers.ModelSerializer):
     deposit_bank = BankAccountSerializer(read_only=True)
     deposit_bank_id = serializers.PrimaryKeyRelatedField(
-        queryset=BankAccount.objects.all(), source="deposit_bank", write_only=True, required=False, allow_null=True
+        queryset=BankAccount.objects.all(),
+        source="deposit_bank",
+        write_only=True,
+        required=False,
+        allow_null=True
     )
 
-    # Accept frontend variants while returning friendly aliases
+    # Canonical aliases (map to model fields)
     customer = serializers.CharField(source="customer_name", required=False, allow_null=True)
-    customer_name = serializers.CharField(source="customer_name", write_only=True, required=False, allow_null=True)
-
     check_number = serializers.CharField(source="check_no", required=False, allow_null=True)
-    check_no = serializers.CharField(source="check_no", write_only=True, required=False, allow_null=True)
 
     maturity_date = serializers.DateField(required=False, allow_null=True)
     amount = serializers.DecimalField(max_digits=20, decimal_places=2)
@@ -113,8 +114,19 @@ class PdcSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pdc
         fields = [
-            "id", "customer", "check_number", "maturity_date", "amount", "status",
-            "deposit_bank", "deposit_bank_id", "date_deposited", "returned_date",
-            "returned_reason", "created_by", "created_at", "updated_at",
+            "id",
+            "customer",          # maps to customer_name in model
+            "check_number",      # maps to check_no in model
+            "maturity_date",
+            "amount",
+            "status",
+            "deposit_bank",
+            "deposit_bank_id",
+            "date_deposited",
+            "returned_date",
+            "returned_reason",
+            "created_by",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "deposit_bank", "created_by", "created_at", "updated_at"]
