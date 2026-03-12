@@ -43,8 +43,6 @@ import PdcCreateModal from "./PdcCreateModal";
 
 /* ---------------------------
    Sidebar (embedded)
-   - Minimal changes only: navy blue background and handler support
-   - Keep layout and behavior identical otherwise
    --------------------------- */
 function Sidebar({ sx = {}, onOpenAddBank = null, onOpenAddPdc = null, onOpenAddTransaction = null }) {
   const navigate = useNavigate();
@@ -73,7 +71,7 @@ function Sidebar({ sx = {}, onOpenAddBank = null, onOpenAddPdc = null, onOpenAdd
       sx={{
         width: collapsed ? { xs: 64, sm: 72 } : { xs: 72, sm: 200 },
         minHeight: "100vh",
-        bgcolor: "#0b3d91", // navy blue
+        bgcolor: "#0b3d91",
         color: "common.white",
         borderRight: "1px solid rgba(255,255,255,0.06)",
         display: "flex",
@@ -100,7 +98,6 @@ function Sidebar({ sx = {}, onOpenAddBank = null, onOpenAddPdc = null, onOpenAdd
           <ListItemButton
             key={item.key}
             onClick={() => {
-              // call modal handlers when provided for add actions
               if (item.key === "add-bank" && typeof onOpenAddBank === "function") {
                 onOpenAddBank();
                 return;
@@ -161,8 +158,9 @@ function Sidebar({ sx = {}, onOpenAddBank = null, onOpenAddPdc = null, onOpenAdd
    Dashboard
    --------------------------- */
 export default function Dashboard() {
-  const [dailyReport, setDailyReport] = useState(null);
-  const [monthlyReport, setMonthlyReport] = useState(null);
+  // initialize as empty objects so property access and fallbacks are safe
+  const [dailyReport, setDailyReport] = useState({});
+  const [monthlyReport, setMonthlyReport] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -186,8 +184,8 @@ export default function Dashboard() {
       const mappedDaily = mapDailyResponse(dailyRes.data ?? dailyRes);
       const mappedMonthly = mapMonthlyResponse(monthlyRes.data ?? monthlyRes);
 
-      setDailyReport(mappedDaily);
-      setMonthlyReport(mappedMonthly);
+      setDailyReport(mappedDaily || {});
+      setMonthlyReport(mappedMonthly || {});
     } catch (err) {
       console.error("Error fetching dashboard data", err);
       const msg = err?.response?.data?.detail || err?.response?.data || err?.message || "Failed to load dashboard data";
@@ -212,63 +210,129 @@ export default function Dashboard() {
   // Cash on hand should be PCF rows (PCF Office / PCF Quarry)
   const cashOnHand = Array.isArray(dailyReport?.cash_on_hand) ? dailyReport.cash_on_hand : [];
 
-  // Cash in bank should show bank-grouped transaction rows (deposits/collections/disbursements)
-  const cashInBank =
+  // Helper: build derived bank rows from transactions
+  const deriveBankRowsFromTxns = (txns = []) =>
+    (Array.isArray(txns) ? txns : []).reduce((acc, t) => {
+      const bank = t.particulars || "Unknown Bank";
+      let row = acc.find((r) => r.particulars === bank);
+      if (!row) {
+        row = {
+          particulars: bank,
+          beginning: 0,
+          collections: 0,
+          local_deposits: 0,
+          disbursements: 0,
+          fund_transfers: 0,
+          returned_checks: 0,
+          adjustments: 0,
+          ending: 0,
+          raw_rows: [],
+          account_number: t.account_number || null,
+        };
+        acc.push(row);
+      }
+      const total = Number(t.total ?? t.amount ?? 0) || 0;
+      const type = (t.type || "").toString().toLowerCase();
+      if (type.includes("deposit")) row.local_deposits += total;
+      else if (type.includes("collect")) row.collections += total;
+      else if (type.includes("disburse")) row.disbursements += total;
+      else row.collections += total;
+      row.raw_rows.push(t.raw || t);
+      row.ending =
+        (row.beginning || 0) +
+        (row.collections || 0) +
+        (row.local_deposits || 0) -
+        (row.disbursements || 0) +
+        (row.fund_transfers || 0) -
+        (row.returned_checks || 0) +
+        (row.adjustments || 0);
+      if (!row.account_number && t.account_number) row.account_number = t.account_number;
+      return acc;
+    }, []);
+
+  // Build initial derived rows: prefer explicit cash_in_bank, otherwise derive from daily txns, otherwise monthly txns
+  const initialDerivedCashInBank =
     Array.isArray(dailyReport?.cash_in_bank) && dailyReport.cash_in_bank.length > 0
       ? dailyReport.cash_in_bank
-      : (dailyReport?.transactions || []).reduce((acc, t) => {
-          const bank = t.particulars || "Unknown Bank";
-          let row = acc.find((r) => r.particulars === bank);
-          if (!row) {
-            row = {
-              particulars: bank,
-              beginning: 0,
-              collections: 0,
-              local_deposits: 0,
-              disbursements: 0,
-              fund_transfers: 0,
-              returned_checks: 0,
-              adjustments: 0,
-              ending: 0,
-              raw_rows: [],
-              account_number: t.account_number || null,
-            };
-            acc.push(row);
-          }
-          const total = Number(t.total ?? t.amount ?? 0) || 0;
-          const type = (t.type || "").toString().toLowerCase();
-          if (type.includes("deposit")) row.local_deposits += total;
-          else if (type.includes("collect")) row.collections += total;
-          else if (type.includes("disburse")) row.disbursements += total;
-          else row.collections += total;
-          row.raw_rows.push(t.raw || t);
-          row.ending =
-            (row.beginning || 0) +
-            (row.collections || 0) +
-            (row.local_deposits || 0) -
-            (row.disbursements || 0) +
-            (row.fund_transfers || 0) -
-            (row.returned_checks || 0) +
-            (row.adjustments || 0);
-          if (!row.account_number && t.account_number) row.account_number = t.account_number;
-          return acc;
-        }, []);
+      : Array.isArray(dailyReport?.transactions) && dailyReport.transactions.length > 0
+      ? deriveBankRowsFromTxns(dailyReport.transactions)
+      : Array.isArray(monthlyReport?.transactions) && monthlyReport.transactions.length > 0
+      ? deriveBankRowsFromTxns(monthlyReport.transactions)
+      : [];
 
-  // Banks list: prefer accounts array (name + account_number), otherwise derive from cashInBank rows
-  const banksList =
-    Array.isArray(dailyReport?.accounts) && dailyReport.accounts.length > 0
-      ? dailyReport.accounts.map((a) => ({
-          name: a.name || a.bank_name || a.particulars || "Unknown",
-          account_number: a.account_number || a.account_no || a.number || null,
-          balance: a.balance ?? a.amount ?? 0,
-          raw: a,
-        }))
-      : cashInBank.map((b) => ({
-          name: b.particulars,
-          account_number: b.account_number || b.raw_rows?.[0]?.bank_account__account_number || null,
-          balance: b.ending ?? 0,
-          raw: b,
-        }));
+  // Merge accounts (from daily or monthly accounts arrays) into cashInBank so banks with no transactions still appear
+  const mergeAccountsIntoCashInBank = (derivedRows, dailyAccounts, monthlyAccounts) => {
+    const rows = Array.isArray(derivedRows) ? [...derivedRows] : [];
+    const seen = new Map(rows.map((r) => [String((r.particulars || "").toLowerCase()) + "|" + String(r.account_number || ""), r]));
+
+    const addAccount = (a) => {
+      if (!a) return;
+      const name = a.name || a.bank_name || a.particulars || "Unknown";
+      const acct = a.account_number || a.account_no || a.number || a.account_no || null;
+      const key = String((name || "").toLowerCase()) + "|" + String(acct || "");
+      if (seen.has(key)) {
+        // if existing row has no account_number but account provides one, set it
+        const existing = seen.get(key);
+        if (!existing.account_number && acct) existing.account_number = acct;
+        // if existing ending is 0 but account has balance, prefer account balance in banks list only
+        return;
+      }
+      const newRow = {
+        particulars: name,
+        account_number: acct,
+        beginning: 0,
+        collections: 0,
+        local_deposits: 0,
+        disbursements: 0,
+        fund_transfers: 0,
+        returned_checks: 0,
+        adjustments: 0,
+        ending: Number(a.balance ?? a.amount ?? 0) || 0,
+        raw_rows: [],
+        raw_account: a,
+      };
+      rows.push(newRow);
+      seen.set(key, newRow);
+    };
+
+    if (Array.isArray(dailyAccounts)) dailyAccounts.forEach(addAccount);
+    if (Array.isArray(monthlyAccounts)) monthlyAccounts.forEach(addAccount);
+
+    return rows;
+  };
+
+  const cashInBank = mergeAccountsIntoCashInBank(
+    initialDerivedCashInBank,
+    Array.isArray(dailyReport?.accounts) ? dailyReport.accounts : [],
+    Array.isArray(monthlyReport?.accounts) ? monthlyReport.accounts : []
+  );
+
+  // Build banksList from daily accounts, then monthly accounts, then derived bank rows.
+  const banksList = (() => {
+    if (Array.isArray(dailyReport?.accounts) && dailyReport.accounts.length > 0) {
+      return dailyReport.accounts.map((a) => ({
+        name: a.name || a.bank_name || a.particulars || "Unknown",
+        account_number: a.account_number || a.account_no || a.number || null,
+        balance: a.balance ?? a.amount ?? 0,
+        raw: a,
+      }));
+    }
+    if (Array.isArray(monthlyReport?.accounts) && monthlyReport.accounts.length > 0) {
+      return monthlyReport.accounts.map((a) => ({
+        name: a.name || a.bank_name || a.particulars || "Unknown",
+        account_number: a.account_number || a.account_no || a.number || null,
+        balance: a.balance ?? a.amount ?? 0,
+        raw: a,
+      }));
+    }
+    // fallback to derived bank rows from cashInBank (could be from daily or monthly txns)
+    return (cashInBank || []).map((b) => ({
+      name: b.particulars || "Unknown",
+      account_number: b.account_number || b.raw_rows?.[0]?.bank_account__account_number || null,
+      balance: b.ending ?? 0,
+      raw: b.raw_account || b,
+    }));
+  })();
 
   if (loading)
     return (
