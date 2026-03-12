@@ -2,9 +2,14 @@
 from django.utils.timezone import now
 from django.db.models import Sum
 from datetime import datetime
+from datetime import date as _date
+from decimal import Decimal
+
 from rest_framework import viewsets, generics, permissions, status
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -18,6 +23,7 @@ from .serializers import (
     PdcSerializer,
 )
 from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
+from .utils.summary import compute_bank_daily_summary
 
 
 # -----------------------------
@@ -174,6 +180,40 @@ def detailed_monthly_report(request):
         "line_items": list(grouped),
         "accounts": list(accounts),
         "grand_total": ending_balance
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def detailed_daily_summary(request):
+    """
+    GET /summary/detailed-daily/?date=YYYY-MM-DD
+    Returns cash_in_bank rows and accounts list for Banks table.
+    """
+    date_str = request.query_params.get("date")
+    if date_str:
+        try:
+            target_date = _date.fromisoformat(date_str)
+        except ValueError:
+            return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+    else:
+        target_date = now().date()
+
+    bank_rows = compute_bank_daily_summary(target_date)
+
+    accounts = []
+    for b in BankAccount.objects.all().order_by("name", "account_number"):
+        accounts.append({
+            "id": b.id,
+            "name": b.name or "",
+            "account_number": b.account_number,
+            "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
+        })
+
+    return Response({
+        "date": target_date.isoformat(),
+        "cash_in_bank": bank_rows,
+        "accounts": accounts,
     })
 
 
