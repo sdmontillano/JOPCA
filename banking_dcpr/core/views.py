@@ -3,6 +3,7 @@ from django.utils.timezone import now
 from django.db.models import Sum
 from datetime import datetime
 from datetime import date as _date
+from datetime import timedelta
 from decimal import Decimal
 
 from rest_framework import viewsets, generics, permissions, status
@@ -215,6 +216,51 @@ def detailed_daily_summary(request):
         "cash_in_bank": bank_rows,
         "accounts": accounts,
     })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def detailed_daily_summary_range(request):
+    """
+    GET /summary/detailed-daily-range/?start=YYYY-MM-DD&end=YYYY-MM-DD
+    Returns a mapping of date -> { cash_in_bank: [...], accounts: [...] } for each date in the inclusive range.
+    """
+    start_str = request.query_params.get("start")
+    end_str = request.query_params.get("end")
+
+    if not start_str or not end_str:
+        return Response({"detail": "start and end parameters required (YYYY-MM-DD)."}, status=400)
+
+    try:
+        start_date = _date.fromisoformat(start_str)
+        end_date = _date.fromisoformat(end_str)
+    except ValueError:
+        return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+    if end_date < start_date:
+        return Response({"detail": "end must be >= start"}, status=400)
+
+    result = {}
+    cur = start_date
+    while cur <= end_date:
+        bank_rows = compute_bank_daily_summary(cur)
+
+        accounts = []
+        for b in BankAccount.objects.all().order_by("name", "account_number"):
+            accounts.append({
+                "id": b.id,
+                "name": b.name or "",
+                "account_number": b.account_number,
+                "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
+            })
+
+        result[cur.isoformat()] = {
+            "cash_in_bank": bank_rows,
+            "accounts": accounts,
+        }
+        cur = cur + timedelta(days=1)
+
+    return Response(result)
 
 
 # -----------------------------
