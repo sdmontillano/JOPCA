@@ -1,8 +1,27 @@
 # core/serializers.py
-from rest_framework import serializers
 from decimal import Decimal
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Sum
-from .models import MonthlyReport, DailyCashPosition, Transaction, BankAccount, Pdc
+from rest_framework import serializers
+
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
+
+
+# canonical inflow/outflow type lists (keep in sync with models if you change types)
+INFLOW_TYPE_LIST = [
+    "deposit", "deposits", "collections", "collection",
+    "local_deposits", "local_deposit",
+    "fund_transfer", "fund_transfers",
+    "interbank_transfer", "interbank_transfers",
+    "transfer",
+]
+OUTFLOW_TYPE_LIST = [
+    "disbursement", "disbursements",
+    "bank_charges", "bank_charge",
+    "returned_check", "returned_checks",
+    "adjustments",
+]
+
 
 class BankAccountSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,84 +30,162 @@ class BankAccountSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+    # nested read-only representation
     bank_account = BankAccountSerializer(read_only=True)
+
+    # write-only PK field that maps to the bank_account relation
     bank_account_id = serializers.PrimaryKeyRelatedField(
         queryset=BankAccount.objects.all(), source="bank_account", write_only=True
     )
+
     created_by_username = serializers.ReadOnlyField(source="created_by.username")
 
     class Meta:
         model = Transaction
         fields = [
-            "id", "bank_account", "bank_account_id", "date", "type", "amount",
-            "description", "created_by", "created_by_username", "created_at", "updated_at",
+            "id",
+            "bank_account",
+            "bank_account_id",
+            "date",
+            "type",
+            "amount",
+            "description",
+            "created_by",
+            "created_by_username",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["created_by", "created_by_username", "created_at", "updated_at"]
 
     def validate(self, data):
+        """
+        Validate:
+         - immediate bank balance (prevent negative bank.balance)
+         - daily ending for the selected bank on the given date (prevent negative per-bank daily ending)
+        """
+        # Resolve values from incoming data or existing instance (for updates)
         bank = data.get("bank_account") or getattr(self.instance, "bank_account", None)
         amount = data.get("amount") if "amount" in data else getattr(self.instance, "amount", None)
         tx_type = (data.get("type") or getattr(self.instance, "type", "")).lower()
         date = data.get("date") if "date" in data else getattr(self.instance, "date", None)
 
+        # If bank or amount missing, skip further checks (field validators will catch missing required fields)
         if bank is None or amount is None:
             return data
 
+        # Normalize amount to Decimal
         amount = Decimal(amount)
+
+        # 1) Immediate bank balance check (current stored balance)
         current_balance = Decimal(bank.balance or 0)
 
-        if tx_type in ["disbursement", "returned_check", "bank_charges", "adjustments"]:
+        if tx_type in OUTFLOW_TYPE_LIST:
             resulting_balance = current_balance - amount
         else:
             resulting_balance = current_balance + amount
 
         if resulting_balance < 0:
-            raise serializers.ValidationError("Insufficient funds: this transaction would make the bank balance negative.")
+            raise serializers.ValidationError({"non_field_errors": ["Insufficient funds: this transaction would make the bank balance negative."]})
 
+        # 2) Per-bank daily ending check (compute beginning for this bank, not global)
         if date:
-            txs_for_date = Transaction.objects.filter(date=date)
+            # Exclude instance when updating
+            txs_for_date = Transaction.objects.filter(bank_account=bank, date=date)
             if self.instance:
                 txs_for_date = txs_for_date.exclude(pk=self.instance.pk)
 
-            inflows = txs_for_date.filter(
-                type__in=["deposit", "collections", "local_deposits", "fund_transfer", "interbank_transfer"]
-            ).aggregate(Sum("amount"))["amount__sum"] or Decimal("0.00")
+            # Today's inflows/outflows for this bank
+            inflows_today = txs_for_date.filter(type__in=INFLOW_TYPE_LIST).aggregate(Sum("amount"))["amount__sum"] or Decimal("0.00")
+            outflows_today = txs_for_date.filter(type__in=OUTFLOW_TYPE_LIST).aggregate(Sum("amount"))["amount__sum"] or Decimal("0.00")
 
-            outflows = txs_for_date.filter(
-                type__in=["disbursement", "bank_charges", "returned_check", "adjustments"]
-            ).aggregate(Sum("amount"))["amount__sum"] or Decimal("0.00")
-
-            if tx_type in ["disbursement", "returned_check", "bank_charges", "adjustments"]:
-                outflows += amount
+            # Add the prospective transaction to the appropriate side
+            if tx_type in OUTFLOW_TYPE_LIST:
+                outflows_today += amount
             else:
-                inflows += amount
+                inflows_today += amount
 
-            prev_day = DailyCashPosition.objects.filter(date__lt=date).order_by("-date").first()
-            beginning = prev_day.ending_balance if prev_day else Decimal("0.00")
+            # Compute beginning for this bank on the target date:
+            # beginning = opening_balance + prior_inflows - prior_outflows
+            prior_inflows = Transaction.objects.filter(
+                bank_account=bank, date__lt=date, type__in=INFLOW_TYPE_LIST
+            ).aggregate(Sum("amount"))["amount__sum"] or Decimal("0.00")
 
-            ending = beginning + inflows - outflows
+            prior_outflows = Transaction.objects.filter(
+                bank_account=bank, date__lt=date, type__in=OUTFLOW_TYPE_LIST
+            ).aggregate(Sum("amount"))["amount__sum"] or Decimal("0.00")
+
+            beginning = (bank.opening_balance or Decimal("0.00")) + Decimal(prior_inflows) - Decimal(prior_outflows)
+
+            # prospective ending for this bank on that date
+            ending = beginning + Decimal(inflows_today) - Decimal(outflows_today)
 
             if ending < 0:
-                raise serializers.ValidationError("This transaction would make the daily ending balance negative for the selected date.")
+                raise serializers.ValidationError({"non_field_errors": ["This transaction would make the daily ending balance negative for the selected date."]})
 
         return data
+
+    def create(self, validated_data):
+        """
+        Construct Transaction instance, run model validation (full_clean -> clean), set created_by from request,
+        then save. Convert Django ValidationError into DRF ValidationError for proper API response.
+        """
+        tx = Transaction(**validated_data)
+
+        # set created_by from request context if available
+        request = self.context.get("request")
+        if request and hasattr(request, "user") and request.user and request.user.is_authenticated:
+            tx.created_by = request.user
+
+        try:
+            tx.full_clean()
+        except DjangoValidationError as e:
+            # Convert to DRF ValidationError with non_field_errors key to match frontend expectations
+            raise serializers.ValidationError({"non_field_errors": list(e.messages)})
+
+        tx.save()
+        return tx
+
+    def update(self, instance, validated_data):
+        # apply incoming changes to the instance
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # preserve created_by if request user present and instance has no created_by
+        request = self.context.get("request")
+        if request and hasattr(request, "user") and request.user and request.user.is_authenticated and not instance.created_by:
+            instance.created_by = request.user
+
+        try:
+            instance.full_clean()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"non_field_errors": list(e.messages)})
+
+        instance.save()
+        return instance
 
 
 class DailyCashPositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailyCashPosition
         fields = [
-            'id', 'date', 'beginning_balance', 'collections', 'disbursements',
-            'transfers', 'returned_checks', 'pdc', 'ending_balance',
+            "id",
+            "date",
+            "beginning_balance",
+            "collections",
+            "disbursements",
+            "transfers",
+            "returned_checks",
+            "pdc",
+            "ending_balance",
         ]
-        read_only_fields = ['beginning_balance', 'ending_balance']
+        read_only_fields = ["beginning_balance", "ending_balance"]
 
 
 class MonthlyReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonthlyReport
-        fields = ['id', 'month', 'total_inflows', 'total_disbursements', 'total_pdc', 'ending_balance']
-        read_only_fields = ['ending_balance']
+        fields = ["id", "month", "total_inflows", "total_disbursements", "total_pdc", "ending_balance"]
+        read_only_fields = ["ending_balance"]
 
 
 class PdcSerializer(serializers.ModelSerializer):
@@ -98,7 +195,7 @@ class PdcSerializer(serializers.ModelSerializer):
         source="deposit_bank",
         write_only=True,
         required=False,
-        allow_null=True
+        allow_null=True,
     )
 
     # Canonical aliases (map to model fields)
