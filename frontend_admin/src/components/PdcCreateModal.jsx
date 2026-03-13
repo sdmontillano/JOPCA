@@ -22,12 +22,12 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
   const [form, setForm] = useState({
     customer_name: "",
     check_number: "",
-    check_date: "", // optional
+    check_date: "",
     maturity_date: today,
     amount: "",
-    deposit_bank_id: "", // optional (bank account id)
+    deposit_bank_id: "",
     notes: "",
-    status: "outstanding", // default server-side status
+    status: "outstanding",
   });
 
   const [banks, setBanks] = useState([]);
@@ -38,9 +38,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
   useEffect(() => {
     if (!open) return;
     setAlert(null);
-    // reset maturity date each time modal opens
     setForm((f) => ({ ...f, maturity_date: today }));
-    // fetch deposit banks for the optional select
     let mounted = true;
     setFetchingBanks(true);
     api
@@ -48,7 +46,8 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
       .then((res) => {
         if (!mounted) return;
         const data = res.data ?? res;
-        setBanks(Array.isArray(data) ? data : data.results ?? []);
+        const list = Array.isArray(data) ? data : data.results ?? [];
+        setBanks(list);
       })
       .catch((err) => {
         console.error("Failed to fetch banks", err);
@@ -91,7 +90,6 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
     e.preventDefault();
     setAlert(null);
 
-    // validation for required fields
     if (!form.customer_name.trim()) {
       setAlert({ type: "error", text: "Customer Name is required." });
       return;
@@ -108,16 +106,23 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
       setAlert({ type: "error", text: "Amount must be greater than 0." });
       return;
     }
+    if (!form.deposit_bank_id) {
+      setAlert({ type: "error", text: "Deposit Bank is required." });
+      return;
+    }
 
     setLoading(true);
     try {
+      // Normalize payload to common backend shape:
+      // - use `customer` instead of `customer_name`
+      // - ensure deposit_bank_id is numeric
       const payload = {
-        customer_name: form.customer_name.trim(),
+        customer: form.customer_name.trim(),
         check_number: form.check_number.trim(),
         check_date: form.check_date || null,
         maturity_date: form.maturity_date,
         amount: Number(form.amount),
-        deposit_bank_id: form.deposit_bank_id === "" ? null : Number(form.deposit_bank_id),
+        deposit_bank_id: Number(form.deposit_bank_id),
         notes: form.notes?.trim() || null,
         status: form.status || "outstanding",
       };
@@ -135,7 +140,6 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
         }
       }
 
-      // close after short delay so user sees success
       setTimeout(() => {
         handleClose();
       }, 700);
@@ -179,67 +183,23 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
           <Stack spacing={2}>
             {alert && <Alert severity={alert.type}>{alert.text}</Alert>}
 
-            <TextField
-              label="Customer Name"
-              name="customer_name"
-              value={form.customer_name}
-              onChange={handleChange}
-              fullWidth
-              required
-            />
-
-            <TextField
-              label="Check Number"
-              name="check_number"
-              value={form.check_number}
-              onChange={handleChange}
-              fullWidth
-              required
-            />
-
-            <TextField
-              label="Check Date (optional)"
-              name="check_date"
-              type="date"
-              value={form.check_date}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
-
-            <TextField
-              label="Maturity Date"
-              name="maturity_date"
-              type="date"
-              value={form.maturity_date}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required
-            />
-
-            <TextField
-              label="Amount (₱)"
-              name="amount"
-              type="number"
-              inputProps={{ step: "0.01", min: 0 }}
-              value={form.amount}
-              onChange={handleChange}
-              fullWidth
-              required
-            />
+            <TextField label="Customer Name" name="customer_name" value={form.customer_name} onChange={handleChange} fullWidth required />
+            <TextField label="Check Number" name="check_number" value={form.check_number} onChange={handleChange} fullWidth required />
+            <TextField label="Check Date (optional)" name="check_date" type="date" value={form.check_date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
+            <TextField label="Maturity Date" name="maturity_date" type="date" value={form.maturity_date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth required />
+            <TextField label="Amount (₱)" name="amount" type="number" inputProps={{ step: "0.01", min: 0 }} value={form.amount} onChange={handleChange} fullWidth required />
 
             <TextField
               select
-              label="Deposit Bank (optional)"
+              label="Deposit Bank"
               name="deposit_bank_id"
               value={form.deposit_bank_id}
               onChange={handleChange}
               fullWidth
+              required
               disabled={fetchingBanks}
-              helperText={fetchingBanks ? "Loading banks..." : ""}
+              helperText={fetchingBanks ? "Loading banks..." : "Select a deposit bank"}
             >
-              <MenuItem value="">— none —</MenuItem>
               {banks.map((b) => (
                 <MenuItem key={b.id ?? b.pk ?? b.account_number} value={b.id ?? b.pk ?? b.account_number}>
                   {b.name} {b.account_number ? `(${b.account_number})` : ""}
@@ -247,15 +207,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
               ))}
             </TextField>
 
-            <TextField
-              label="Notes (optional)"
-              name="notes"
-              value={form.notes}
-              onChange={handleChange}
-              fullWidth
-              multiline
-              minRows={2}
-            />
+            <TextField label="Notes (optional)" name="notes" value={form.notes} onChange={handleChange} fullWidth multiline minRows={2} />
           </Stack>
         </form>
       </DialogContent>

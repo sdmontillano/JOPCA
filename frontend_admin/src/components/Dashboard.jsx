@@ -28,6 +28,7 @@ import {
   MenuItem,
   Avatar,
   useMediaQuery,
+  Snackbar,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
@@ -37,19 +38,22 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import LogoutIcon from "@mui/icons-material/Logout";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import CloseIcon from "@mui/icons-material/Close";
 
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
 
-// Modal-capable components (must exist and accept open/onClose/onCreated)
 import AddBankAccount from "./AddBankAccount";
 import AddTransaction from "./AddTransaction";
 import PdcCreateModal from "./PdcCreateModal";
+
+import logo from "../assets/jopca-logo.png";
+
+import usePdcTotals from "../hooks/usePdcTotals";
 
 /* ---------------------------
    Helpers
@@ -74,6 +78,9 @@ function formatPeso(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+function monthString(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /* ---------------------------
@@ -187,8 +194,8 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
           </Button>
 
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 1 }}>
-            <Chip label={dates[0]} size="small" sx={{ borderColor: "#60a5fa", color: "#1e3a8a", background: "rgba(96,165,250,0.06)" }} />
-            <Chip label={dates[1]} size="small" sx={{ borderColor: "#F4C542", color: "#065f46", background: "rgba(52,211,153,0.06)" }} />
+            <Chip label={dates[0]} size="small" color="primary" variant="outlined" />
+            <Chip label={dates[1]} size="small" sx={{ borderColor: "secondary.main", color: "secondary.main", background: "rgba(255,213,74,0.06)" }} />
           </Stack>
 
           <IconButton size="small" onClick={goPrev} aria-label="previous day">
@@ -349,9 +356,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
     <AppBar position="sticky" color="default" elevation={2}>
       <Toolbar sx={{ gap: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, cursor: "pointer" }} onClick={() => navigate("/dashboard")}>
-          <Box sx={{ width: 36, height: 36, bgcolor: "#D7262F", borderRadius: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Typography variant="subtitle2" sx={{ color: "white", fontWeight: 800 }}>J</Typography>
-          </Box>
+          <Box component="img" src={logo} alt="JOPCA logo" sx={{ width: 40, height: 40, objectFit: "contain" }} />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800 }}>JOPCA</Typography>
             <Typography variant="caption" color="text.secondary">Daily Cash Position</Typography>
@@ -410,7 +415,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
         </Tooltip>
 
         <IconButton onClick={openUserMenu} sx={{ ml: 1 }}>
-          <Avatar sx={{ bgcolor: "#D7262F" }}><AccountCircleIcon /></Avatar>
+          <Avatar sx={{ bgcolor: "primary.main" }}><AccountCircleIcon /></Avatar>
         </IconButton>
 
         <Menu anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={closeUserMenu}>
@@ -436,7 +441,9 @@ export default function Dashboard() {
 }
 
 function DashboardInner() {
+  // Core state (hooks order is stable and unconditional)
   const [dailyReport, setDailyReport] = useState({});
+  const [dailyRaw, setDailyRaw] = useState(null); // raw response for debugging/fallback
   const [monthlyReport, setMonthlyReport] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -451,6 +458,18 @@ function DashboardInner() {
   const [showCashInBank, setShowCashInBank] = useState(false);
   const [cashCollapsed, setCashCollapsed] = useState(false);
 
+  const [actionAlert, setActionAlert] = useState(null);
+
+  // PDC fallback hook (unconditional)
+  const reportMonth = manualMonth || monthString();
+  const {
+    totals: pdcFallbackTotals,
+    partition: pdcPartition,
+    loading: pdcLoading,
+    refresh: refreshPdcTotals,
+  } = usePdcTotals(reportMonth);
+
+  // fetchAll (keeps rawDaily and mapped responses)
   const fetchAll = async (monthOverride = null) => {
     setError(null);
     setRefreshing(true);
@@ -460,9 +479,27 @@ function DashboardInner() {
       const monthStr = monthOverride || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
       const monthlyRes = await api.get(`/summary/detailed-monthly/?month=${monthStr}`);
 
-      const mappedDaily = mapDailyResponse(dailyRes.data ?? dailyRes);
-      const mappedMonthly = mapMonthlyResponse(monthlyRes.data ?? monthlyRes);
+      const rawDaily = dailyRes?.data ?? dailyRes;
+      const mappedDaily = (() => {
+        try {
+          return mapDailyResponse(rawDaily);
+        } catch (e) {
+          console.error("mapDailyResponse failed, using rawDaily", e);
+          return rawDaily;
+        }
+      })();
 
+      const rawMonthly = monthlyRes?.data ?? monthlyRes;
+      const mappedMonthly = (() => {
+        try {
+          return mapMonthlyResponse(rawMonthly);
+        } catch (e) {
+          console.error("mapMonthlyResponse failed, using rawMonthly", e);
+          return rawMonthly;
+        }
+      })();
+
+      setDailyRaw(rawDaily);
       setDailyReport(mappedDaily || {});
       setMonthlyReport(mappedMonthly || {});
     } catch (err) {
@@ -574,7 +611,52 @@ function DashboardInner() {
     Array.isArray(monthlyReport?.accounts) ? monthlyReport.accounts : []
   );
 
+  const banksList = (() => {
+    if (Array.isArray(dailyReport?.accounts) && dailyReport.accounts.length > 0) {
+      return dailyReport.accounts.map((a) => ({
+        name: a.name || a.bank_name || a.particulars || "Unknown",
+        account_number: a.account_number || a.account_no || a.number || null,
+        balance: a.balance ?? a.amount ?? 0,
+        raw: a,
+      }));
+    }
+    if (Array.isArray(monthlyReport?.accounts) && monthlyReport.accounts.length > 0) {
+      return monthlyReport.accounts.map((a) => ({
+        name: a.name || a.bank_name || a.particulars || "Unknown",
+        account_number: a.account_number || a.account_no || a.number || null,
+        balance: a.balance ?? a.amount ?? 0,
+        raw: a,
+      }));
+    }
+    return (cashInBank || []).map((b) => ({
+      name: b.particulars || "Unknown",
+      account_number: b.account_number || b.raw_rows?.[0]?.bank_account__account_number || null,
+      balance: b.ending ?? 0,
+      raw: b.raw_account || b,
+    }));
+  })();
+
   const totalEndingAllBanks = (cashInBank || []).reduce((s, r) => s + Number(r.ending ?? 0), 0);
+
+  const handleOpenAddTransaction = () => {
+    if (!banksList || banksList.length === 0) {
+      setBankModalOpen(true);
+      setActionAlert({ severity: "warning", text: "Please add a deposit bank first — transactions require a deposit bank." });
+      setTimeout(() => setActionAlert(null), 4500);
+      return;
+    }
+    setTransactionModalOpen(true);
+  };
+
+  const handleOpenAddPdc = () => {
+    if (!banksList || banksList.length === 0) {
+      setBankModalOpen(true);
+      setActionAlert({ severity: "warning", text: "Please add a deposit bank first — PDC requires a deposit bank." });
+      setTimeout(() => setActionAlert(null), 4500);
+      return;
+    }
+    setPdcModalOpen(true);
+  };
 
   if (loading)
     return (
@@ -593,11 +675,36 @@ function DashboardInner() {
       </Box>
     );
 
+  // Prefer backend pdc_summary if present and non-zero; otherwise use computed fallback totals
+  const backendPdc = dailyReport?.pdc_summary ?? dailyRaw?.pdc_summary ?? null;
+  const backendTotal = Number(backendPdc?.total ?? backendPdc?.this_month ?? 0) || 0;
+  const backendMatured = Number(backendPdc?.matured ?? 0) || 0;
+
+  const effectivePdcSummary = (backendPdc && (backendTotal > 0 || backendMatured > 0))
+    ? {
+        matured: Number(backendPdc.matured ?? backendPdc.mature ?? 0),
+        this_month: Number(backendPdc.this_month ?? backendPdc.thisMonth ?? 0),
+        next_month: Number(backendPdc.next_month ?? backendPdc.nextMonth ?? 0),
+        total: Number(backendPdc.total ?? backendPdc.total_amount ?? backendTotal),
+      }
+    : {
+        matured: pdcFallbackTotals.matured || 0,
+        this_month: pdcFallbackTotals.this_month || 0,
+        next_month: pdcFallbackTotals.next_month || 0,
+        total: pdcFallbackTotals.total || 0,
+      };
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <TopNav onOpenAddBank={() => setBankModalOpen(true)} onOpenAddPdc={() => setPdcModalOpen(true)} onOpenAddTransaction={() => setTransactionModalOpen(true)} />
+      <TopNav onOpenAddBank={() => setBankModalOpen(true)} onOpenAddPdc={handleOpenAddPdc} onOpenAddTransaction={handleOpenAddTransaction} />
 
       <Box sx={{ p: { xs: 2, md: 4 } }}>
+        {actionAlert && (
+          <Snackbar open autoHideDuration={4500} onClose={() => setActionAlert(null)}>
+            <Alert severity={actionAlert.severity} sx={{ width: "100%" }}>{actionAlert.text}</Alert>
+          </Snackbar>
+        )}
+
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 700, color: "primary.main" }}>
@@ -628,12 +735,12 @@ function DashboardInner() {
 
           <Paper sx={{ p: 2, minWidth: 220, borderRadius: 2, boxShadow: 1, bgcolor: "background.paper" }}>
             <Typography variant="caption" color="text.secondary">PDC This Month</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(dailyReport?.pdc_summary?.this_month ?? 0)}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(effectivePdcSummary.this_month ?? 0)}</Typography>
           </Paper>
 
           <Paper sx={{ p: 2, minWidth: 220, borderRadius: 2, boxShadow: 1, bgcolor: "background.paper" }}>
             <Typography variant="caption" color="text.secondary">PDC Total</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(dailyReport?.pdc_summary?.total ?? 0)}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(effectivePdcSummary.total ?? 0)}</Typography>
           </Paper>
         </Box>
 
@@ -674,8 +781,7 @@ function DashboardInner() {
             <Paper sx={{ p: 2, boxShadow: 2 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="h6" sx={{ mb: 0, fontWeight: "bold" }}>CASH IN BANK</Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button
+                <Stack direction="row" spacing={1}><Button
                     variant={showCashInBank ? "contained" : "outlined"}
                     startIcon={<AccountBalanceIcon />}
                     onClick={() => { setShowCashInBank((s) => !s); if (!showCashInBank) setCashCollapsed(false); }}
@@ -738,23 +844,23 @@ function DashboardInner() {
           </Grid>
         </Grid>
 
-        {/* PDC, Transactions, Returned checks, etc. (unchanged) */}
+        {/* PDC, Transactions, Returned checks, etc. */}
         <Paper sx={{ p: 2, mt: 3, boxShadow: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" sx={{ fontWeight: "bold" }}>PDC SUMMARY</Typography>
             <Stack direction="row" spacing={2} alignItems="center">
               <Box sx={{ textAlign: "right" }}>
                 <Typography variant="caption">This Month</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(dailyReport?.pdc_summary?.this_month ?? 0)}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(effectivePdcSummary.this_month ?? 0)}</Typography>
               </Box>
 
               <Box sx={{ textAlign: "right" }}>
                 <Typography variant="caption">Total</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(dailyReport?.pdc_summary?.total ?? 0)}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(effectivePdcSummary.total ?? 0)}</Typography>
               </Box>
 
               <Button variant="contained" onClick={() => navigate("/pdc")}>View Details</Button>
-              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => setPdcModalOpen(true)}>Add PDC</Button>
+              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={handleOpenAddPdc}>Add PDC</Button>
             </Stack>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Bank transactions are shown under Cash In Bank; PCF entries are in Cash On Hand.</Typography>
@@ -814,26 +920,36 @@ function DashboardInner() {
       </Box>
 
       {/* Modals */}
-      <AddBankAccount open={bankModalOpen} onClose={() => setBankModalOpen(false)} onCreated={(newBank) => {
-        setDailyReport((prev) => {
-          if (!prev) return prev;
-          const accounts = Array.isArray(prev.accounts) ? [newBank, ...prev.accounts] : [newBank];
-          return { ...prev, accounts };
-        });
-      }} />
+      <AddBankAccount
+        open={bankModalOpen}
+        onClose={() => setBankModalOpen(false)}
+        onCreated={(newBank) => {
+          setDailyReport((prev) => {
+            if (!prev) return prev;
+            const accounts = Array.isArray(prev.accounts) ? [newBank, ...prev.accounts] : [newBank];
+            return { ...prev, accounts };
+          });
+        }}
+      />
 
-      <PdcCreateModal open={pdcModalOpen} onClose={() => setPdcModalOpen(false)} onCreated={(newPdc) => {
-        setDailyReport((prev) => {
-          if (!prev) return prev;
-          const thisMonth = Number(prev.pdc_summary?.this_month ?? 0) + Number(newPdc.amount ?? 0);
-          const total = Number(prev.pdc_summary?.total ?? 0) + Number(newPdc.amount ?? 0);
-          return { ...prev, pdc_summary: { ...(prev.pdc_summary || {}), this_month: thisMonth, total } };
-        });
-      }} />
+      <PdcCreateModal
+        open={pdcModalOpen}
+        onClose={() => setPdcModalOpen(false)}
+        onCreated={() => {
+          // Refetch summary and fallback totals after creating a PDC
+          setPdcModalOpen(false);
+          fetchAll(manualMonth || null);
+          refreshPdcTotals();
+        }}
+      />
 
-      <AddTransaction open={transactionModalOpen} onClose={() => setTransactionModalOpen(false)} onCreated={(txn) => {
-        fetchAll(manualMonth || null);
-      }} />
+      <AddTransaction
+        open={transactionModalOpen}
+        onClose={() => setTransactionModalOpen(false)}
+        onCreated={() => {
+          fetchAll(manualMonth || null);
+        }}
+      />
     </Box>
   );
 }

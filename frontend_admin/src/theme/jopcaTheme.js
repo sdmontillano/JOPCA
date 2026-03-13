@@ -4,7 +4,8 @@ import { createTheme } from "@mui/material/styles";
 const jopcaTheme = createTheme({
   palette: {
     primary: { main: "#D7262F", contrastText: "#ffffff" },
-    secondary: { main: "#F4C542", contrastText: "#0b0b0b" },
+    // brighter, warmer yellow for stronger accent
+    secondary: { main: "#FFD54A", contrastText: "#0b0b0b" },
     info: { main: "#0B3D91" },
     background: { default: "#f6f8fa", paper: "#ffffff" },
     text: { primary: "#0f172a", secondary: "#475569" },
