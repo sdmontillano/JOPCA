@@ -29,6 +29,7 @@ import {
   Avatar,
   useMediaQuery,
   Snackbar,
+  Badge,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
@@ -42,6 +43,9 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import CloseIcon from "@mui/icons-material/Close";
+import WalletIcon from "@mui/icons-material/Wallet";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import WarningIcon from "@mui/icons-material/Warning";
 
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
@@ -50,14 +54,16 @@ import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
 import AddBankAccount from "./AddBankAccount";
 import AddTransaction from "./AddTransaction";
 import PdcCreateModal from "./PdcCreateModal";
+import PcfTable from "./PcfTable";
+import AddPcfModal from "./AddPcfModal";
+import ReconciliationPanel from "./ReconciliationPanel";
+import AlertsModal from "./AlertsModal";
 
 import logo from "../assets/jopca-logo.png";
 
 import usePdcTotals from "../hooks/usePdcTotals";
 
-/* ---------------------------
-   Helpers
-   --------------------------- */
+// Helpers
 function isoDateOffset(baseIso, offsetDays) {
   const d = new Date(baseIso);
   d.setDate(d.getDate() + offsetDays);
@@ -83,12 +89,10 @@ function monthString(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/* ---------------------------
-   Inline 2-day CashInBank component
-   --------------------------- */
+// Cash In Bank 2-Day Inline Component
 function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onToggleCollapse = () => {} }) {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const defaultCenter = initialCenterDate || isoDateOffset(todayIso, -1); // yesterday
+  const defaultCenter = initialCenterDate || isoDateOffset(todayIso, -1);
   const [centerDate, setCenterDate] = useState(defaultCenter);
   const [dataMap, setDataMap] = useState({});
   const [loading, setLoading] = useState(false);
@@ -99,50 +103,45 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
     return { dates: [prev, centerIso] };
   };
 
-  const fetchRange = useCallback(
-    async (centerIso) => {
-      setLoading(true);
-      setMessage(null);
-      const { dates } = computeRange(centerIso);
-      try {
-        const promises = dates.map((d) =>
-          api
-            .get("/summary/detailed-daily/", { params: { date: d } })
-            .then((r) => r.data ?? r)
-            .catch(() => ({ cash_in_bank: [], accounts: [] }))
-        );
-        const results = await Promise.all(promises);
-        const out = {};
-        dates.forEach((d, i) => {
-          const payload = results[i] || { cash_in_bank: [], accounts: [] };
-          const bankRows = Array.isArray(payload.cash_in_bank) && payload.cash_in_bank.length > 0
-            ? payload.cash_in_bank
-            : [
-                {
-                  particulars: "No transactions",
-                  account_number: null,
-                  beginning: 0,
-                  collections: 0,
-                  local_deposits: 0,
-                  disbursements: 0,
-                  fund_transfers: 0,
-                  returned_checks: 0,
-                  ending: 0,
-                },
-              ];
-          out[d] = { cash_in_bank: bankRows, accounts: Array.isArray(payload.accounts) ? payload.accounts : [] };
-        });
-        setDataMap(out);
-      } catch (err) {
-        console.error("Failed to fetch 2-day cash-in-bank", err);
-        setMessage({ type: "error", text: "Failed to load cash-in-bank data." });
-        setDataMap({});
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const fetchRange = useCallback(async (centerIso) => {
+    setLoading(true);
+    setMessage(null);
+    const { dates } = computeRange(centerIso);
+    try {
+      const promises = dates.map((d) =>
+        api
+          .get("/summary/detailed-daily/", { params: { date: d } })
+          .then((r) => r.data ?? r)
+          .catch(() => ({ cash_in_bank: [], accounts: [] }))
+      );
+      const results = await Promise.all(promises);
+      const out = {};
+      dates.forEach((d, i) => {
+        const payload = results[i] || { cash_in_bank: [], accounts: [] };
+        const bankRows = Array.isArray(payload.cash_in_bank) && payload.cash_in_bank.length > 0
+          ? payload.cash_in_bank
+          : [{
+              particulars: "No transactions",
+              account_number: null,
+              beginning: 0,
+              collections: 0,
+              local_deposits: 0,
+              disbursements: 0,
+              fund_transfers: 0,
+              returned_checks: 0,
+              ending: 0,
+            }];
+        out[d] = { cash_in_bank: bankRows, accounts: Array.isArray(payload.accounts) ? payload.accounts : [] };
+      });
+      setDataMap(out);
+    } catch (err) {
+      console.error("Failed to fetch 2-day cash-in-bank", err);
+      setMessage({ type: "error", text: "Failed to load cash-in-bank data." });
+      setDataMap({});
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchRange(centerDate);
@@ -181,50 +180,26 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
             Center (yesterday): {centerDate}
           </Typography>
         </Box>
-
         <Stack direction="row" spacing={1} alignItems="center">
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<AccountBalanceIcon />}
-            onClick={onToggleCollapse}
-            sx={{ textTransform: "none", px: 2 }}
-          >
+          <Button variant="outlined" size="small" startIcon={<AccountBalanceIcon />} onClick={onToggleCollapse} sx={{ textTransform: "none", px: 2 }}>
             Show / Hide Recent Days
           </Button>
-
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 1 }}>
             <Chip label={dates[0]} size="small" color="primary" variant="outlined" />
             <Chip label={dates[1]} size="small" sx={{ borderColor: "secondary.main", color: "secondary.main", background: "rgba(255,213,74,0.06)" }} />
           </Stack>
-
-          <IconButton size="small" onClick={goPrev} aria-label="previous day">
-            <ArrowBackIosNewIcon fontSize="small" />
-          </IconButton>
-
-          <IconButton size="small" onClick={goNext} aria-label="next day">
-            <ArrowForwardIosIcon fontSize="small" />
-          </IconButton>
-
-          <Button size="small" onClick={refresh} disabled={loading}>
-            Refresh
-          </Button>
+          <IconButton size="small" onClick={goPrev} aria-label="previous day"><ArrowBackIosNewIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={goNext} aria-label="next day"><ArrowForwardIosIcon fontSize="small" /></IconButton>
+          <Button size="small" onClick={refresh} disabled={loading}>Refresh</Button>
         </Stack>
       </Stack>
 
       <Collapse in={!collapsed} timeout={400}>
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-            <CircularProgress />
-          </Box>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
         ) : (
           <>
-            {message && (
-              <Alert severity={message.type} sx={{ mb: 2 }}>
-                {message.text}
-              </Alert>
-            )}
-
+            {message && <Alert severity={message.type} sx={{ mb: 2 }}>{message.text}</Alert>}
             <Grid container spacing={2}>
               {dates.map((dateIso) => {
                 const dayData = dataMap[dateIso] || { cash_in_bank: [], accounts: [] };
@@ -234,14 +209,11 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                   <Grid item xs={12} md={6} key={dateIso}>
                     <Paper variant="outlined" sx={{ p: 1, height: "100%", borderRadius: 1 }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                          {dateIso}
-                        </Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>{dateIso}</Typography>
                         <Typography variant="caption" color="text.secondary">
                           {dayData.accounts?.length ? `${dayData.accounts.length} accounts` : "No accounts"}
                         </Typography>
                       </Box>
-
                       <Table size="small">
                         <TableHead>
                           <TableRow>
@@ -255,12 +227,9 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell align="right"><strong>End</strong></TableCell>
                           </TableRow>
                         </TableHead>
-
                         <TableBody>
                           {rows.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={8} align="center">No data</TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={8} align="center">No data</TableCell></TableRow>
                           ) : (
                             rows.map((r, idx) => (
                               <TableRow key={r.bank_id ?? `${r.particulars}-${r.account_number}-${idx}`}>
@@ -278,7 +247,6 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                               </TableRow>
                             ))
                           )}
-
                           <TableRow sx={{ backgroundColor: "rgba(14,165,233,0.06)" }}>
                             <TableCell sx={{ fontWeight: 700 }}>Totals</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.beginning)}</TableCell>
@@ -291,7 +259,6 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                           </TableRow>
                         </TableBody>
                       </Table>
-
                       <Box sx={{ mt: 1 }}>
                         <Typography variant="caption" sx={{ display: "block", mb: 0.5 }}>Accounts</Typography>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
@@ -319,10 +286,8 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
   );
 }
 
-/* ---------------------------
-   Top navigation bar
-   --------------------------- */
-function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
+// Top Navigation Bar
+function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPcf, onOpenAlerts, alertCount = 0 }) {
   const navigate = useNavigate();
   const isSmall = useMediaQuery((theme) => theme.breakpoints.down("md"));
   const [anchorEl, setAnchorEl] = useState(null);
@@ -338,15 +303,9 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
 
   const openMenu = (e) => setAnchorEl(e.currentTarget);
   const closeMenu = () => setAnchorEl(null);
-
   const openUserMenu = (e) => setUserMenuAnchor(e.currentTarget);
   const closeUserMenu = () => setUserMenuAnchor(null);
-
-  const handleNavigate = (to) => {
-    navigate(to);
-    closeMenu();
-  };
-
+  const handleNavigate = (to) => { navigate(to); closeMenu(); };
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
@@ -367,23 +326,17 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
 
         {isSmall ? (
           <>
-            <IconButton onClick={openMenu} aria-label="open menu">
-              <MenuIcon />
-            </IconButton>
+            <IconButton onClick={openMenu} aria-label="open menu"><MenuIcon /></IconButton>
             <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
               {navItems.map((n) => (
                 <MenuItem key={n.key} onClick={() => handleNavigate(n.to)}>{n.icon} <Box sx={{ ml: 1 }}>{n.label}</Box></MenuItem>
               ))}
               <Divider />
-              <MenuItem onClick={() => { onOpenAddTransaction(); closeMenu(); }}>
-                <AddCircleOutlineIcon sx={{ mr: 1 }} /> Add Transaction
-              </MenuItem>
-              <MenuItem onClick={() => { onOpenAddBank(); closeMenu(); }}>
-                <AccountBalanceIcon sx={{ mr: 1 }} /> Add Bank
-              </MenuItem>
-              <MenuItem onClick={() => { onOpenAddPdc(); closeMenu(); }}>
-                <ReceiptLongIcon sx={{ mr: 1 }} /> Add PDC
-              </MenuItem>
+              <MenuItem onClick={() => { onOpenAddTransaction(); closeMenu(); }}><AddCircleOutlineIcon sx={{ mr: 1 }} /> Add Transaction</MenuItem>
+              <MenuItem onClick={() => { onOpenAddBank(); closeMenu(); }}><AccountBalanceIcon sx={{ mr: 1 }} /> Add Bank</MenuItem>
+              <MenuItem onClick={() => { onOpenAddPdc(); closeMenu(); }}><ReceiptLongIcon sx={{ mr: 1 }} /> Add PDC</MenuItem>
+              <MenuItem onClick={() => { onOpenAddPcf(); closeMenu(); }}><WalletIcon sx={{ mr: 1 }} /> Add PCF</MenuItem>
+              <MenuItem onClick={() => { onOpenAlerts(); closeMenu(); }}><NotificationsIcon sx={{ mr: 1 }} /> Alerts {alertCount > 0 && <Chip label={alertCount} size="small" color="error" sx={{ ml: 1 }} />}</MenuItem>
             </Menu>
           </>
         ) : (
@@ -399,9 +352,17 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
             <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
 
             <Stack direction="row" spacing={1} alignItems="center">
-              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={onOpenAddTransaction} size="small">Add Txn</Button>
-              <Button variant="outlined" startIcon={<AccountBalanceIcon />} onClick={onOpenAddBank} size="small">Add Bank</Button>
-              <Button variant="outlined" startIcon={<ReceiptLongIcon />} onClick={onOpenAddPdc} size="small">Add PDC</Button>
+              <Tooltip title="Alerts">
+                <IconButton color={alertCount > 0 ? "error" : "default"} onClick={onOpenAlerts}>
+                  <Badge badgeContent={alertCount} color="error">
+                    <NotificationsIcon />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={onOpenAddTransaction} size="small">Txn</Button>
+              <Button variant="outlined" startIcon={<AccountBalanceIcon />} onClick={onOpenAddBank} size="small">Bank</Button>
+              <Button variant="outlined" startIcon={<ReceiptLongIcon />} onClick={onOpenAddPdc} size="small">PDC</Button>
+              <Button variant="contained" startIcon={<WalletIcon />} onClick={onOpenAddPcf} size="small" color="secondary">PCF</Button>
             </Stack>
           </>
         )}
@@ -429,9 +390,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction }) {
   );
 }
 
-/* ---------------------------
-   Dashboard main component
-   --------------------------- */
+// Main Dashboard Component
 export default function Dashboard() {
   return (
     <ThemeProvider theme={jopcaTheme}>
@@ -441,9 +400,9 @@ export default function Dashboard() {
 }
 
 function DashboardInner() {
-  // Core state (hooks order is stable and unconditional)
+  // State
   const [dailyReport, setDailyReport] = useState({});
-  const [dailyRaw, setDailyRaw] = useState(null); // raw response for debugging/fallback
+  const [dailyRaw, setDailyRaw] = useState(null);
   const [monthlyReport, setMonthlyReport] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -451,25 +410,29 @@ function DashboardInner() {
   const [manualMonth, setManualMonth] = useState("");
   const navigate = useNavigate();
 
+  // Modal states
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [pdcModalOpen, setPdcModalOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [pcfModalOpen, setPcfModalOpen] = useState(false);
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false);
 
+  // UI states
   const [showCashInBank, setShowCashInBank] = useState(false);
   const [cashCollapsed, setCashCollapsed] = useState(false);
-
+  const [reconciliationCollapsed, setReconciliationCollapsed] = useState(true);
   const [actionAlert, setActionAlert] = useState(null);
+  const [pcfData, setPcfData] = useState([]);
+  const [alertCount, setAlertCount] = useState(0);
 
-  // PDC fallback hook (unconditional)
+  // PDC fallback hook
   const reportMonth = manualMonth || monthString();
   const {
     totals: pdcFallbackTotals,
-    partition: pdcPartition,
-    loading: pdcLoading,
     refresh: refreshPdcTotals,
   } = usePdcTotals(reportMonth);
 
-  // fetchAll (keeps rawDaily and mapped responses)
+  // Fetch all data
   const fetchAll = async (monthOverride = null) => {
     setError(null);
     setRefreshing(true);
@@ -484,7 +447,7 @@ function DashboardInner() {
         try {
           return mapDailyResponse(rawDaily);
         } catch (e) {
-          console.error("mapDailyResponse failed, using rawDaily", e);
+          console.error("mapDailyResponse failed", e);
           return rawDaily;
         }
       })();
@@ -494,7 +457,7 @@ function DashboardInner() {
         try {
           return mapMonthlyResponse(rawMonthly);
         } catch (e) {
-          console.error("mapMonthlyResponse failed, using rawMonthly", e);
+          console.error("mapMonthlyResponse failed", e);
           return rawMonthly;
         }
       })();
@@ -502,6 +465,13 @@ function DashboardInner() {
       setDailyRaw(rawDaily);
       setDailyReport(mappedDaily || {});
       setMonthlyReport(mappedMonthly || {});
+      
+      // Extract PCF data from daily response
+      if (rawDaily?.cash_on_hand) {
+        setPcfData(rawDaily.cash_on_hand);
+      } else if (mappedDaily?.cash_on_hand) {
+        setPcfData(mappedDaily.cash_on_hand);
+      }
     } catch (err) {
       console.error("Error fetching dashboard data", err);
       const msg = err?.response?.data?.detail || err?.response?.data || err?.message || "Failed to load dashboard data";
@@ -512,12 +482,24 @@ function DashboardInner() {
     }
   };
 
+  // Fetch alerts count
+  const fetchAlertsCount = async () => {
+    try {
+      const res = await api.get("/summary/pcf-alerts/");
+      const alerts = res?.data?.alerts || [];
+      setAlertCount(alerts.length);
+    } catch (err) {
+      console.error("Failed to fetch alerts", err);
+    }
+  };
+
   useEffect(() => {
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchAlertsCount();
   }, []);
 
-  const cashOnHand = Array.isArray(dailyReport?.cash_on_hand) ? dailyReport.cash_on_hand : [];
+  // Derive data
+  const cashOnHand = pcfData.length > 0 ? pcfData : (Array.isArray(dailyReport?.cash_on_hand) ? dailyReport.cash_on_hand : []);
 
   const deriveBankRowsFromTxns = (txns = []) =>
     (Array.isArray(txns) ? txns : []).reduce((acc, t) => {
@@ -546,14 +528,7 @@ function DashboardInner() {
       else if (type.includes("disburse")) row.disbursements += total;
       else row.collections += total;
       row.raw_rows.push(t.raw || t);
-      row.ending =
-        (row.beginning || 0) +
-        (row.collections || 0) +
-        (row.local_deposits || 0) -
-        (row.disbursements || 0) +
-        (row.fund_transfers || 0) -
-        (row.returned_checks || 0) +
-        (row.adjustments || 0);
+      row.ending = (row.beginning || 0) + (row.collections || 0) + (row.local_deposits || 0) - (row.disbursements || 0) + (row.fund_transfers || 0) - (row.returned_checks || 0) + (row.adjustments || 0);
       if (!row.account_number && t.account_number) row.account_number = t.account_number;
       return acc;
     }, []);
@@ -570,7 +545,6 @@ function DashboardInner() {
   const mergeAccountsIntoCashInBank = (derivedRows, dailyAccounts, monthlyAccounts) => {
     const rows = Array.isArray(derivedRows) ? [...derivedRows] : [];
     const seen = new Map(rows.map((r) => [String((r.particulars || "").toLowerCase()) + "|" + String(r.account_number || ""), r]));
-
     const addAccount = (a) => {
       if (!a) return;
       const name = a.name || a.bank_name || a.particulars || "Unknown";
@@ -598,10 +572,8 @@ function DashboardInner() {
       rows.push(newRow);
       seen.set(key, newRow);
     };
-
     if (Array.isArray(dailyAccounts)) dailyAccounts.forEach(addAccount);
     if (Array.isArray(monthlyAccounts)) monthlyAccounts.forEach(addAccount);
-
     return rows;
   };
 
@@ -638,6 +610,11 @@ function DashboardInner() {
 
   const totalEndingAllBanks = (cashInBank || []).reduce((s, r) => s + Number(r.ending ?? 0), 0);
 
+  // PCF totals
+  const totalPcfBalance = pcfData.reduce((s, p) => s + Number(p.current_balance || p.ending || 0), 0);
+  const totalPcfDisbursements = pcfData.reduce((s, p) => s + Number(p.disbursements || 0), 0);
+  const totalPcfUnreplenished = pcfData.reduce((s, p) => s + Number(p.unreplenished || p.unreplenished_amount || 0), 0);
+
   const handleOpenAddTransaction = () => {
     if (!banksList || banksList.length === 0) {
       setBankModalOpen(true);
@@ -658,24 +635,15 @@ function DashboardInner() {
     setPdcModalOpen(true);
   };
 
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-        <CircularProgress />
-      </Box>
-    );
+  const handleOpenAddPcf = () => {
+    setPcfModalOpen(true);
+  };
 
-  if (error)
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" startIcon={<RefreshIcon />} onClick={() => fetchAll(manualMonth || null)}>Retry Fetch</Button>
-        </Stack>
-      </Box>
-    );
+  const handleOpenAlerts = () => {
+    setAlertsModalOpen(true);
+  };
 
-  // Prefer backend pdc_summary if present and non-zero; otherwise use computed fallback totals
+  // PDC Summary
   const backendPdc = dailyReport?.pdc_summary ?? dailyRaw?.pdc_summary ?? null;
   const backendTotal = Number(backendPdc?.total ?? backendPdc?.this_month ?? 0) || 0;
   const backendMatured = Number(backendPdc?.matured ?? 0) || 0;
@@ -694,9 +662,35 @@ function DashboardInner() {
         total: pdcFallbackTotals.total || 0,
       };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Stack direction="row" spacing={1}>
+          <Button variant="contained" startIcon={<RefreshIcon />} onClick={() => fetchAll(manualMonth || null)}>Retry Fetch</Button>
+        </Stack>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <TopNav onOpenAddBank={() => setBankModalOpen(true)} onOpenAddPdc={handleOpenAddPdc} onOpenAddTransaction={handleOpenAddTransaction} />
+      <TopNav
+        onOpenAddBank={() => setBankModalOpen(true)}
+        onOpenAddPdc={handleOpenAddPdc}
+        onOpenAddTransaction={handleOpenAddTransaction}
+        onOpenAddPcf={handleOpenAddPcf}
+        onOpenAlerts={handleOpenAlerts}
+        alertCount={alertCount}
+      />
 
       <Box sx={{ p: { xs: 2, md: 4 } }}>
         {actionAlert && (
@@ -705,6 +699,7 @@ function DashboardInner() {
           </Snackbar>
         )}
 
+        {/* Header */}
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 700, color: "primary.main" }}>
@@ -714,160 +709,163 @@ function DashboardInner() {
               {dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE"} — {dailyReport?.date || ""}
             </Typography>
           </Box>
-
           <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="Refresh data from server">
-              <IconButton color="primary" onClick={() => fetchAll(manualMonth || null)} disabled={refreshing}>
+              <IconButton color="primary" onClick={() => { fetchAll(manualMonth || null); fetchAlertsCount(); }} disabled={refreshing}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
-
             <TextField size="small" label="Month (YYYY-MM)" value={manualMonth} onChange={(e) => setManualMonth(e.target.value)} placeholder="2026-03" />
           </Stack>
         </Stack>
 
-        {/* KPI row with Grand Total */}
-        <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-          <Paper sx={{ p: 2, minWidth: 220, borderRadius: 2, boxShadow: 2 }}>
-            <Typography variant="caption" color="text.secondary">Grand Total Ending (All Banks)</Typography>
+        {/* KPI Cards Row */}
+        <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "stretch", flexWrap: "wrap" }}>
+          <Paper sx={{ p: 2, minWidth: 200, flex: 1, borderRadius: 2, boxShadow: 2 }}>
+            <Typography variant="caption" color="text.secondary">Total Cash in Bank</Typography>
             <Typography variant="h5" sx={{ fontWeight: 800, color: "primary.main", mt: 0.5 }}>{formatPeso(totalEndingAllBanks)}</Typography>
           </Paper>
 
-          <Paper sx={{ p: 2, minWidth: 220, borderRadius: 2, boxShadow: 1, bgcolor: "background.paper" }}>
+          <Paper sx={{ p: 2, minWidth: 200, flex: 1, borderRadius: 2, boxShadow: 2, bgcolor: "secondary.light" }}>
+            <Typography variant="caption" color="text.secondary">Total PCF Balance</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>{formatPeso(totalPcfBalance)}</Typography>
+          </Paper>
+
+          <Paper sx={{ p: 2, minWidth: 180, flex: 1, borderRadius: 2, boxShadow: 1 }}>
             <Typography variant="caption" color="text.secondary">PDC This Month</Typography>
             <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(effectivePdcSummary.this_month ?? 0)}</Typography>
           </Paper>
 
-          <Paper sx={{ p: 2, minWidth: 220, borderRadius: 2, boxShadow: 1, bgcolor: "background.paper" }}>
+          <Paper sx={{ p: 2, minWidth: 180, flex: 1, borderRadius: 2, boxShadow: 1 }}>
             <Typography variant="caption" color="text.secondary">PDC Total</Typography>
             <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(effectivePdcSummary.total ?? 0)}</Typography>
           </Paper>
+
+          {totalPcfUnreplenished > 0 && (
+            <Paper sx={{ p: 2, minWidth: 180, flex: 1, borderRadius: 2, boxShadow: 1, bgcolor: "warning.light" }}>
+              <Typography variant="caption" color="warning.dark">Unreplenished PCF</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "warning.dark", mt: 0.5 }}>
+                <WarningIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                {formatPeso(totalPcfUnreplenished)}
+              </Typography>
+            </Paper>
+          )}
         </Box>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, boxShadow: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>CASH ON HAND (PCF)</Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>PARTICULARS</TableCell>
-                    <TableCell align="right">Beginning</TableCell>
-                    <TableCell align="right">Disbursements</TableCell>
-                    <TableCell align="right">Replenishments</TableCell>
-                    <TableCell align="right">Ending</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {cashOnHand.length > 0 ? (
-                    cashOnHand.map((r, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{r.particulars || `PCF ${i + 1}`}</TableCell>
-                        <TableCell align="right">{formatPeso(r.beginning ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.disbursements ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.replenishments ?? r.replenish ?? 0)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>{formatPeso(r.ending ?? ((r.beginning ?? 0) - (r.disbursements ?? 0) + (r.replenishments ?? 0)))}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={5} align="center">No PCF (cash on hand) entries</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Paper>
-          </Grid>
+        {/* PCF Cash on Hand Section */}
+        <Box sx={{ mb: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: "secondary.main" }}>
+              <WalletIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+              CASH ON HAND (PCF)
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button variant="contained" color="secondary" size="small" startIcon={<WalletIcon />} onClick={handleOpenAddPcf}>
+                Add PCF
+              </Button>
+            </Stack>
+          </Stack>
+          <PcfTable pcfs={cashOnHand.length > 0 ? cashOnHand : pcfData} showExport={true} defaultExpanded={true} />
+        </Box>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, boxShadow: 2 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="h6" sx={{ mb: 0, fontWeight: "bold" }}>CASH IN BANK</Typography>
-                <Stack direction="row" spacing={1}><Button
-                    variant={showCashInBank ? "contained" : "outlined"}
-                    startIcon={<AccountBalanceIcon />}
-                    onClick={() => { setShowCashInBank((s) => !s); if (!showCashInBank) setCashCollapsed(false); }}
-                    size="small"
-                  >
-                    Yesterday & Prev
-                  </Button>
-                </Stack>
+        {/* Cash in Bank Section */}
+        <Box sx={{ mb: 3 }}>
+          <Paper sx={{ p: 2, boxShadow: 2 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                <AccountBalanceIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+                CASH IN BANK
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant={showCashInBank ? "contained" : "outlined"}
+                  startIcon={<AccountBalanceIcon />}
+                  onClick={() => { setShowCashInBank((s) => !s); if (!showCashInBank) setCashCollapsed(false); }}
+                  size="small"
+                >
+                  Yesterday & Prev
+                </Button>
               </Stack>
+            </Stack>
 
-              {showCashInBank && <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} />}
+            {showCashInBank && <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} />}
 
-              <Table size="small" sx={{ mt: 1 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>PARTICULARS</TableCell>
-                    <TableCell>Account #</TableCell>
-                    <TableCell align="right">Beginning</TableCell>
-                    <TableCell align="right">Collections</TableCell>
-                    <TableCell align="right">Local Deposits</TableCell>
-                    <TableCell align="right">Disbursements</TableCell>
-                    <TableCell align="right">Fund Transfers</TableCell>
-                    <TableCell align="right">Returned Checks</TableCell>
-                    <TableCell align="right">Ending</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {cashInBank.length > 0 ? (
-                    cashInBank.map((r, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{r.particulars || `Bank ${i + 1}`}</TableCell>
-                        <TableCell>{r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}</TableCell>
-                        <TableCell align="right">{formatPeso(r.beginning ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.collections ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.local_deposits ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.disbursements ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.fund_transfers ?? 0)}</TableCell>
-                        <TableCell align="right">{formatPeso(r.returned_checks ?? 0)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>{formatPeso(r.ending ?? 0)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={9} align="center">No bank transactions</TableCell></TableRow>
-                  )}
+            <Table size="small" sx={{ mt: 1 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>PARTICULARS</TableCell>
+                  <TableCell>Account #</TableCell>
+                  <TableCell align="right">Beginning</TableCell>
+                  <TableCell align="right">Collections</TableCell>
+                  <TableCell align="right">Local Deposits</TableCell>
+                  <TableCell align="right">Disbursements</TableCell>
+                  <TableCell align="right">Fund Transfers</TableCell>
+                  <TableCell align="right">Returned Checks</TableCell>
+                  <TableCell align="right">Ending</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {cashInBank.length > 0 ? (
+                  cashInBank.map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{r.particulars || `Bank ${i + 1}`}</TableCell>
+                      <TableCell>{r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}</TableCell>
+                      <TableCell align="right">{formatPeso(r.beginning ?? 0)}</TableCell>
+                      <TableCell align="right">{formatPeso(r.collections ?? 0)}</TableCell>
+                      <TableCell align="right">{formatPeso(r.local_deposits ?? 0)}</TableCell>
+                      <TableCell align="right">{formatPeso(r.disbursements ?? 0)}</TableCell>
+                      <TableCell align="right">{formatPeso(r.fund_transfers ?? 0)}</TableCell>
+                      <TableCell align="right">{formatPeso(r.returned_checks ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatPeso(r.ending ?? 0)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow><TableCell colSpan={9} align="center">No bank transactions</TableCell></TableRow>
+                )}
+                <TableRow sx={{ backgroundColor: "rgba(0,0,0,0.03)" }}>
+                  <TableCell sx={{ fontWeight: 800 }}>Grand Total</TableCell>
+                  <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                  <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.1em" }}>{formatPeso(totalEndingAllBanks)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Paper>
+        </Box>
 
-                  <TableRow sx={{ backgroundColor: "rgba(0,0,0,0.03)" }}>
-                    <TableCell sx={{ fontWeight: 800 }}>Grand Total</TableCell>
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>{formatPeso(totalEndingAllBanks)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </Paper>
-          </Grid>
-        </Grid>
-
-        {/* PDC, Transactions, Returned checks, etc. */}
-        <Paper sx={{ p: 2, mt: 3, boxShadow: 2 }}>
+        {/* PDC Summary */}
+        <Paper sx={{ p: 3, mb: 3, boxShadow: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" sx={{ fontWeight: "bold" }}>PDC SUMMARY</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              <ReceiptLongIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+              PDC SUMMARY
+            </Typography>
             <Stack direction="row" spacing={2} alignItems="center">
               <Box sx={{ textAlign: "right" }}>
                 <Typography variant="caption">This Month</Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(effectivePdcSummary.this_month ?? 0)}</Typography>
               </Box>
-
               <Box sx={{ textAlign: "right" }}>
                 <Typography variant="caption">Total</Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(effectivePdcSummary.total ?? 0)}</Typography>
               </Box>
-
               <Button variant="contained" onClick={() => navigate("/pdc")}>View Details</Button>
               <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={handleOpenAddPdc}>Add PDC</Button>
             </Stack>
           </Stack>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Bank transactions are shown under Cash In Bank; PCF entries are in Cash On Hand.</Typography>
         </Paper>
 
+        {/* Bank Reconciliation Panel */}
+        <ReconciliationPanel
+          collapsed={reconciliationCollapsed}
+          onToggleCollapse={() => setReconciliationCollapsed(!reconciliationCollapsed)}
+        />
+
+        {/* Transactions Section */}
         <Paper sx={{ p: 3, mt: 3, borderRadius: 2, boxShadow: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>TRANSACTIONS FOR THIS MONTH</Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>TRANSACTIONS FOR THIS MONTH</Typography>
+            <Button variant="outlined" size="small" onClick={() => navigate("/transactions")}>View All</Button>
+          </Stack>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -877,7 +875,7 @@ function DashboardInner() {
             </TableHead>
             <TableBody>
               {(monthlyReport?.transactions || []).length > 0 ? (
-                (monthlyReport.transactions || []).map((t, i) => (
+                (monthlyReport.transactions || []).slice(0, 10).map((t, i) => (
                   <TableRow key={i}>
                     <TableCell>{t.particulars || t.type || `Txn ${i + 1}`}</TableCell>
                     <TableCell align="right">{formatPeso(t.total ?? t.amount ?? 0)}</TableCell>
@@ -885,34 +883,6 @@ function DashboardInner() {
                 ))
               ) : (
                 <TableRow><TableCell colSpan={2} align="center">No transactions for this month</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Paper>
-
-        <Paper sx={{ p: 3, mt: 3, borderRadius: 2, boxShadow: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>ANALYSIS OF RETURNED CHECKS</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Customer</TableCell>
-                <TableCell>Check #</TableCell>
-                <TableCell>RCNB / RCNR</TableCell>
-                <TableCell align="right">Amount (₱)</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(dailyReport?.returned_checks || []).length > 0 ? (
-                (dailyReport.returned_checks || []).map((r, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{r.customer || r.payee || "-"}</TableCell>
-                    <TableCell>{r.check_number || r.check_no || "-"}</TableCell>
-                    <TableCell>{r.rcnb ?? r.rcnr ?? "-"}</TableCell>
-                    <TableCell align="right">{formatPeso(r.amount ?? r.total ?? 0)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow><TableCell colSpan={4} align="center">No returned checks recorded</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -936,7 +906,6 @@ function DashboardInner() {
         open={pdcModalOpen}
         onClose={() => setPdcModalOpen(false)}
         onCreated={() => {
-          // Refetch summary and fallback totals after creating a PDC
           setPdcModalOpen(false);
           fetchAll(manualMonth || null);
           refreshPdcTotals();
@@ -949,6 +918,20 @@ function DashboardInner() {
         onCreated={() => {
           fetchAll(manualMonth || null);
         }}
+      />
+
+      <AddPcfModal
+        open={pcfModalOpen}
+        onClose={() => setPcfModalOpen(false)}
+        onCreated={() => {
+          setPcfModalOpen(false);
+          fetchAll(manualMonth || null);
+        }}
+      />
+
+      <AlertsModal
+        open={alertsModalOpen}
+        onClose={() => setAlertsModalOpen(false)}
       />
     </Box>
   );

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Sum
 from rest_framework import serializers
 
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount
 
 
 # canonical inflow/outflow type lists (keep in sync with models if you change types)
@@ -227,3 +227,93 @@ class PdcSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "deposit_bank", "created_by", "created_at", "updated_at"]
+
+
+# ---------------------------------------------------------------------
+# PCF Serializers
+# ---------------------------------------------------------------------
+class PettyCashFundSerializer(serializers.ModelSerializer):
+    current_balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    total_disbursements = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    total_replenishments = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    unreplenished_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    location_display = serializers.CharField(source='get_location_display', read_only=True)
+
+    class Meta:
+        model = PettyCashFund
+        fields = [
+            'id', 'name', 'location', 'location_display', 'opening_balance',
+            'current_balance', 'total_disbursements', 'total_replenishments',
+            'unreplenished_amount', 'is_active', 'min_balance_threshold',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'current_balance', 'total_disbursements', 'total_replenishments', 'unreplenished_amount', 'created_at', 'updated_at']
+
+
+class PettyCashFundMinimalSerializer(serializers.ModelSerializer):
+    current_balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    unreplenished_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    location_display = serializers.CharField(source='get_location_display', read_only=True)
+
+    class Meta:
+        model = PettyCashFund
+        fields = ['id', 'name', 'location', 'location_display', 'current_balance', 'unreplenished_amount']
+
+
+class PettyCashTransactionSerializer(serializers.ModelSerializer):
+    pcf_name = serializers.CharField(source='pcf.name', read_only=True)
+    location_display = serializers.CharField(source='pcf.get_location_display', read_only=True)
+    created_by_username = serializers.ReadOnlyField(source='created_by.username')
+
+    class Meta:
+        model = PettyCashTransaction
+        fields = [
+            'id', 'pcf', 'pcf_name', 'location_display',
+            'date', 'type', 'amount', 'description',
+            'created_by', 'created_by_username', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'pcf_name', 'location_display', 'created_by', 'created_by_username', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        tx = PettyCashTransaction(**validated_data)
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            tx.created_by = request.user
+        tx.save()
+        return tx
+
+
+class CashCountSerializer(serializers.ModelSerializer):
+    pcf_name = serializers.CharField(source='pcf.name', read_only=True)
+    location_display = serializers.CharField(source='pcf.get_location_display', read_only=True)
+    verified_by_username = serializers.ReadOnlyField(source='verified_by.username')
+
+    class Meta:
+        model = CashCount
+        fields = [
+            'id', 'pcf', 'pcf_name', 'location_display',
+            'count_date', 'system_balance', 'actual_count', 'variance',
+            'notes', 'verified_by', 'verified_by_username',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'pcf_name', 'location_display', 'variance', 'verified_by_username', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        count = CashCount(**validated_data)
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            count.verified_by = request.user
+        count.save()
+        return count
+
+
+class PcfSummarySerializer(serializers.Serializer):
+    pcf_id = serializers.IntegerField()
+    pcf_name = serializers.CharField()
+    location = serializers.CharField()
+    location_display = serializers.CharField()
+    beginning = serializers.DecimalField(max_digits=12, decimal_places=2)
+    disbursements = serializers.DecimalField(max_digits=12, decimal_places=2)
+    replenishments = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unreplenished = serializers.DecimalField(max_digits=12, decimal_places=2)
+    ending = serializers.DecimalField(max_digits=12, decimal_places=2)

@@ -22,9 +22,14 @@ from .serializers import (
     DailyCashPositionSerializer,
     MonthlyReportSerializer,
     PdcSerializer,
+    PettyCashFundSerializer,
+    PettyCashFundMinimalSerializer,
+    PettyCashTransactionSerializer,
+    CashCountSerializer,
 )
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount
 from .utils.summary import compute_bank_daily_summary
+from .export_views import pcf_export_excel, pcf_export_pdf
 
 
 # -----------------------------
@@ -189,7 +194,7 @@ def detailed_monthly_report(request):
 def detailed_daily_summary(request):
     """
     GET /summary/detailed-daily/?date=YYYY-MM-DD
-    Returns cash_in_bank rows and accounts list for Banks table.
+    Returns cash_in_bank rows, accounts list, and cash_on_hand (PCF) for the Dashboard.
     """
     date_str = request.query_params.get("date")
     if date_str:
@@ -211,10 +216,44 @@ def detailed_daily_summary(request):
             "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
         })
 
+    cash_on_hand = []
+    for pcf in PettyCashFund.objects.filter(is_active=True):
+        beginning = pcf.opening_balance
+        previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=target_date)
+        for t in previous_txns:
+            if t.type == 'disbursement':
+                beginning -= t.amount
+            elif t.type == 'replenishment':
+                beginning += t.amount
+
+        daily_txns = PettyCashTransaction.objects.filter(pcf=pcf, date=target_date)
+        disbursements = daily_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = daily_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
+        ending = beginning - disbursements + replenishments
+
+        cash_on_hand.append({
+            "id": pcf.id,
+            "name": pcf.name,
+            "location": pcf.location,
+            "location_display": pcf.get_location_display(),
+            "beginning": float(beginning),
+            "disbursements": float(disbursements),
+            "replenishments": float(replenishments),
+            "ending": float(ending),
+            "unreplenished": float(unreplenished),
+            "current_balance": float(pcf.current_balance),
+            "unreplenished_amount": float(pcf.unreplenished_amount),
+        })
+
     return Response({
         "date": target_date.isoformat(),
         "cash_in_bank": bank_rows,
         "accounts": accounts,
+        "cash_on_hand": cash_on_hand,
     })
 
 
@@ -386,3 +425,471 @@ class PdcViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(pdc)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------
+# PCF ViewSets
+# ---------------------------------------------------------------------
+class PettyCashFundViewSet(viewsets.ModelViewSet):
+    queryset = PettyCashFund.objects.all().order_by('name')
+    serializer_class = PettyCashFundSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return PettyCashFundMinimalSerializer
+        return PettyCashFundSerializer
+
+    @action(detail=True, methods=['get'])
+    def balance(self, request, pk=None):
+        pcf = self.get_object()
+        return Response({
+            'pcf_id': pcf.id,
+            'pcf_name': pcf.name,
+            'current_balance': float(pcf.current_balance),
+            'total_disbursements': float(pcf.total_disbursements),
+            'total_replenishments': float(pcf.total_replenishments),
+            'unreplenished_amount': float(pcf.unreplenished_amount),
+        })
+
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def add_balance(self, request, pk=None):
+        pcf = self.get_object()
+        amount = request.data.get('amount')
+        date_str = request.data.get('date')
+        description = request.data.get('description', '')
+
+        if not amount:
+            return Response({'detail': 'amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount = Decimal(str(amount))
+        except Exception:
+            return Response({'detail': 'Invalid amount format'}, status=status.HTTP_400_BAD_REQUEST)
+
+        tx_date = parse_date(date_str) if date_str else now().date()
+
+        txn = PettyCashTransaction.objects.create(
+            pcf=pcf,
+            date=tx_date,
+            type='replenishment',
+            amount=amount,
+            description=description,
+            created_by=request.user if request.user.is_authenticated else None
+        )
+
+        serializer = PettyCashTransactionSerializer(txn, context={'request': request})
+        return Response({
+            'message': 'Balance added successfully',
+            'transaction': serializer.data,
+            'new_balance': float(pcf.current_balance),
+        }, status=status.HTTP_201_CREATED)
+
+
+class PettyCashTransactionViewSet(viewsets.ModelViewSet):
+    queryset = PettyCashTransaction.objects.all().order_by('-date', '-created_at')
+    serializer_class = PettyCashTransactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        pcf_id = self.request.query_params.get('pcf_id')
+        if pcf_id:
+            qs = qs.filter(pcf_id=pcf_id)
+        return qs
+
+
+class CashCountViewSet(viewsets.ModelViewSet):
+    queryset = CashCount.objects.all().order_by('-count_date', '-created_at')
+    serializer_class = CashCountSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+# ---------------------------------------------------------------------
+# Summary Endpoints
+# ---------------------------------------------------------------------
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def bank_reconciliation_summary(request):
+    """
+    GET /summary/bank-reconciliation/
+    Returns PCF breakdown, Bank breakdown, and reconciliation totals.
+    """
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    pcf_breakdown = []
+    total_available = Decimal('0.00')
+    total_unreplenished = Decimal('0.00')
+
+    for pcf in pcfs:
+        available = pcf.current_balance
+        unrep = pcf.unreplenished_amount
+        pcf_breakdown.append({
+            'pcf_id': pcf.id,
+            'pcf_name': pcf.name,
+            'location': pcf.location,
+            'location_display': pcf.get_location_display(),
+            'available_balance': float(available),
+            'unreplenished': float(unrep),
+        })
+        total_available += available
+        total_unreplenished += unrep
+
+    banks = BankAccount.objects.all()
+    bank_breakdown = []
+    bank_total = Decimal('0.00')
+    for bank in banks:
+        bank_breakdown.append({
+            'bank_id': bank.id,
+            'bank_name': bank.name or '',
+            'account_number': bank.account_number,
+            'balance': float(bank.balance),
+        })
+        bank_total += bank.balance or Decimal('0.00')
+
+    expected_bank = bank_total + total_unreplenished
+    total_cash = total_available + bank_total
+    variance = total_cash - expected_bank
+
+    return Response({
+        'pcf': {
+            'breakdown': pcf_breakdown,
+            'total_available': float(total_available),
+            'total_unreplenished': float(total_unreplenished),
+        },
+        'bank': {
+            'breakdown': bank_breakdown,
+            'total': float(bank_total),
+        },
+        'reconciliation': {
+            'expected_bank_after_replenishment': float(expected_bank),
+            'total_cash': float(total_cash),
+            'variance': float(variance),
+            'is_balanced': abs(variance) < Decimal('0.01'),
+        }
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def cash_counts_summary(request):
+    """
+    GET /summary/cash-counts/
+    Returns latest cash count for each PCF and summary.
+    """
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    summary = []
+
+    for pcf in pcfs:
+        last_count = pcf.cash_counts.first()
+        summary.append({
+            'pcf_id': pcf.id,
+            'pcf_name': pcf.name,
+            'location': pcf.location,
+            'location_display': pcf.get_location_display(),
+            'system_balance': float(pcf.current_balance),
+            'last_count_date': last_count.count_date.isoformat() if last_count else None,
+            'last_actual_count': float(last_count.actual_count) if last_count else None,
+            'last_variance': float(last_count.variance) if last_count else None,
+        })
+
+    return Response({'summary': summary})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pcf_alerts(request):
+    """
+    GET /summary/pcf-alerts/
+    Returns alerts for PCFs below threshold or with unreplenished amounts.
+    """
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    alerts = []
+
+    for pcf in pcfs:
+        if pcf.current_balance < pcf.min_balance_threshold:
+            alerts.append({
+                'id': f'low_balance_{pcf.id}',
+                'pcf_id': pcf.id,
+                'pcf_name': pcf.name,
+                'type': 'low_balance',
+                'severity': 'warning',
+                'message': f'{pcf.name} balance ({float(pcf.current_balance):,.2f}) is below threshold ({float(pcf.min_balance_threshold):,.2f})',
+            })
+
+        if pcf.unreplenished_amount > Decimal('0.00'):
+            alerts.append({
+                'id': f'unreplenished_{pcf.id}',
+                'pcf_id': pcf.id,
+                'pcf_name': pcf.name,
+                'type': 'unreplenished',
+                'severity': 'warning',
+                'message': f'{pcf.name} has unreplenished amount of {float(pcf.unreplenished_amount):,.2f}',
+            })
+
+    return Response({'alerts': alerts})
+
+
+# ---------------------------------------------------------------------
+# PCF Report Endpoints
+# ---------------------------------------------------------------------
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pcf_daily_report(request):
+    """
+    GET /api/reports/pcf-daily/?date=YYYY-MM-DD
+    Returns daily PCF report.
+    """
+    date_str = request.query_params.get('date')
+    target_date = parse_date(date_str) if date_str else now().date()
+
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    pcf_data = []
+    totals = {'beginning': Decimal('0.00'), 'disbursements': Decimal('0.00'),
+              'replenishments': Decimal('0.00'), 'unreplenished': Decimal('0.00'), 'ending': Decimal('0.00')}
+
+    for pcf in pcfs:
+        beginning = pcf.opening_balance
+        previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=target_date)
+        for t in previous_txns:
+            if t.type == 'disbursement':
+                beginning -= t.amount
+            elif t.type == 'replenishment':
+                beginning += t.amount
+
+        daily_txns = PettyCashTransaction.objects.filter(pcf=pcf, date=target_date)
+        disbursements = daily_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = daily_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
+        ending = beginning - disbursements + replenishments
+
+        pcf_data.append({
+            'pcf_id': pcf.id,
+            'pcf_name': pcf.name,
+            'location': pcf.location,
+            'location_display': pcf.get_location_display(),
+            'beginning': float(beginning),
+            'disbursements': float(disbursements),
+            'replenishments': float(replenishments),
+            'unreplenished': float(unreplenished),
+            'ending': float(ending),
+        })
+
+        totals['beginning'] += beginning
+        totals['disbursements'] += disbursements
+        totals['replenishments'] += replenishments
+        totals['unreplenished'] += unreplenished
+        totals['ending'] += ending
+
+    return Response({
+        'date': target_date.isoformat(),
+        'pufs': pcf_data,
+        'totals': {k: float(v) for k, v in totals.items()}
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pcf_weekly_report(request):
+    """
+    GET /api/reports/pcf-weekly/?start=YYYY-MM-DD&end=YYYY-MM-DD
+    Returns weekly PCF report.
+    """
+    start_str = request.query_params.get('start')
+    end_str = request.query_params.get('end')
+    start_date = parse_date(start_str) if start_str else now().date() - timedelta(days=7)
+    end_date = parse_date(end_str) if end_str else now().date()
+
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    pcf_data = []
+    totals = {'disbursements': Decimal('0.00'), 'replenishments': Decimal('0.00'), 'unreplenished': Decimal('0.00')}
+
+    for pcf in pcfs:
+        txns = PettyCashTransaction.objects.filter(pcf=pcf, date__gte=start_date, date__lte=end_date)
+        disbursements = txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=end_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=end_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
+
+        pcf_data.append({
+            'pcf_id': pcf.id,
+            'pcf_name': pcf.name,
+            'location': pcf.location,
+            'location_display': pcf.get_location_display(),
+            'disbursements': float(disbursements),
+            'replenishments': float(replenishments),
+            'unreplenished': float(unreplenished),
+        })
+
+        totals['disbursements'] += disbursements
+        totals['replenishments'] += replenishments
+        totals['unreplenished'] += unreplenished
+
+    return Response({
+        'start_date': start_date.isoformat(),
+        'end_date': end_date.isoformat(),
+        'report_type': 'weekly',
+        'pufs': pcf_data,
+        'totals': {k: float(v) for k, v in totals.items()}
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pcf_monthly_report(request):
+    """
+    GET /api/reports/pcf-monthly/?year=YYYY&month=MM
+    Returns monthly PCF report.
+    """
+    year = request.query_params.get('year', now().year)
+    month = request.query_params.get('month', now().month)
+
+    try:
+        year = int(year)
+        month = int(month)
+    except ValueError:
+        return Response({'detail': 'Invalid year or month'}, status=400)
+
+    from calendar import monthrange
+    import calendar
+    start_date = _date(year, month, 1)
+    end_date = _date(year, month, monthrange(year, month)[1])
+
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    pcf_data = []
+    totals = {'disbursements': Decimal('0.00'), 'replenishments': Decimal('0.00'), 'unreplenished': Decimal('0.00')}
+
+    for pcf in pcfs:
+        txns = PettyCashTransaction.objects.filter(pcf=pcf, date__gte=start_date, date__lte=end_date)
+        disbursements = txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=end_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=end_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
+
+        pcf_data.append({
+            'pcf_id': pcf.id,
+            'pcf_name': pcf.name,
+            'location': pcf.location,
+            'location_display': pcf.get_location_display(),
+            'disbursements': float(disbursements),
+            'replenishments': float(replenishments),
+            'unreplenished': float(unreplenished),
+        })
+
+        totals['disbursements'] += disbursements
+        totals['replenishments'] += replenishments
+        totals['unreplenished'] += unreplenished
+
+    return Response({
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'report_type': 'monthly',
+        'pufs': pcf_data,
+        'totals': {k: float(v) for k, v in totals.items()}
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pcf_unreplenished_aging(request):
+    """
+    GET /api/reports/pcf-unreplenished-aging/
+    Returns aging of unreplenished disbursements.
+    """
+    from datetime import timedelta as td
+
+    pcfs = PettyCashFund.objects.filter(is_active=True)
+    today = now().date()
+    all_disbursements = []
+
+    for pcf in pcfs:
+        disbs = PettyCashTransaction.objects.filter(pcf=pcf, type='disbursement')
+        for d in disbs:
+            replenished = PettyCashTransaction.objects.filter(
+                pcf=pcf, type='replenishment', date__gte=d.date
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+            total_rep_for_pcf = PettyCashTransaction.objects.filter(
+                pcf=pcf, type='replenishment', date__lte=today
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+            total_disb_for_pcf = PettyCashTransaction.objects.filter(
+                pcf=pcf, type='disbursement', date__lte=today
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+            cumulative_unrep = max(Decimal('0.00'), total_disb_for_pcf - total_rep_for_pcf)
+            if cumulative_unrep > 0:
+                all_disbursements.append({
+                    'id': d.id,
+                    'pcf_id': pcf.id,
+                    'pcf_name': pcf.name,
+                    'location': pcf.location,
+                    'location_display': pcf.get_location_display(),
+                    'date': d.date.isoformat(),
+                    'amount': float(d.amount),
+                    'days_outstanding': (today - d.date).days,
+                })
+
+    buckets = {
+        '0_15_days': {'label': '0-15 Days', 'total': Decimal('0.00'), 'count': 0, 'transactions': []},
+        '16_30_days': {'label': '16-30 Days', 'total': Decimal('0.00'), 'count': 0, 'transactions': []},
+        '31_60_days': {'label': '31-60 Days', 'total': Decimal('0.00'), 'count': 0, 'transactions': []},
+        '61_plus_days': {'label': '61+ Days', 'total': Decimal('0.00'), 'count': 0, 'transactions': []},
+    }
+
+    for d in all_disbursements:
+        days = d['days_outstanding']
+        amt = Decimal(str(d['amount']))
+
+        if days <= 15:
+            bucket = buckets['0_15_days']
+        elif days <= 30:
+            bucket = buckets['16_30_days']
+        elif days <= 60:
+            bucket = buckets['31_60_days']
+        else:
+            bucket = buckets['61_plus_days']
+
+        bucket['transactions'].append(d)
+        bucket['count'] += 1
+        bucket['total'] += amt
+
+    for bucket in buckets.values():
+        bucket['total'] = float(bucket['total'])
+
+    total_outstanding = sum(Decimal(str(b['total'])) for b in buckets.values())
+
+    return Response({
+        'as_of_date': today.isoformat(),
+        'total_outstanding': float(total_outstanding),
+        'aging_buckets': buckets,
+    })
+
+
+# ---------------------------------------------------------------------
+# Export Views (connected to API)
+# ---------------------------------------------------------------------
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def export_pcf_excel(request):
+    """
+    GET /api/reports/export/excel/?type=daily&date=YYYY-MM-DD
+    """
+    return pcf_export_excel(request)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def export_pcf_pdf(request):
+    """
+    GET /api/reports/export/pdf/?type=daily&date=YYYY-MM-DD
+    """
+    return pcf_export_pdf(request)

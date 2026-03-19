@@ -1,7 +1,7 @@
 # core/admin.py
 from django.contrib import admin
 from django.db.models import Sum
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount
 
 
 class TransactionInline(admin.TabularInline):
@@ -92,3 +92,40 @@ class PdcAdmin(admin.ModelAdmin):
     list_filter = ("status", "maturity_date")
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-maturity_date", "-id")
+
+
+@admin.register(PettyCashFund)
+class PettyCashFundAdmin(admin.ModelAdmin):
+    list_display = ('name', 'location', 'opening_balance', 'current_balance_display', 'is_active')
+    search_fields = ('name', 'location')
+    list_filter = ('location', 'is_active')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('name',)
+
+    def current_balance_display(self, obj):
+        return f"{obj.current_balance:.2f}"
+    current_balance_display.short_description = "Current Balance"
+
+
+class PettyCashTransactionInline(admin.TabularInline):
+    model = PettyCashTransaction
+    extra = 1
+    readonly_fields = ('date', 'type', 'amount', 'description')
+
+
+@admin.register(PettyCashTransaction)
+class PettyCashTransactionAdmin(admin.ModelAdmin):
+    list_display = ('date', 'pcf', 'type', 'amount', 'description', 'created_by')
+    search_fields = ('pcf__name', 'description')
+    list_filter = ('type', 'date', 'pcf')
+    ordering = ('-date', '-created_at')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(CashCount)
+class CashCountAdmin(admin.ModelAdmin):
+    list_display = ('count_date', 'pcf', 'system_balance', 'actual_count', 'variance', 'verified_by')
+    search_fields = ('pcf__name', 'notes')
+    list_filter = ('count_date', 'pcf')
+    ordering = ('-count_date', '-created_at')
+    readonly_fields = ('variance', 'created_at', 'updated_at')

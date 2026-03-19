@@ -279,6 +279,126 @@ class MonthlyReport(models.Model):
 
 
 # ---------------------------------------------------------------------
+# PettyCashFund model
+# ---------------------------------------------------------------------
+class PettyCashFund(models.Model):
+    LOCATION_CHOICES = [
+        ('office', 'Main Office'),
+        ('quarry', 'Quarry'),
+    ]
+
+    name = models.CharField(max_length=100)
+    location = models.CharField(max_length=50, choices=LOCATION_CHOICES, default='office')
+    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    is_active = models.BooleanField(default=True)
+    min_balance_threshold = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('1000.00'),
+        help_text='Alert when balance falls below this amount'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Petty Cash Fund'
+        verbose_name_plural = 'Petty Cash Funds'
+
+    def __str__(self):
+        return f"{self.name} ({self.get_location_display()})"
+
+    @property
+    def current_balance(self):
+        disbursements = self.transactions.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = self.transactions.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        return self.opening_balance + replenishments - disbursements
+
+    @property
+    def total_disbursements(self):
+        return self.transactions.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    @property
+    def total_replenishments(self):
+        return self.transactions.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    @property
+    def unreplenished_amount(self):
+        total_disb = self.total_disbursements
+        total_rep = self.total_replenishments
+        return max(Decimal('0.00'), total_disb - total_rep)
+
+    def recalc_balance(self):
+        self.save(update_fields=['updated_at'])
+
+
+# ---------------------------------------------------------------------
+# PettyCashTransaction model
+# ---------------------------------------------------------------------
+class PettyCashTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('disbursement', 'Disbursement'),
+        ('replenishment', 'Replenishment'),
+    ]
+
+    pcf = models.ForeignKey(PettyCashFund, on_delete=models.CASCADE, related_name='transactions')
+    date = models.DateField()
+    type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_pcf_transactions'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f"{self.pcf.name} - {self.type} - {self.amount} ({self.date})"
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------
+# CashCount model
+# ---------------------------------------------------------------------
+class CashCount(models.Model):
+    pcf = models.ForeignKey(PettyCashFund, on_delete=models.CASCADE, related_name='cash_counts')
+    count_date = models.DateField()
+    system_balance = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text='System balance at time of count'
+    )
+    actual_count = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text='Actual physical cash count'
+    )
+    variance = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text='Difference (actual - system)'
+    )
+    notes = models.TextField(blank=True, null=True)
+    verified_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_cash_counts'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Cash Count'
+        verbose_name_plural = 'Cash Counts'
+        ordering = ['-count_date', '-created_at']
+
+    def __str__(self):
+        return f"Cash Count - {self.pcf.name} ({self.count_date})"
+
+    def save(self, *args, **kwargs):
+        self.variance = self.actual_count - self.system_balance
+        super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------
 # Signals: keep your existing handlers (they call recalc_balance and update daily)
 # ---------------------------------------------------------------------
 @receiver(post_save, sender=Transaction)
@@ -302,6 +422,25 @@ def update_balance_on_delete(sender, instance, **kwargs):
         daily.save()
     except Exception:
         logger.exception("Error in post_delete handler for Transaction")
+
+
+# ---------------------------------------------------------------------
+# PCF Signals: auto-update PCF balances
+# ---------------------------------------------------------------------
+@receiver(post_save, sender=PettyCashTransaction)
+def update_pcf_balance_on_save(sender, instance, **kwargs):
+    try:
+        instance.pcf.recalc_balance()
+    except Exception:
+        logger.exception("Error in post_save handler for PettyCashTransaction")
+
+
+@receiver(post_delete, sender=PettyCashTransaction)
+def update_pcf_balance_on_delete(sender, instance, **kwargs):
+    try:
+        instance.pcf.recalc_balance()
+    except Exception:
+        logger.exception("Error in post_delete handler for PettyCashTransaction")
 
 
 # ---------------------------------------------------------------------

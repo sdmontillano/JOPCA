@@ -41,9 +41,8 @@ function groupLineItemsByBank(lineItems = []) {
     else if (t.includes("fund")) row.fund_transfers += total;
     else if (t.includes("returned")) row.returned_checks += total;
     else if (t.includes("bank_charge") || t.includes("bank charge")) row.bank_charges += total;
-    else row.collections += total; // default
+    else row.collections += total;
 
-    // recompute ending as a best-effort
     row.ending =
       (row.beginning || 0) +
       (row.collections || 0) +
@@ -135,10 +134,6 @@ function buildPcfRowsFromUnreplenished(unreplenished = []) {
   return [pcfOffice, pcfQuarry];
 }
 
-/* ---------------------------
-   Robust PDC type matcher
-   - accepts many common variants
-   --------------------------- */
 function isPdcType(typeStr = "") {
   const t = (typeStr || "").toString().toLowerCase();
   if (!t) return false;
@@ -150,7 +145,6 @@ export function mapDailyResponse(raw = {}) {
   const data = unwrap(raw);
   const lineItems = Array.isArray(data.line_items) ? data.line_items : [];
 
-  // transactions = non-PDC line_items
   const transactions = lineItems
     .filter((li) => !isPdcType(li.type || li.txn_type || li.particulars))
     .map((li) => ({
@@ -161,14 +155,11 @@ export function mapDailyResponse(raw = {}) {
       raw: li,
     }));
 
-  // PDC items (tolerant matching)
   const pdcItems = lineItems.filter((li) => isPdcType(li.type || li.txn_type || li.particulars));
   const pdcTotalFromLineItems = sum(pdcItems);
 
-  // Prefer backend-provided pdc_summary if present, but normalize fields
   let pdcSummary = { matured: 0, this_month: pdcTotalFromLineItems, next_month: 0, total: pdcTotalFromLineItems };
   if (data.pdc_summary) {
-    // If backend returns different keys, try to map common ones
     const s = data.pdc_summary;
     pdcSummary = {
       matured: toNumber(s.matured ?? s.mature ?? s.matured_amount ?? 0),
@@ -176,9 +167,7 @@ export function mapDailyResponse(raw = {}) {
       next_month: toNumber(s.next_month ?? s.nextMonth ?? s.upcoming_month ?? 0),
       total: toNumber(s.total ?? s.total_amount ?? s.sum ?? pdcTotalFromLineItems),
     };
-    // console.debug("raw pdc_summary from API:", data.pdc_summary);
   } else if (data._raw && data._raw.pdc_summary) {
-    // fallback if nested under _raw
     const s = data._raw.pdc_summary;
     pdcSummary = {
       matured: toNumber(s.matured ?? 0),
@@ -186,13 +175,8 @@ export function mapDailyResponse(raw = {}) {
       next_month: toNumber(s.next_month ?? 0),
       total: toNumber(s.total ?? pdcTotalFromLineItems),
     };
-  } else {
-    // no backend summary — use computed totals
-    pdcSummary = { matured: 0, this_month: pdcTotalFromLineItems, next_month: 0, total: pdcTotalFromLineItems };
   }
 
-  // Build cash_in_bank: prefer backend-provided rows (numbers) and convert to numbers,
-  // otherwise fall back to grouping line_items by bank.
   const rawCashInBank = Array.isArray(data.cash_in_bank) ? data.cash_in_bank : null;
 
   const cashInBank = rawCashInBank
@@ -214,12 +198,28 @@ export function mapDailyResponse(raw = {}) {
       }))
     : groupLineItemsByBank(lineItems.filter((li) => !isPdcType(li.type || li.txn_type || li.particulars)));
 
-  // Build cash_on_hand from unreplenished fund entries (PCF Office / PCF Quarry)
-  const unreplenished = Array.isArray(data.unreplenished) ? data.unreplenished : data.unreplenished_fund || [];
-  const pcfRows = buildPcfRowsFromUnreplenished(unreplenished);
+  // PCF / Cash on Hand - Priority: explicit cash_on_hand from backend > computed pcfRows
+  let cashOnHand = [];
 
-  // If backend provided explicit cash_on_hand rows, prefer them; otherwise use PCF rows
-  const cashOnHand = Array.isArray(data.cash_on_hand) && data.cash_on_hand.length > 0 ? data.cash_on_hand : pcfRows;
+  if (Array.isArray(data.cash_on_hand) && data.cash_on_hand.length > 0) {
+    cashOnHand = data.cash_on_hand.map((pcf) => ({
+      id: pcf.id,
+      name: pcf.name,
+      location: pcf.location,
+      location_display: pcf.location_display || pcf.location,
+      particulars: pcf.name,
+      beginning: toNumber(pcf.beginning ?? pcf.opening_balance ?? 0),
+      disbursements: toNumber(pcf.disbursements ?? 0),
+      replenishments: toNumber(pcf.replenishments ?? 0),
+      ending: toNumber(pcf.ending ?? pcf.current_balance ?? 0),
+      unreplenished: toNumber(pcf.unreplenished ?? pcf.unreplenished_amount ?? 0),
+      current_balance: toNumber(pcf.current_balance ?? pcf.ending ?? 0),
+      unreplenished_amount: toNumber(pcf.unreplenished ?? pcf.unreplenished_amount ?? 0),
+    }));
+  } else {
+    const unreplenished = Array.isArray(data.unreplenished) ? data.unreplenished : data.unreplenished_fund || [];
+    cashOnHand = buildPcfRowsFromUnreplenished(unreplenished);
+  }
 
   return {
     office: data.office || data.branch || null,
@@ -227,7 +227,7 @@ export function mapDailyResponse(raw = {}) {
     cash_on_hand: cashOnHand,
     cash_in_bank: cashInBank,
     pdc_summary: pdcSummary,
-    unreplenished: unreplenished,
+    unreplenished: Array.isArray(data.unreplenished) ? data.unreplenished : data.unreplenished_fund || [],
     returned_checks: data.returned_checks || [],
     accounts: data.accounts || [],
     total: data.grand_total ?? data.total ?? 0,
@@ -264,9 +264,6 @@ export function mapMonthlyResponse(raw = {}) {
       next_month: toNumber(s.next_month ?? s.nextMonth ?? 0),
       total: toNumber(s.total ?? s.total_amount ?? pdcTotalFromLineItems),
     };
-    // console.debug("monthly raw pdc_summary:", data.pdc_summary);
-  } else {
-    pdcSummary = { matured: 0, this_month: pdcTotalFromLineItems, next_month: 0, total: pdcTotalFromLineItems };
   }
 
   return {
