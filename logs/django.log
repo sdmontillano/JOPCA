@@ -1,0 +1,374 @@
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+[19/Mar/2026 16:20:07] "OPTIONS /api-token-auth/ HTTP/1.1" 200 0
+[19/Mar/2026 16:20:08] "POST /api-token-auth/ HTTP/1.1" 200 52
+[19/Mar/2026 16:20:09] "OPTIONS /pdc/ HTTP/1.1" 200 0
+[19/Mar/2026 16:20:09] "OPTIONS /summary/detailed-daily/ HTTP/1.1" 200 0
+[19/Mar/2026 16:20:09] "GET /summary/detailed-daily/ HTTP/1.1" 200 1739
+[19/Mar/2026 16:20:09] "GET /summary/detailed-daily/ HTTP/1.1" 200 1739
+[19/Mar/2026 16:20:09] "OPTIONS /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 0
+[19/Mar/2026 16:20:09] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:20:09] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:20:09] "GET /pdc/ HTTP/1.1" 200 911
+[19/Mar/2026 16:20:09] "GET /pdc/ HTTP/1.1" 200 911
+[19/Mar/2026 16:20:09] "OPTIONS /bankaccounts/ HTTP/1.1" 200 0
+[19/Mar/2026 16:20:09] "OPTIONS /bankaccounts/ HTTP/1.1" 200 0
+[19/Mar/2026 16:20:09] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:20:09] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:20:09] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:20:09] "GET /bankaccounts/ HTTP/1.1" 200 659
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\models.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:20:07
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\models.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:26:40
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\serializers.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:26:45
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\serializers.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:27:04
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\views.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:27:36
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\views.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:27:56
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\banking_dcpr\urls.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:29:22
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+[19/Mar/2026 16:41:29] "GET /summary/detailed-daily/ HTTP/1.1" 200 1739
+[19/Mar/2026 16:41:29] "GET /summary/detailed-daily/ HTTP/1.1" 200 1739
+[19/Mar/2026 16:41:29] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:41:29] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:41:29] "GET /pdc/ HTTP/1.1" 200 911
+[19/Mar/2026 16:41:29] "GET /pdc/ HTTP/1.1" 200 911
+[19/Mar/2026 16:41:29] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:41:29] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:41:29] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:41:29] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:05] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:14] "GET /pdc/ HTTP/1.1" 200 911
+[19/Mar/2026 16:42:20] "POST /pdc/ HTTP/1.1" 201 423
+[19/Mar/2026 16:42:20] "GET /pdc/ HTTP/1.1" 200 1335
+[19/Mar/2026 16:42:20] "GET /summary/detailed-daily/ HTTP/1.1" 200 1739
+[19/Mar/2026 16:42:20] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:42:24] "GET /pdc/ HTTP/1.1" 200 1335
+[19/Mar/2026 16:42:27] "GET /pdc/ HTTP/1.1" 200 1335
+[19/Mar/2026 16:42:27] "GET /pdc/ HTTP/1.1" 200 1335
+[19/Mar/2026 16:42:30] "OPTIONS /pdc/14/mark_matured/ HTTP/1.1" 200 0
+[19/Mar/2026 16:42:30] "POST /pdc/14/mark_matured/ HTTP/1.1" 200 419
+[19/Mar/2026 16:42:30] "GET /pdc/ HTTP/1.1" 200 1331
+[19/Mar/2026 16:42:32] "OPTIONS /pdc/14/deposit/ HTTP/1.1" 200 0
+[19/Mar/2026 16:42:32] "POST /pdc/14/deposit/ HTTP/1.1" 200 429
+[19/Mar/2026 16:42:32] "GET /pdc/ HTTP/1.1" 200 1341
+[19/Mar/2026 16:42:33] "GET /pdc/ HTTP/1.1" 200 1341
+[19/Mar/2026 16:42:33] "GET /pdc/ HTTP/1.1" 200 1341
+[19/Mar/2026 16:42:33] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:42:33] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:42:33] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:42:33] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:33] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:42:33] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:33] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:33] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:36] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:50] "POST /pdc/ HTTP/1.1" 201 423
+[19/Mar/2026 16:42:50] "GET /pdc/ HTTP/1.1" 200 1765
+[19/Mar/2026 16:42:50] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:42:50] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:42:55] "GET /pdc/ HTTP/1.1" 200 1765
+[19/Mar/2026 16:42:55] "GET /pdc/ HTTP/1.1" 200 1765
+[19/Mar/2026 16:42:55] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:42:55] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:42:55] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:42:56] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:56] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:56] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:56] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:42:56] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:42:58] "GET /pdc/ HTTP/1.1" 200 1765
+[19/Mar/2026 16:42:58] "GET /pdc/ HTTP/1.1" 200 1765
+[19/Mar/2026 16:43:00] "OPTIONS /pdc/15/mark_matured/ HTTP/1.1" 200 0
+[19/Mar/2026 16:43:00] "POST /pdc/15/mark_matured/ HTTP/1.1" 200 419
+[19/Mar/2026 16:43:00] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:00] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:00] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:00] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:00] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:04] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:04] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:05] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:05] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:05] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:05] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:05] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:05] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:05] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:05] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:05] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:05] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:12] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:12] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:12] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:12] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:12] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:12] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:12] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:12] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:12] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:12] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:15] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:15] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:15] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:15] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:15] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:16] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:16] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:16] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:16] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:16] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:18] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:18] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:18] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:18] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:19] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:19] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:19] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:19] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:19] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:42] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:42] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:42] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:42] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:42] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:42] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:42] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:42] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:42] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:42] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:45] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:45] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:43:45] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:45] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:46] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:43:46] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:46] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:43:46] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:46] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:43:46] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:45:02] "OPTIONS /pcf/ HTTP/1.1" 200 0
+[19/Mar/2026 16:45:02] "OPTIONS /pcf/ HTTP/1.1" 200 0
+[19/Mar/2026 16:45:02] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:45:02] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:45:07] "OPTIONS /summary/cash-counts/ HTTP/1.1" 200 0
+[19/Mar/2026 16:45:07] "OPTIONS /summary/cash-counts/ HTTP/1.1" 200 0
+[19/Mar/2026 16:45:07] "GET /summary/cash-counts/ HTTP/1.1" 200 14
+[19/Mar/2026 16:45:07] "GET /summary/cash-counts/ HTTP/1.1" 200 14
+[19/Mar/2026 16:45:12] "GET /summary/cash-counts/ HTTP/1.1" 200 14
+[19/Mar/2026 16:45:12] "GET /summary/cash-counts/ HTTP/1.1" 200 14
+[19/Mar/2026 16:45:15] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:45:19] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:45:19] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:45:19] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:45:19] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:45:19] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:45:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:45:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:45:19] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:45:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:45:19] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:15] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:46:15] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:46:18] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:46:18] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:46:18] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:46:18] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:46:18] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:46:18] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:18] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:18] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:46:18] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:18] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:20] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:46:20] "GET /pcf/ HTTP/1.1" 200 2
+[19/Mar/2026 16:46:24] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:46:24] "GET /pdc/ HTTP/1.1" 200 1761
+[19/Mar/2026 16:46:24] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:46:24] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:46:24] "GET /summary/detailed-daily/ HTTP/1.1" 200 1741
+[19/Mar/2026 16:46:25] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:25] "GET /summary/detailed-monthly/?month=2026-03 HTTP/1.1" 200 1697
+[19/Mar/2026 16:46:25] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:25] "GET /bankaccounts/ HTTP/1.1" 200 659
+[19/Mar/2026 16:46:25] "GET /bankaccounts/ HTTP/1.1" 200 659
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\admin.py changed, reloading.
+Performing system checks...
+
+
+You have 11 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): core.
+Run 'python manage.py migrate' to apply them.
+March 19, 2026 - 16:29:48
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\admin.py changed, reloading.
+Performing system checks...
+
+March 19, 2026 - 16:47:25
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).
+C:\Users\DELL\Desktop\JOPCA\banking_dcpr\core\views.py changed, reloading.
+Performing system checks...
+
+March 19, 2026 - 16:47:37
+Django version 5.1.6, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\DELL\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 1 issue (0 silenced).

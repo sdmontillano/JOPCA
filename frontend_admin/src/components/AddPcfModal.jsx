@@ -212,7 +212,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
         }
 
         const txnPayload = {
-          pcf_id: Number(selectedPcf),
+          pcf: Number(selectedPcf),  // Backend expects 'pcf', not 'pcf_id'
           type: form.type,
           date: form.date,
           amount: Number(form.amount),

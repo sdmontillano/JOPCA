@@ -442,35 +442,44 @@ function DashboardInner() {
       const monthStr = monthOverride || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
       const monthlyRes = await api.get(`/summary/detailed-monthly/?month=${monthStr}`);
 
-      const rawDaily = dailyRes?.data ?? dailyRes;
+      // Extract raw data from axios response
+      const rawDaily = dailyRes.data || dailyRes;
+      const rawMonthly = monthlyRes.data || monthlyRes;
+
+      // Map the data
       const mappedDaily = (() => {
         try {
           return mapDailyResponse(rawDaily);
         } catch (e) {
           console.error("mapDailyResponse failed", e);
-          return rawDaily;
+          return {};
         }
       })();
 
-      const rawMonthly = monthlyRes?.data ?? monthlyRes;
       const mappedMonthly = (() => {
         try {
           return mapMonthlyResponse(rawMonthly);
         } catch (e) {
           console.error("mapMonthlyResponse failed", e);
-          return rawMonthly;
+          return {};
         }
       })();
 
       setDailyRaw(rawDaily);
-      setDailyReport(mappedDaily || {});
-      setMonthlyReport(mappedMonthly || {});
+      setDailyReport(mappedDaily);
+      setMonthlyReport(mappedMonthly);
       
-      // Extract PCF data from daily response
-      if (rawDaily?.cash_on_hand) {
-        setPcfData(rawDaily.cash_on_hand);
-      } else if (mappedDaily?.cash_on_hand) {
-        setPcfData(mappedDaily.cash_on_hand);
+      // Extract PCF data - prioritize raw API data, then mapped data
+      const rawCashOnHand = rawDaily?.cash_on_hand;
+      const mappedCashOnHand = mappedDaily?.cash_on_hand;
+      
+      // Use PCF data if available and non-empty
+      if (Array.isArray(rawCashOnHand) && rawCashOnHand.length > 0) {
+        setPcfData(rawCashOnHand);
+      } else if (Array.isArray(mappedCashOnHand) && mappedCashOnHand.length > 0) {
+        setPcfData(mappedCashOnHand);
+      } else {
+        setPcfData([]);  // No PCF data available
       }
     } catch (err) {
       console.error("Error fetching dashboard data", err);
@@ -498,8 +507,8 @@ function DashboardInner() {
     fetchAlertsCount();
   }, []);
 
-  // Derive data
-  const cashOnHand = pcfData.length > 0 ? pcfData : (Array.isArray(dailyReport?.cash_on_hand) ? dailyReport.cash_on_hand : []);
+  // Derive data - use pcfData directly for PCF display
+  const cashOnHand = pcfData;
 
   const deriveBankRowsFromTxns = (txns = []) =>
     (Array.isArray(txns) ? txns : []).reduce((acc, t) => {
@@ -765,7 +774,7 @@ function DashboardInner() {
               </Button>
             </Stack>
           </Stack>
-          <PcfTable pcfs={cashOnHand.length > 0 ? cashOnHand : pcfData} showExport={true} defaultExpanded={true} />
+          <PcfTable pcfs={cashOnHand} showExport={true} defaultExpanded={true} />
         </Box>
 
         {/* Cash in Bank Section */}
