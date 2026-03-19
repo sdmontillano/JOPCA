@@ -5,22 +5,10 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount
+from .constants import INFLOW_TYPES, OUTFLOW_TYPES
 
-
-# canonical inflow/outflow type lists (keep in sync with models if you change types)
-INFLOW_TYPE_LIST = [
-    "deposit", "deposits", "collections", "collection",
-    "local_deposits", "local_deposit",
-    "fund_transfer", "fund_transfers",
-    "interbank_transfer", "interbank_transfers",
-    "transfer",
-]
-OUTFLOW_TYPE_LIST = [
-    "disbursement", "disbursements",
-    "bank_charges", "bank_charge",
-    "returned_check", "returned_checks",
-    "adjustments",
-]
+INFLOW_TYPE_LIST = list(INFLOW_TYPES)
+OUTFLOW_TYPE_LIST = list(OUTFLOW_TYPES)
 
 
 class BankAccountSerializer(serializers.ModelSerializer):

@@ -2,13 +2,7 @@
 from decimal import Decimal
 from django.db.models import Sum
 from ..models import BankAccount, Transaction
-
-INFLOW_TYPES = {"deposit", "collections", "local_deposits", "fund_transfer", "interbank_transfer"}
-OUTFLOW_TYPES = {"disbursement", "bank_charges"}
-TRANSFER_TYPES = {"transfer", "fund_transfer", "interbank_transfer"}
-RETURNED_TYPES = {"returned_check"}
-ADJUSTMENT_TYPES = {"adjustments"}
-PDC_TYPES = {"post_dated_check"}
+from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, ADJUSTMENT_TYPES, PDC_TYPES
 
 def _safe_decimal(value):
     return Decimal(value or 0)

@@ -1,4 +1,5 @@
 # core/views.py
+import logging
 from django.utils.timezone import now
 from django.db.models import Sum
 from datetime import datetime
@@ -15,6 +16,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils.dateparse import parse_date
+
+logger = logging.getLogger(__name__)
 
 from .serializers import (
     BankAccountSerializer,
@@ -60,7 +63,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return qs
 
     def create(self, request, *args, **kwargs):
-        """Convert Django ValidationError into a DRF 400 response."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -69,8 +71,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             messages = e.messages if hasattr(e, 'messages') else [str(e)]
             return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
-            import logging
-            logging.getLogger(__name__).exception("Unexpected error creating transaction")
+            logger.exception("Unexpected error creating transaction")
             return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         headers = self.get_success_headers(serializer.data)
@@ -115,10 +116,7 @@ class TransactionListCreate(generics.ListCreateAPIView):
             messages = e.messages if hasattr(e, 'messages') else [str(e)]
             return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
-            import logging
-            logging.getLogger(__name__).exception(
-                "Unexpected error creating transaction (ListCreate)"
-            )
+            logger.exception("Unexpected error creating transaction (ListCreate)")
             return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         headers = self.get_success_headers(serializer.data)

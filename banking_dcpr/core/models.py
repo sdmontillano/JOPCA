@@ -9,44 +9,16 @@ import logging
 from django.utils import timezone
 from django.contrib.auth.models import User
 
+from .constants import INFLOW_TYPES, OUTFLOW_TYPES, is_inflow, is_outflow
+
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------
-# Helper sets / functions for transaction validation
-# ---------------------------------------------------------------------
-INFLOW_TYPES = {
-    "deposit", "deposits", "collections", "collection",
-    "local_deposits", "local_deposit",
-    "fund_transfer", "fund_transfers",
-    "interbank_transfer", "interbank_transfers",
-    "transfer",  # if you treat transfer as inflow for the receiving account
-}
-OUTFLOW_TYPES = {
-    "disbursement", "disbursements",
-    "bank_charges", "bank_charge",
-    "returned_check", "returned_checks",
-    "adjustments",
-    # "transfer" could be an outflow for the sending account; include variants if needed
-}
 
 def _safe_decimal(v):
     return Decimal(v or 0)
 
-def _normalize_type(tx_type):
-    return (tx_type or "").strip().lower()
-
-def _is_inflow(tx_type):
-    return _normalize_type(tx_type) in INFLOW_TYPES
-
-def _is_outflow(tx_type):
-    return _normalize_type(tx_type) in OUTFLOW_TYPES
 
 def _compute_beginning_for_bank(bank, target_date, TransactionModel):
-    """
-    beginning = opening_balance + prior_inflows - prior_outflows
-    TransactionModel must be the Transaction class to avoid circular imports.
-    """
     prior_inflows = TransactionModel.objects.filter(
         bank_account=bank, date__lt=target_date, type__in=INFLOW_TYPES
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
