@@ -32,3 +32,99 @@ Quit the server with CTRL-BREAK.
 
 WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
 For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\static' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 2 issues (0 silenced).
+Performing system checks...
+
+March 19, 2026 - 20:48:15
+Django version 6.0.3, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\static' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 2 issues (0 silenced).
+Performing system checks...
+
+March 19, 2026 - 20:48:19
+Django version 6.0.3, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\static' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 2 issues (0 silenced).
+Performing system checks...
+
+March 19, 2026 - 20:48:25
+Django version 6.0.3, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\static' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 2 issues (0 silenced).
+Performing system checks...
+
+March 19, 2026 - 20:48:32
+Django version 6.0.3, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\static' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 2 issues (0 silenced).
+Performing system checks...
+
+March 19, 2026 - 20:48:39
+Django version 6.0.3, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\frontend_admin\dist' in the STATICFILES_DIRS setting does not exist.
+?: (staticfiles.W004) The directory 'C:\Users\amer\Desktop\JOPCA\banking_dcpr\static' in the STATICFILES_DIRS setting does not exist.
+
+System check identified 2 issues (0 silenced).
+Performing system checks...
+
+March 19, 2026 - 20:48:43
+Django version 6.0.3, using settings 'banking_dcpr.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/

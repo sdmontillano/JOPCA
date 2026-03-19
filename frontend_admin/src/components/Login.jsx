@@ -14,8 +14,7 @@ import {
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import axios from "axios";
-import { setAccessToken as saveTokenToService } from "../services/tokenService";
+import api, { setAccessToken as saveTokenToService } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/jopca-logo.png";
 
@@ -73,7 +72,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:8000/api-token-auth/", {
+      const res = await api.post("/api-token-auth/", {
         username: username.trim(),
         password,
       });

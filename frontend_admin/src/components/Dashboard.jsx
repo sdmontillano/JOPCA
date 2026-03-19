@@ -108,13 +108,24 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
     setMessage(null);
     const { dates } = computeRange(centerIso);
     try {
-      const promises = dates.map((d) =>
-        api
-          .get("/summary/detailed-daily/", { params: { date: d } })
-          .then((r) => r.data ?? r)
-          .catch(() => ({ cash_in_bank: [], accounts: [] }))
-      );
-      const results = await Promise.all(promises);
+      const results = [];
+      const errors = [];
+      
+      for (const d of dates) {
+        try {
+          const res = await api.get("/summary/detailed-daily/", { params: { date: d } });
+          results.push(res.data ?? res);
+        } catch (err) {
+          errors.push({ date: d, error: err });
+          results.push({ cash_in_bank: [], accounts: [] });
+        }
+      }
+      
+      if (errors.length > 0) {
+        const errorMsg = errors.map(e => `${e.date}: ${e.error?.response?.data?.detail || e.error?.message || 'Failed'}`).join('; ');
+        setMessage({ type: "error", text: `Failed to load some data: ${errorMsg}` });
+      }
+      
       const out = {};
       dates.forEach((d, i) => {
         const payload = results[i] || { cash_in_bank: [], accounts: [] };
@@ -433,7 +444,7 @@ function DashboardInner() {
   } = usePdcTotals(reportMonth);
 
   // Fetch all data
-  const fetchAll = async (monthOverride = null) => {
+  const fetchAll = useCallback(async (monthOverride = null) => {
     setError(null);
     setRefreshing(true);
     try {
@@ -489,7 +500,7 @@ function DashboardInner() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   // Fetch alerts count
   const fetchAlertsCount = async () => {
@@ -505,7 +516,7 @@ function DashboardInner() {
   useEffect(() => {
     fetchAll();
     fetchAlertsCount();
-  }, []);
+  }, [fetchAll]);
 
   // Derive data - use pcfData directly for PCF display
   const cashOnHand = pcfData;

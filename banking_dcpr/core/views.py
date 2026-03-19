@@ -324,6 +324,13 @@ class PdcViewSet(viewsets.ModelViewSet):
         Payload (optional): { "maturity_date": "YYYY-MM-DD" }
         """
         pdc = get_object_or_404(Pdc, pk=pk)
+        
+        if pdc.status not in (Pdc.STATUS_OUTSTANDING,):
+            return Response(
+                {"detail": f"Cannot mark as matured: PDC is already {pdc.status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         maturity_date = request.data.get("maturity_date")
         if maturity_date:
             parsed = parse_date(maturity_date)
@@ -347,6 +354,13 @@ class PdcViewSet(viewsets.ModelViewSet):
           { "bank_account_id": 123, "deposit_date": "YYYY-MM-DD", "reference": "DEP-001" }
         """
         pdc = get_object_or_404(Pdc, pk=pk)
+        
+        if pdc.status not in (Pdc.STATUS_MATURED,):
+            return Response(
+                {"detail": f"Cannot deposit: PDC is {pdc.status}, only matured PDCs can be deposited"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         bank_account_id = request.data.get("bank_account_id")
         deposit_date = request.data.get("deposit_date")
         reference = request.data.get("reference", "")
@@ -392,6 +406,13 @@ class PdcViewSet(viewsets.ModelViewSet):
           { "returned_date": "YYYY-MM-DD", "returned_reason": "Insufficient funds" }
         """
         pdc = get_object_or_404(Pdc, pk=pk)
+        
+        if pdc.status in (Pdc.STATUS_DEPOSITED, Pdc.STATUS_RETURNED):
+            return Response(
+                {"detail": f"Cannot mark as returned: PDC is already {pdc.status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         returned_date = request.data.get("returned_date")
         returned_reason = request.data.get("returned_reason", "")
 
@@ -465,6 +486,9 @@ class PettyCashFundViewSet(viewsets.ModelViewSet):
             amount = Decimal(str(amount))
         except Exception:
             return Response({'detail': 'Invalid amount format'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if amount <= 0:
+            return Response({'detail': 'Amount must be positive'}, status=status.HTTP_400_BAD_REQUEST)
 
         tx_date = parse_date(date_str) if date_str else now().date()
 

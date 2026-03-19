@@ -13,28 +13,22 @@ import {
   Button,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import api from "../services/tokenService";
 
 export default function MonthlyReport() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // ✅ hook for navigation
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    fetch("http://localhost:8000/api/monthly-report/", {
-      headers: { Authorization: `Token ${token}` }, // ✅ fixed header
-    })
+    api.get("/monthly-report/")
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch report");
-        return res.json();
-      })
-      .then((data) => {
-        setReport(data);
+        setReport(res.data || res);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(err?.response?.data?.detail || err.message || "Failed to fetch report");
         setLoading(false);
       });
   }, []);
