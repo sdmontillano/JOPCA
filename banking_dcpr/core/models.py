@@ -274,6 +274,7 @@ class PettyCashFund(models.Model):
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=50, choices=LOCATION_CHOICES, default='office')
     opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    note = models.TextField(blank=True, default='', help_text='Notes or description for this PCF')
     is_active = models.BooleanField(default=True)
     min_balance_threshold = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal('1000.00'),

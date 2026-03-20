@@ -236,11 +236,24 @@ def detailed_daily_summary(request):
         unreplenished = max(Decimal('0.00'), total_disb - total_rep)
         ending = beginning - disbursements + replenishments
 
+        # Get today's transactions with descriptions
+        transactions = [
+            {
+                "id": t.id,
+                "type": t.type,
+                "amount": float(t.amount),
+                "description": t.description or "",
+                "date": str(t.date)
+            }
+            for t in daily_txns.order_by('-date', '-id')
+        ]
+
         cash_on_hand.append({
             "id": pcf.id,
             "name": pcf.name,
             "location": pcf.location,
             "location_display": pcf.get_location_display(),
+            "note": pcf.note or "",
             "beginning": float(beginning),
             "disbursements": float(disbursements),
             "replenishments": float(replenishments),
@@ -248,6 +261,7 @@ def detailed_daily_summary(request):
             "unreplenished": float(unreplenished),
             "current_balance": float(pcf.current_balance),
             "unreplenished_amount": float(pcf.unreplenished_amount),
+            "transactions": transactions,
         })
 
     # PDC Summary - Calculate from Pdc model, excluding returned PDCs

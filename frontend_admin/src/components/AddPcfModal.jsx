@@ -34,6 +34,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
     existing_pcf: "",
     location: "",
     opening_balance: "",
+    note: "",
     type: "disbursement",
     date: today,
     amount: "",
@@ -47,18 +48,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
   const [fetchingPcf, setFetchingPcf] = useState(false);
   const [alert, setAlert] = useState(null);
 
-  useEffect(() => {
-    if (!open) return;
-    setAlert(null);
-    setForm((f) => ({ ...f, date: today }));
-    fetchPcfFunds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    setAlert(null);
-    setForm((f) => ({ ...f, date: today }));
+  const fetchPcfFunds = () => {
     let mounted = true;
     setFetchingPcf(true);
     api
@@ -78,7 +68,15 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
         setFetchingPcf(false);
       });
     return () => { mounted = false; };
-  }, [open, today]);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    setAlert(null);
+    setForm((f) => ({ ...f, date: today }));
+    fetchPcfFunds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Fetch PCF current balance when selected
   useEffect(() => {
@@ -112,6 +110,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
       existing_pcf: "",
       location: "",
       opening_balance: "",
+      note: "",
       type: "disbursement",
       date: today,
       amount: "",
@@ -189,6 +188,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
           name: form.pcf_name.trim(),
           location: form.location,
           opening_balance: Number(form.opening_balance) || 0,
+          note: form.note?.trim() || '',
         };
 
         await api.post("/pcf/", pcfPayload);
@@ -462,6 +462,17 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
                   disabled={!!form.existing_pcf}
                   placeholder="e.g., PCF Office"
                   helperText={form.existing_pcf ? "Pre-filled from selected PCF" : "Enter new PCF name"}
+                />
+
+                <TextField
+                  label="Note"
+                  name="note"
+                  value={form.note || ""}
+                  onChange={handleChange}
+                  fullWidth
+                  multiline
+                  rows={2}
+                  placeholder="Add a note or description for this PCF"
                 />
 
                 <FormControl fullWidth required>

@@ -97,8 +97,9 @@ export default function CashInBankTable({
   return (
     <Paper
       sx={{
-        borderRadius: 2,
-        boxShadow: 2,
+        borderRadius: 1,
+        border: "1px solid",
+        borderColor: "#E5E7EB",
         overflow: "hidden",
       }}
     >
@@ -109,7 +110,7 @@ export default function CashInBankTable({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          bgcolor: "primary.main",
+          bgcolor: "#1E293B",
           color: "white",
         }}
       >
@@ -157,41 +158,41 @@ export default function CashInBankTable({
         <Box sx={{ overflowX: "auto" }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: "grey.100" }}>
-                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", minWidth: 150 }}>
+              <TableRow>
+                <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", minWidth: 150, bgcolor: "#1E293B" }}>
                   Particulars
                 </TableCell>
-                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Account #
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Beginning
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Collections
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Local Dep
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Disbursements
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Fund Trans
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Returned Chks
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Bank Charges
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Interbank Trans
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Adjustments
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap", bgcolor: "primary.light" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Ending
                 </TableCell>
               </TableRow>
@@ -208,42 +209,42 @@ export default function CashInBankTable({
                   <TableRow
                     key={bank.id || bank.bank_id || index}
                     sx={{
-                      "&:hover": { bgcolor: "action.hover" },
-                      "&:nth-of-type(even)": { bgcolor: "grey.50" },
+                      "&:hover": { bgcolor: "#F9FAFB" },
+                      "&:nth-of-type(even)": { bgcolor: "#F9FAFB" },
                     }}
                   >
-                    <TableCell sx={{ fontWeight: 500, whiteSpace: "nowrap" }}>
+                    <TableCell sx={{ fontWeight: 500, whiteSpace: "nowrap", color: "#374151" }}>
                       {bank.particulars || bank.name || "Unnamed Bank"}
                     </TableCell>
-                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    <TableCell sx={{ whiteSpace: "nowrap", color: "#6B7280" }}>
                       {bank.account_number || "-"}
                     </TableCell>
-                    <TableCell align="right">{formatCurrency(bank.beginning ?? 0)}</TableCell>
-                    <TableCell align="right" sx={{ color: "success.main" }}>
+                    <TableCell align="right" sx={{ color: "#6B7280" }}>{formatCurrency(bank.beginning ?? 0)}</TableCell>
+                    <TableCell align="right" sx={{ color: "#166534" }}>
                       {formatCurrency(bank.collections ?? 0)}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "success.main" }}>
+                    <TableCell align="right" sx={{ color: "#166534" }}>
                       {formatCurrency(bank.local_deposits ?? 0)}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "error.main" }}>
+                    <TableCell align="right" sx={{ color: "#991B1B" }}>
                       {formatCurrency(bank.disbursements ?? 0)}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ color: "#6B7280" }}>
                       {formatCurrency(bank.fund_transfers ?? 0)}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "warning.main" }}>
+                    <TableCell align="right" sx={{ color: "#B45309" }}>
                       {formatCurrency(bank.returned_checks ?? 0)}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "error.main" }}>
+                    <TableCell align="right" sx={{ color: "#991B1B" }}>
                       {formatCurrency(bank.bank_charges ?? 0)}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ color: "#6B7280" }}>
                       {formatCurrency(bank.interbank_transfers ?? 0)}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ color: "#6B7280" }}>
                       {formatCurrency(bank.adjustments ?? 0)}
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, bgcolor: "primary.light" }}>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>
                       {formatCurrency(bank.ending ?? 0)}
                     </TableCell>
                   </TableRow>
@@ -252,39 +253,39 @@ export default function CashInBankTable({
 
               {/* Grand Total Row */}
               {banks.length > 0 && (
-                <TableRow sx={{ bgcolor: "#0D47A1" }}>
-                  <TableCell sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1rem", letterSpacing: "0.5px" }}>
+                <TableRow sx={{ bgcolor: "#1E293B" }}>
+                  <TableCell sx={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.9rem", letterSpacing: "0.03em" }}>
                     GRAND TOTAL
                   </TableCell>
-                  <TableCell sx={{ color: "white" }} />
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell sx={{ color: "rgba(255,255,255,0.6)" }} />
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.beginning)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.collections)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.local_deposits)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.disbursements)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.fund_transfers)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.returned_checks)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.bank_charges)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.interbank_transfers)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.adjustments)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, color: "#FFFFFF", fontSize: "1.2rem", bgcolor: "rgba(255,255,255,0.15)" }}>
+                  <TableCell align="right" sx={{ fontWeight: 800, color: "#F59E0B", fontSize: "1.1rem" }}>
                     {formatCurrency(totals.ending)}
                   </TableCell>
                 </TableRow>
@@ -299,7 +300,7 @@ export default function CashInBankTable({
         <Box
           sx={{
             p: 1.5,
-            bgcolor: "grey.50",
+            bgcolor: "#F9FAFB",
             borderTop: "1px solid",
             borderColor: "divider",
             display: "flex",
@@ -308,23 +309,23 @@ export default function CashInBankTable({
         >
           <Stack direction="row" spacing={3}>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: "#6B7280" }}>
                 Total Inflows
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700, color: "success.main" }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: "#166534" }}>
                 +{formatCurrency(totals.collections + totals.local_deposits)}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: "#6B7280" }}>
                 Total Outflows
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700, color: "error.main" }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: "#991B1B" }}>
                 -{formatCurrency(totals.disbursements + totals.bank_charges)}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: "#6B7280" }}>
                 Net Movement
               </Typography>
               <Typography
@@ -333,8 +334,8 @@ export default function CashInBankTable({
                   fontWeight: 700,
                   color:
                     totals.collections + totals.local_deposits - totals.disbursements - totals.bank_charges >= 0
-                      ? "success.main"
-                      : "error.main",
+                      ? "#166534"
+                      : "#991B1B",
                 }}
               >
                 {totals.collections + totals.local_deposits - totals.disbursements - totals.bank_charges >= 0 ? "+" : ""}

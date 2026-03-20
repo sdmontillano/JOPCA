@@ -30,11 +30,14 @@ import {
   useMediaQuery,
   Snackbar,
   Badge,
+  Fab,
+  Zoom,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AddIcon from "@mui/icons-material/Add";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -182,13 +185,13 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
   };
 
   return (
-    <Paper sx={{ p: 2, mt: 2, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", border: "1px solid", borderColor: "divider" }}>
+    <Paper sx={{ p: 2, mt: 2, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "primary.dark" }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B" }}>
             Cash in Bank — Yesterday & Previous Day
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: "#6B7280" }}>
             Center (yesterday): <strong>{centerDate}</strong>
           </Typography>
         </Box>
@@ -198,30 +201,30 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
             size="small" 
             startIcon={<AccountBalanceIcon />} 
             onClick={onToggleCollapse} 
-            sx={{ textTransform: "none", px: 2 }}
+            sx={{ textTransform: "none", px: 2, borderColor: "#D1D5DB", color: "#475569" }}
           >
             {collapsed ? "Show" : "Hide"}
           </Button>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 1 }}>
-            <Chip label={dates[0]} size="small" color="primary" variant="outlined" />
+            <Chip label={dates[0]} size="small" variant="outlined" sx={{ borderColor: "#E5E7EB", color: "#6B7280" }} />
             <Chip 
               label={dates[1]} 
               size="small" 
               sx={{ 
-                borderColor: "secondary.main", 
-                color: "secondary.main", 
-                bgcolor: "rgba(0,137,123,0.08)",
+                borderColor: "#1E293B", 
+                color: "#1E293B", 
+                bgcolor: "#F1F5F9",
                 fontWeight: 600
               }} 
             />
           </Stack>
-          <IconButton size="small" onClick={goPrev} aria-label="previous day">
+          <IconButton size="small" onClick={goPrev} aria-label="previous day" sx={{ color: "#475569" }}>
             <ArrowBackIosNewIcon fontSize="small" />
           </IconButton>
-          <IconButton size="small" onClick={goNext} aria-label="next day">
+          <IconButton size="small" onClick={goNext} aria-label="next day" sx={{ color: "#475569" }}>
             <ArrowForwardIosIcon fontSize="small" />
           </IconButton>
-          <Button size="small" onClick={refresh} disabled={loading} variant="contained" color="primary">
+          <Button size="small" onClick={refresh} disabled={loading} variant="contained" sx={{ bgcolor: "#1E293B" }}>
             Refresh
           </Button>
         </Stack>
@@ -246,34 +249,34 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                       sx={{ 
                         p: 2, 
                         height: "100%", 
-                        borderRadius: 2,
-                        border: "2px solid",
-                        borderColor: isToday ? "primary.main" : "divider",
-                        bgcolor: isToday ? "rgba(21,101,192,0.02)" : "white"
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: isToday ? "#1E293B" : "#E5E7EB",
+                        bgcolor: isToday ? "#F8FAFB" : "white"
                       }}
                     >
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: isToday ? "primary.main" : "text.primary" }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: isToday ? "#1E293B" : "#374151" }}>
                             {dateIso}
                           </Typography>
-                          {isToday && <Chip label="TODAY" size="small" color="primary" sx={{ height: 18, fontSize: "0.65rem" }} />}
+                          {isToday && <Chip label="TODAY" size="small" sx={{ height: 18, fontSize: "0.65rem", bgcolor: "#1E293B", color: "white" }} />}
                         </Box>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: "#6B7280" }}>
                           {dayData.accounts?.length ? `${dayData.accounts.length} accounts` : "No accounts"}
                         </Typography>
                       </Box>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ "& th": { bgcolor: isToday ? "primary.main" : "grey.600" } }}>
-                            <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Particulars</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Beg</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Coll</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Local</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Disb</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Fund</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Ret</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>End</TableCell>
+                          <TableRow>
+                            <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Particulars</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Beg</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Coll</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Local</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Disb</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Fund</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Ret</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>End</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -285,49 +288,49 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             </TableRow>
                           ) : (
                             rows.map((r, idx) => (
-                              <TableRow key={r.bank_id ?? `${r.particulars}-${r.account_number}-${idx}`} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
-                                <TableCell sx={{ fontWeight: 500, fontSize: "0.8rem" }}>
+                              <TableRow key={r.bank_id ?? `${r.particulars}-${r.account_number}-${idx}`} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
+                                <TableCell sx={{ fontWeight: 500, fontSize: "0.8rem", color: "#374151" }}>
                                   {r.particulars}
-                                  <Typography variant="caption" display="block" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>
+                                  <Typography variant="caption" display="block" sx={{ color: "#9CA3AF", fontSize: "0.7rem" }}>
                                     {r.account_number ?? ""}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "text.secondary" }}>{formatCurrency(r.beginning ?? r.beginning_balance ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "success.dark" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "success.dark" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "error.main" }}>{formatCurrency(r.disbursements ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "info.main" }}>{formatCurrency(r.fund_transfers ?? r.transfers ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "warning.main" }}>{formatCurrency(r.returned_checks ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "primary.dark" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.beginning ?? r.beginning_balance ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.disbursements ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.fund_transfers ?? r.transfers ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#B45309" }}>{formatCurrency(r.returned_checks ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
                               </TableRow>
                             ))
                           )}
-                          <TableRow sx={{ bgcolor: isToday ? "#0D47A1" : "#37474F" }}>
-                            <TableCell sx={{ fontWeight: 800, color: "#FFD54A", fontSize: "0.85rem" }}>TOTALS</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.beginning)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.returned_checks)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1.1rem" }}>{formatCurrency(totals.ending)}</TableCell>
+                          <TableRow sx={{ bgcolor: "#F1F5F9", borderTop: "2px solid #E5E7EB" }}>
+                            <TableCell sx={{ fontWeight: 700, fontSize: "0.8rem", color: "#1E293B" }}>TOTALS</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.beginning)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency(totals.returned_checks)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.9rem" }}>{formatCurrency(totals.ending)}</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
-                      <Box sx={{ mt: 1.5, pt: 1, borderTop: "1px dashed", borderColor: "divider" }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      <Box sx={{ mt: 1.5, pt: 1, borderTop: "1px dashed", borderColor: "#E5E7EB" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                           Accounts
                         </Typography>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.5 }}>
                           {(dayData.accounts || []).length > 0 ? (
                             (dayData.accounts || []).slice(0, 4).map((a) => (
                               <Box key={a.id} sx={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>{a.name}</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.dark" }}>₱{formatCurrency(a.balance)}</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, color: "#374151" }}>{a.name}</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 700, color: "#1E293B" }}>₱{formatCurrency(a.balance)}</Typography>
                               </Box>
                             ))
                           ) : (
-                            <Typography variant="caption" color="text.secondary">No accounts</Typography>
+                            <Typography variant="caption" sx={{ color: "#6B7280" }}>No accounts</Typography>
                           )}
                         </Box>
                       </Box>
@@ -405,22 +408,6 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
                 </Button>
               ))}
             </Stack>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
-
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Tooltip title="Alerts">
-                <IconButton color={alertCount > 0 ? "error" : "default"} onClick={onOpenAlerts}>
-                  <Badge badgeContent={alertCount} color="error">
-                    <NotificationsIcon />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={onOpenAddTransaction} size="small">Txn</Button>
-              <Button variant="outlined" startIcon={<AccountBalanceIcon />} onClick={onOpenAddBank} size="small">Bank</Button>
-              <Button variant="outlined" startIcon={<ReceiptLongIcon />} onClick={onOpenAddPdc} size="small">PDC</Button>
-              <Button variant="contained" startIcon={<WalletIcon />} onClick={onOpenAddPcf} size="small" color="secondary">PCF</Button>
-            </Stack>
           </>
         )}
 
@@ -437,7 +424,13 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
         </IconButton>
 
         <Menu anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={closeUserMenu}>
-          <MenuItem onClick={() => { closeUserMenu(); navigate("/profile"); }}>Profile</MenuItem>
+          <MenuItem onClick={() => { closeUserMenu(); navigate("/settings"); }}>
+            <AccountCircleIcon sx={{ mr: 1 }} /> Settings
+          </MenuItem>
+          <MenuItem onClick={() => { closeUserMenu(); navigate("/change-password"); }}>
+            <AccountCircleIcon sx={{ mr: 1 }} /> Change Password
+          </MenuItem>
+          <Divider />
           <MenuItem onClick={() => { closeUserMenu(); handleLogout(); }}>
             <LogoutIcon sx={{ mr: 1 }} /> Logout
           </MenuItem>
@@ -476,6 +469,9 @@ function DashboardInner() {
   const [actionAlert, setActionAlert] = useState(null);
   const [pcfData, setPcfData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
+  
+  // FAB Menu State
+  const [fabOpen, setFabOpen] = useState(false);
 
   // PDC fallback hook
   const reportMonth = manualMonth || monthString();
@@ -774,139 +770,161 @@ function DashboardInner() {
               {dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE"} — {dailyReport?.date || ""}
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Tooltip title="Refresh data from server">
-              <IconButton 
-                color="primary" 
-                onClick={() => { fetchAll(manualMonth || null); fetchAlertsCount(); }} 
-                disabled={refreshing}
-                sx={{ 
-                  bgcolor: 'primary.main', 
-                  color: 'white',
-                  '&:hover': { bgcolor: 'primary.dark' },
-                  '&:disabled': { bgcolor: 'grey.300' }
-                }}
-              >
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-            <TextField 
-              size="small" 
-              label="Month (YYYY-MM)" 
-              value={manualMonth} 
-              onChange={(e) => setManualMonth(e.target.value)} 
-              placeholder="2026-03"
-              sx={{ minWidth: 140 }}
-            />
-          </Stack>
+
         </Stack>
 
-        {/* KPI Cards Row */}
-        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2 }}>
+        {/* KPI Cards Row - Modern Minimal */}
+        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 2 }}>
           {/* Cash in Bank Card */}
-          <Paper sx={{ 
+          <Paper elevation={0} sx={{ 
             p: 2.5, 
-            borderRadius: 3, 
-            boxShadow: "0 4px 12px rgba(21, 101, 192, 0.15)",
+            borderRadius: 1,
             border: "1px solid",
-            borderColor: "primary.light",
-            background: "linear-gradient(135deg, #FFFFFF 0%, #E3F2FD 100%)",
-            transition: "transform 0.2s, box-shadow 0.2s",
-            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 16px rgba(21, 101, 192, 0.2)" }
+            borderColor: "#E5E7EB",
+            bgcolor: "#FFFFFF",
+            transition: "all 0.15s ease",
+            "&:hover": { borderColor: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }
           }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-              <AccountBalanceIcon sx={{ color: "primary.main", mr: 1, fontSize: 20 }} />
-              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Box sx={{ 
+                width: 32, 
+                height: 32, 
+                borderRadius: 1, 
+                bgcolor: "#F1F5F9",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <AccountBalanceIcon sx={{ fontSize: 16, color: "#475569" }} />
+              </Box>
+              <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}>
                 Cash in Bank
               </Typography>
             </Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: "primary.dark", letterSpacing: "-0.5px" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B", letterSpacing: "-0.01em" }}>
               {formatPeso(totalEndingAllBanks)}
             </Typography>
           </Paper>
 
           {/* PCF Balance Card */}
-          <Paper sx={{ 
+          <Paper elevation={0} sx={{ 
             p: 2.5, 
-            borderRadius: 3, 
-            boxShadow: "0 4px 12px rgba(0, 137, 123, 0.15)",
+            borderRadius: 1,
             border: "1px solid",
-            borderColor: "secondary.light",
-            background: "linear-gradient(135deg, #FFFFFF 0%, #E0F2F1 100%)",
-            transition: "transform 0.2s, box-shadow 0.2s",
-            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 16px rgba(0, 137, 123, 0.2)" }
+            borderColor: "#E5E7EB",
+            bgcolor: "#FFFFFF",
+            transition: "all 0.15s ease",
+            "&:hover": { borderColor: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }
           }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-              <WalletIcon sx={{ color: "secondary.main", mr: 1, fontSize: 20 }} />
-              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Box sx={{ 
+                width: 32, 
+                height: 32, 
+                borderRadius: 1, 
+                bgcolor: "#F1F5F9",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <WalletIcon sx={{ fontSize: 16, color: "#475569" }} />
+              </Box>
+              <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}>
                 PCF Balance
               </Typography>
             </Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.dark", letterSpacing: "-0.5px" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B", letterSpacing: "-0.01em" }}>
               {formatPeso(totalPcfBalance)}
             </Typography>
           </Paper>
 
           {/* PDC This Month Card */}
-          <Paper sx={{ 
+          <Paper elevation={0} sx={{ 
             p: 2.5, 
-            borderRadius: 3, 
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            borderRadius: 1,
             border: "1px solid",
-            borderColor: "divider",
-            transition: "transform 0.2s, box-shadow 0.2s",
-            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }
+            borderColor: "#E5E7EB",
+            bgcolor: "#FFFFFF",
+            transition: "all 0.15s ease",
+            "&:hover": { borderColor: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }
           }}>
-            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              PDC This Month
-            </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: "info.dark", mt: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Box sx={{ 
+                width: 32, 
+                height: 32, 
+                borderRadius: 1, 
+                bgcolor: "#F1F5F9",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <ReceiptLongIcon sx={{ fontSize: 16, color: "#475569" }} />
+              </Box>
+              <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}>
+                PDC This Month
+              </Typography>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B", letterSpacing: "-0.01em" }}>
               {formatPeso(effectivePdcSummary.this_month ?? 0)}
             </Typography>
           </Paper>
 
           {/* PDC Total Card */}
-          <Paper sx={{ 
+          <Paper elevation={0} sx={{ 
             p: 2.5, 
-            borderRadius: 3, 
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            borderRadius: 1,
             border: "1px solid",
-            borderColor: "divider",
-            transition: "transform 0.2s, box-shadow 0.2s",
-            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }
+            borderColor: "#E5E7EB",
+            bgcolor: "#FFFFFF",
+            transition: "all 0.15s ease",
+            "&:hover": { borderColor: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }
           }}>
-            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              PDC Total
-            </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: "info.main", mt: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Box sx={{ 
+                width: 32, 
+                height: 32, 
+                borderRadius: 1, 
+                bgcolor: "#F1F5F9",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <ReceiptLongIcon sx={{ fontSize: 16, color: "#475569" }} />
+              </Box>
+              <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}>
+                PDC Total
+              </Typography>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B", letterSpacing: "-0.01em" }}>
               {formatPeso(effectivePdcSummary.total ?? 0)}
             </Typography>
           </Paper>
+        </Box>
 
-          {/* Unreplenished Card */}
-          {totalPcfUnreplenished > 0 && (
-            <Paper sx={{ 
-              p: 2.5, 
-              borderRadius: 3, 
-              boxShadow: "0 4px 12px rgba(245, 124, 0, 0.15)",
-              border: "1px solid",
-              borderColor: "warning.light",
-              background: "linear-gradient(135deg, #FFFFFF 0%, #FFF3E0 100%)",
-              transition: "transform 0.2s, box-shadow 0.2s",
-              "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 16px rgba(245, 124, 0, 0.2)" }
-            }}>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <WarningIcon sx={{ color: "warning.main", mr: 0.5, fontSize: 18 }} />
-                <Typography variant="caption" sx={{ color: "warning.dark", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  Unreplenished
+        {/* Unreplenished Alert Card - Muted */}
+        {totalPcfUnreplenished > 0 && (
+          <Paper elevation={0} sx={{ 
+            mb: 3, 
+            p: 2, 
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: "#FDE68A",
+            bgcolor: "#FFFBEB",
+            borderLeft: "3px solid",
+            borderLeftColor: "#B45309",
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <WarningIcon sx={{ color: "#B45309", fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: "#92400E", fontWeight: 500 }}>
+                  Unreplenished PCF:
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#92400E", fontWeight: 700 }}>
+                  {formatPeso(totalPcfUnreplenished)}
                 </Typography>
               </Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: "warning.dark" }}>
-                {formatPeso(totalPcfUnreplenished)}
-              </Typography>
-            </Paper>
-          )}
-        </Box>
+            </Box>
+          </Paper>
+        )}
 
         {/* PCF Cash on Hand Section */}
         <Box sx={{ mb: 3 }}>
@@ -915,38 +933,39 @@ function DashboardInner() {
 
         {/* Cash in Bank Section */}
         <Box sx={{ mb: 3 }}>
-          <Paper sx={{ p: 0, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-            {/* Section Header */}
+          <Paper elevation={0} sx={{ borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden" }}>
+            {/* Section Header - Minimal */}
             <Box sx={{ 
-              p: 2, 
-              bgcolor: "primary.main",
+              px: 2,
+              py: 1.5, 
+              bgcolor: "#FFFFFF",
+              borderBottom: "1px solid #E5E7EB",
               display: "flex", 
               justifyContent: "space-between", 
               alignItems: "center"
             }}>
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <AccountBalanceIcon sx={{ color: "white", mr: 1.5, fontSize: 24 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700, color: "white", letterSpacing: "0.5px" }}>
-                  CASH IN BANK
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AccountBalanceIcon sx={{ color: "#475569", fontSize: 18 }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: "#374151", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                  Cash in Bank
                 </Typography>
               </Box>
               <Button
-                variant={showCashInBank ? "contained" : "outlined"}
-                startIcon={<AccountBalanceIcon />}
+                variant="outlined"
                 onClick={() => { setShowCashInBank((s) => !s); if (!showCashInBank) setCashCollapsed(false); }}
                 size="small"
                 sx={{ 
-                  color: showCashInBank ? "primary.main" : "white",
-                  borderColor: "white",
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.1)" }
+                  borderColor: "#E5E7EB",
+                  color: "#475569",
+                  "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" }
                 }}
               >
-                Yesterday & Prev
+                {showCashInBank ? "Hide" : "Show"} History
               </Button>
             </Box>
 
             {showCashInBank && (
-              <Box sx={{ p: 2, bgcolor: "grey.50" }}>
+              <Box sx={{ p: 2, bgcolor: "#F9FAFB" }}>
                 <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} />
               </Box>
             )}
@@ -954,52 +973,51 @@ function DashboardInner() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: "white", fontWeight: 700 }}>PARTICULARS</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 700 }}>Account #</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Beginning</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Collections</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Local Deposits</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Disbursements</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Fund Transfers</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Returned</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Ending</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>PARTICULARS</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Account #</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Beginning</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Collections</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Local Deposits</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Disbursements</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Fund Transfers</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Returned</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Ending</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {cashInBank.length > 0 ? (
                   cashInBank.map((r, i) => (
-                    <TableRow key={i} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
-                      <TableCell sx={{ fontWeight: 600, color: "text.primary" }}>{r.particulars || `Bank ${i + 1}`}</TableCell>
-                      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.85rem", color: "text.secondary" }}>
+                    <TableRow key={i} sx={{ "&:hover": { bgcolor: "#F3F4F6" } }}>
+                      <TableCell sx={{ fontWeight: 500, color: "#374151" }}>{r.particulars || `Bank ${i + 1}`}</TableCell>
+                      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#9CA3AF" }}>
                         {r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}
                       </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "text.primary" }}>{formatPeso(r.beginning ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#2E7D32" }}>{formatPeso(r.collections ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#2E7D32" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#C62828" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#0277BD" }}>{formatPeso(r.fund_transfers ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#F57C00" }}>{formatPeso(r.returned_checks ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: "#0D47A1" }}>{formatPeso(r.ending ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#6B7280" }}>{formatPeso(r.beginning ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.collections ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#475569" }}>{formatPeso(r.fund_transfers ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.returned_checks ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>{formatPeso(r.ending ?? 0)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
                       No bank transactions found
                     </TableCell>
                   </TableRow>
                 )}
-                <TableRow sx={{ bgcolor: "#0D47A1" }}>
-                  <TableCell colSpan={2} sx={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "1px", color: "#FFD54A", backgroundColor: "#0D47A1" }}>
+                <TableRow sx={{ bgcolor: "#1E293B" }}>
+                  <TableCell colSpan={2} sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#FFFFFF" }}>
                     GRAND TOTAL
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.4rem", p: 1, color: "#FFD54A", backgroundColor: "#0D47A1" }}>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, fontSize: "1rem", p: 1, color: "#F59E0B" }}>
                     {formatPeso(totalEndingAllBanks)}
                   </TableCell>
                 </TableRow>
@@ -1008,62 +1026,30 @@ function DashboardInner() {
           </Paper>
         </Box>
 
-        {/* PDC Summary */}
-        <Paper sx={{ p: 3, mb: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <ReceiptLongIcon sx={{ color: "primary.main", mr: 1.5, fontSize: 28 }} />
-              <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
-                PDC SUMMARY
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={3} alignItems="center">
-              <Box sx={{ textAlign: "center", px: 2, py: 1, bgcolor: "grey.50", borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
-                  This Month
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: "info.dark" }}>
-                  {formatPeso(effectivePdcSummary.this_month ?? 0)}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center", px: 2, py: 1, bgcolor: "grey.50", borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
-                  Total Outstanding
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: "info.main" }}>
-                  {formatPeso(effectivePdcSummary.total ?? 0)}
-                </Typography>
-              </Box>
-              <Button variant="contained" onClick={() => navigate("/pdc")} size="small">
-                View Details
-              </Button>
-              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={handleOpenAddPdc} size="small">
-                Add PDC
-              </Button>
-            </Stack>
-          </Box>
-        </Paper>
-
         {/* Transactions Section */}
-        <Paper sx={{ p: 0, mt: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+        <Paper elevation={0} sx={{ mt: 3, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden", bgcolor: "#FFFFFF" }}>
           <Box sx={{ 
-            p: 2, 
-            bgcolor: "secondary.main",
+            px: 2,
+            py: 1.5, 
+            bgcolor: "#FFFFFF",
+            borderBottom: "1px solid #E5E7EB",
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center"
           }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: "white" }}>
-              TRANSACTIONS THIS MONTH
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <ReceiptLongIcon sx={{ color: "#475569", fontSize: 18 }} />
+              <Typography variant="body2" sx={{ fontWeight: 600, color: "#374151", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                Transactions This Month
+              </Typography>
+            </Box>
             <Button 
-              variant="outlined" 
+              variant="text" 
               size="small" 
               onClick={() => navigate("/transactions")}
               sx={{ 
-                color: "white", 
-                borderColor: "white",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.1)", borderColor: "white" }
+                color: "#475569",
+                "&:hover": { bgcolor: "#F3F4F6" }
               }}
             >
               View All
@@ -1093,6 +1079,85 @@ function DashboardInner() {
           </Table>
         </Paper>
       </Box>
+
+      {/* Floating Action Button - Quick Add Menu */}
+      <Zoom in timeout={300}>
+        <Fab
+          aria-label="add"
+          sx={{
+            position: "fixed",
+            bottom: 32,
+            right: 32,
+            width: 60,
+            height: 60,
+            bgcolor: "#1E293B",
+            color: "white",
+            boxShadow: "0 4px 12px rgba(30,41,59,0.3)",
+            "&:hover": {
+              bgcolor: "#334155",
+              boxShadow: "0 6px 16px rgba(30,41,59,0.4)",
+              transform: "scale(1.05)",
+            },
+            transition: "all 0.2s ease-in-out",
+          }}
+          onClick={() => setFabOpen(!fabOpen)}
+        >
+          <AddIcon sx={{ fontSize: 28 }} />
+        </Fab>
+      </Zoom>
+
+      {/* FAB Menu */}
+      <Zoom in={fabOpen}>
+        <Paper
+          sx={{
+            position: "fixed",
+            bottom: 100,
+            right: 32,
+            p: 1.5,
+            borderRadius: 2,
+            minWidth: 200,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+            zIndex: 1000,
+          }}
+        >
+          <Typography variant="caption" sx={{ px: 1, pb: 1, color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "block" }}>
+            Quick Actions
+          </Typography>
+          <Divider sx={{ mb: 1 }} />
+          <MenuItem onClick={() => { handleOpenAddTransaction(); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
+            <AddCircleOutlineIcon sx={{ mr: 1.5, color: "primary.main" }} />
+            <Typography variant="body2" fontWeight={500}>Add Transaction</Typography>
+          </MenuItem>
+          <MenuItem onClick={() => { setBankModalOpen(true); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
+            <AccountBalanceIcon sx={{ mr: 1.5, color: "primary.main" }} />
+            <Typography variant="body2" fontWeight={500}>Add Bank Account</Typography>
+          </MenuItem>
+          <MenuItem onClick={() => { handleOpenAddPdc(); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
+            <ReceiptLongIcon sx={{ mr: 1.5, color: "info.main" }} />
+            <Typography variant="body2" fontWeight={500}>Add PDC</Typography>
+          </MenuItem>
+          <MenuItem onClick={() => { handleOpenAddPcf(); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
+            <WalletIcon sx={{ mr: 1.5, color: "secondary.main" }} />
+            <Typography variant="body2" fontWeight={500}>Add PCF</Typography>
+          </MenuItem>
+        </Paper>
+      </Zoom>
+
+      {/* FAB Backdrop */}
+      {fabOpen && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(0,0,0,0.3)",
+            zIndex: 999,
+          }}
+          onClick={() => setFabOpen(false)}
+        />
+      )}
 
       {/* Modals */}
       <AddBankAccount
