@@ -55,7 +55,10 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const fetchPcfFunds = () => {
+  useEffect(() => {
+    if (!open) return;
+    setAlert(null);
+    setForm((f) => ({ ...f, date: today }));
     let mounted = true;
     setFetchingPcf(true);
     api
@@ -66,6 +69,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
         setPcfFunds(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
+        if (!mounted) return;
         console.error("Failed to fetch PCF funds", err);
         setPcfFunds([]);
       })
@@ -73,10 +77,8 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
         if (!mounted) return;
         setFetchingPcf(false);
       });
-    return () => {
-      mounted = false;
-    };
-  };
+    return () => { mounted = false; };
+  }, [open, today]);
 
   // Fetch PCF current balance when selected
   useEffect(() => {
@@ -84,15 +86,15 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
       setPcfBalance(null);
       return;
     }
-    
+    let mounted = true;
     api
       .get(`/pcf/${selectedPcf}/balance/`)
       .then((res) => {
-        setPcfBalance(res.data);
+        if (mounted) setPcfBalance(res.data);
       })
       .catch((err) => {
+        if (!mounted) return;
         console.error("Failed to fetch PCF balance", err);
-        // Fallback to local data
         const pcf = pcfFunds.find((p) => p.id === parseInt(selectedPcf));
         if (pcf) {
           setPcfBalance({
@@ -101,7 +103,8 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
           });
         }
       });
-  }, [selectedPcf]);
+    return () => { mounted = false; };
+  }, [selectedPcf, pcfFunds]);
 
   const resetForm = () => {
     setForm({

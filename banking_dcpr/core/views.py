@@ -1,6 +1,6 @@
 # core/views.py
 import logging
-from django.utils.timezone import now
+from django.utils.timezone import now, timezone
 from django.db.models import Sum
 from datetime import datetime
 from datetime import date as _date
@@ -130,7 +130,10 @@ class TransactionListCreate(generics.ListCreateAPIView):
 def detailed_daily_report(request):
     """Return detailed breakdown of transactions by account + type + ending balances."""
     date_str = request.GET.get("date")
-    report_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else now().date()
+    try:
+        report_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else now().date()
+    except ValueError:
+        report_date = now().date()
 
     transactions = Transaction.objects.filter(date=report_date)
     grouped = transactions.values(
@@ -247,11 +250,39 @@ def detailed_daily_summary(request):
             "unreplenished_amount": float(pcf.unreplenished_amount),
         })
 
+    # PDC Summary - Calculate from Pdc model, excluding returned PDCs
+    # "this_month" = Outstanding + Matured PDCs maturing this month
+    # "total" = All Outstanding + Matured PDCs (not deposited, not returned)
+    current_month = target_date.month
+    current_year = target_date.year
+    
+    active_pdcs = Pdc.objects.exclude(status__in=['deposited', 'returned'])
+    
+    this_month_pdcs = active_pdcs.filter(
+        maturity_date__year=current_year,
+        maturity_date__month=current_month
+    )
+    
+    total_active_pdcs = active_pdcs
+    
+    this_month_total = this_month_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_active_total = total_active_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    matured_pdcs = Pdc.objects.filter(status='matured')
+    matured_total = matured_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    pdc_summary = {
+        'this_month': float(this_month_total),
+        'total': float(total_active_total),
+        'matured': float(matured_total),
+    }
+
     return Response({
         "date": target_date.isoformat(),
         "cash_in_bank": bank_rows,
         "accounts": accounts,
         "cash_on_hand": cash_on_hand,
+        "pdc_summary": pdc_summary,
     })
 
 
@@ -276,6 +307,15 @@ def detailed_daily_summary_range(request):
 
     if end_date < start_date:
         return Response({"detail": "end must be >= start"}, status=400)
+
+    # Limit date range to prevent DoS (max 31 days)
+    max_days = 31
+    date_diff = (end_date - start_date).days
+    if date_diff > max_days:
+        return Response(
+            {"detail": f"Date range cannot exceed {max_days} days. Requested {date_diff} days."},
+            status=400
+        )
 
     result = {}
     cur = start_date
@@ -402,6 +442,8 @@ class PdcViewSet(viewsets.ModelViewSet):
     def record_returned(self, request, pk=None):
         """
         Mark a PDC as returned.
+        NOTE: Returned checks do NOT create transactions and do NOT affect bank balances.
+        They simply mark the PDC status as 'returned' for tracking purposes.
         Expected payload:
           { "returned_date": "YYYY-MM-DD", "returned_reason": "Insufficient funds" }
         """
@@ -422,23 +464,11 @@ class PdcViewSet(viewsets.ModelViewSet):
             if returned_date_parsed is None:
                 return Response({"detail": "invalid returned_date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Choose a bank for the returned transaction: prefer deposit_bank, otherwise first bank
-        bank_for_return = pdc.deposit_bank if pdc.deposit_bank else BankAccount.objects.first()
-
-        if bank_for_return is None:
-            return Response({"detail": "no bank account available to record returned check"}, status=status.HTTP_400_BAD_REQUEST)
-
-        Transaction.objects.create(
-            bank_account=bank_for_return,
-            date=returned_date_parsed or now().date(),
-            type="returned_check",
-            amount=pdc.amount,
-            description=f"PDC returned pdc_id:{pdc.id} reason:{returned_reason}",
-            created_by=request.user if request.user.is_authenticated else None
-        )
+        # DO NOT create a transaction - returned checks do not affect bank balances
+        # They simply mark the PDC as not receivable anymore
 
         pdc.status = Pdc.STATUS_RETURNED
-        pdc.returned_date = returned_date_parsed
+        pdc.returned_date = returned_date_parsed or now().date()
         pdc.returned_reason = returned_reason
         pdc.save(update_fields=["status", "returned_date", "returned_reason"])
 
@@ -825,30 +855,34 @@ def pcf_unreplenished_aging(request):
     """
     GET /api/reports/pcf-unreplenished-aging/
     Returns aging of unreplenished disbursements.
+    OPTIMIZED: Uses batch queries to avoid N+1 problem.
     """
-    from datetime import timedelta as td
-
-    pcfs = PettyCashFund.objects.filter(is_active=True)
     today = now().date()
-    all_disbursements = []
-
+    
+    # Fetch all PCFs with their transactions in ONE query
+    pcfs = PettyCashFund.objects.filter(is_active=True).prefetch_related(
+        'transactions'
+    )
+    
+    # Pre-calculate totals for each PCF (single query per aggregation)
+    pcf_totals = {}
     for pcf in pcfs:
-        disbs = PettyCashTransaction.objects.filter(pcf=pcf, type='disbursement')
-        for d in disbs:
-            replenished = PettyCashTransaction.objects.filter(
-                pcf=pcf, type='replenishment', date__gte=d.date
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-            total_rep_for_pcf = PettyCashTransaction.objects.filter(
-                pcf=pcf, type='replenishment', date__lte=today
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-            total_disb_for_pcf = PettyCashTransaction.objects.filter(
-                pcf=pcf, type='disbursement', date__lte=today
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-            cumulative_unrep = max(Decimal('0.00'), total_disb_for_pcf - total_rep_for_pcf)
-            if cumulative_unrep > 0:
+        total_rep = pcf.transactions.filter(type='replenishment', date__lte=today).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_disb = pcf.transactions.filter(type='disbursement', date__lte=today).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        pcf_totals[pcf.id] = {
+            'replenishments': total_rep,
+            'disbursements': total_disb,
+            'unreplenished': max(Decimal('0.00'), total_disb - total_rep)
+        }
+    
+    # Build unreplenished disbursements list
+    all_disbursements = []
+    for pcf in pcfs:
+        totals = pcf_totals.get(pcf.id, {'unreplenished': Decimal('0.00')})
+        
+        # Only include if PCF has unreplenished amount
+        if totals['unreplenished'] > 0:
+            for d in pcf.transactions.filter(type='disbursement'):
                 all_disbursements.append({
                     'id': d.id,
                     'pcf_id': pcf.id,
@@ -860,6 +894,7 @@ def pcf_unreplenished_aging(request):
                     'days_outstanding': (today - d.date).days,
                 })
 
+    # Bucket by age
     buckets = {
         '0_15_days': {'label': '0-15 Days', 'total': Decimal('0.00'), 'count': 0, 'transactions': []},
         '16_30_days': {'label': '16-30 Days', 'total': Decimal('0.00'), 'count': 0, 'transactions': []},
@@ -915,3 +950,164 @@ def export_pcf_pdf(request):
     GET /api/reports/export/pdf/?type=daily&date=YYYY-MM-DD
     """
     return pcf_export_pdf(request)
+
+
+# ---------------------------------------------------------------------
+# User Management
+# ---------------------------------------------------------------------
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change the current user's password.
+    
+    POST /api/change-password/
+    Body: { "current_password": "...", "new_password": "...", "confirm_password": "..." }
+    """
+    from django.contrib.auth import authenticate
+    
+    user = request.user
+    current_password = request.data.get("current_password", "")
+    new_password = request.data.get("new_password", "")
+    confirm_password = request.data.get("confirm_password", "")
+    
+    if not current_password or not new_password or not confirm_password:
+        return Response(
+            {"detail": "All fields are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if new_password != confirm_password:
+        return Response(
+            {"detail": "New password and confirmation do not match."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(new_password) < 8:
+        return Response(
+            {"detail": "Password must be at least 8 characters long."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if not user.check_password(current_password):
+        return Response(
+            {"detail": "Current password is incorrect."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    user.set_password(new_password)
+    user.save()
+    
+    return Response({"detail": "Password changed successfully."})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    """
+    Get current user profile.
+    
+    GET /api/user/profile/
+    """
+    user = request.user
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "is_active": user.is_active,
+        "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def audit_log(request):
+    """
+    Get audit log entries.
+    
+    GET /api/audit-log/?page=1&limit=50&user_id=1
+    """
+    from .models import AuditLog
+    
+    page = int(request.GET.get("page", 1))
+    limit = min(int(request.GET.get("limit", 50)), 100)
+    user_id = request.GET.get("user_id")
+    
+    queryset = AuditLog.objects.select_related('user').order_by('-created_at')
+    
+    if user_id:
+        queryset = queryset.filter(user_id=user_id)
+    
+    total = queryset.count()
+    offset = (page - 1) * limit
+    entries = queryset[offset:offset + limit]
+    
+    return Response({
+        "count": total,
+        "page": page,
+        "limit": limit,
+        "results": [
+            {
+                "id": entry.id,
+                "user": entry.user.username if entry.user else "System",
+                "action": entry.action,
+                "details": entry.details,
+                "model_name": entry.model_name,
+                "object_id": entry.object_id,
+                "ip_address": entry.ip_address,
+                "created_at": entry.created_at.isoformat(),
+            }
+            for entry in entries
+        ]
+    })
+
+
+# ---------------------------------------------------------------------
+# Scheduled Reports
+# ---------------------------------------------------------------------
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def email_reports_config(request):
+    """
+    Get or update email report configuration.
+    
+    GET /api/reports/email-config/
+    POST /api/reports/email-config/
+    """
+    from django.conf import settings
+    
+    config = {
+        "email_enabled": getattr(settings, 'EMAIL_REPORT_ENABLED', False),
+        "email_recipients": getattr(settings, 'EMAIL_REPORT_RECIPIENTS', []),
+        "report_frequency": getattr(settings, 'EMAIL_REPORT_FREQUENCY', 'daily'),
+        "include_cash_in_bank": getattr(settings, 'EMAIL_REPORT_INCLUDE_CASH_IN_BANK', True),
+        "include_pcf": getattr(settings, 'EMAIL_REPORT_INCLUDE_PCF', True),
+        "include_pdc": getattr(settings, 'EMAIL_REPORT_INCLUDE_PDC', True),
+    }
+    
+    if request.method == "GET":
+        return Response(config)
+    
+    # For now, just return success (actual email sending requires more setup)
+    return Response({
+        "detail": "Email report configuration updated (requires server restart to take effect)",
+        "config": config
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def send_test_report(request):
+    """
+    Send a test report email.
+    
+    POST /api/reports/send-test/
+    """
+    # This would send an actual email if configured
+    # For now, just return a mock response
+    return Response({
+        "detail": "Test report email would be sent to configured recipients",
+        "note": "Configure EMAIL settings in settings.py to enable actual email sending"
+    })

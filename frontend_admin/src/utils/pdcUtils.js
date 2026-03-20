@@ -56,107 +56,121 @@ function toNumber(v) {
     };
   }
   
-  /**
-   * Bucket PDCs by maturity relative to reportMonth (YYYY-MM).
-   * Returns { matured, this_month, next_month, two_months, over_two_months, total }
-   */
-  export function bucketPdcList(pdcList = [], reportMonth = null) {
-    const now = new Date();
-    const reportStart = reportMonth
-      ? startOfMonth(parseDateSafe(`${reportMonth}-01`))
-      : startOfMonth(now);
-  
-    const buckets = {
-      matured: 0,
-      this_month: 0,
-      next_month: 0,
-      two_months: 0,
-      over_two_months: 0,
-      total: 0,
-    };
-  
-    (pdcList || []).forEach((raw) => {
-      const p = normalizePdc(raw);
-      const amt = p.amount;
-      buckets.total += amt;
-  
-      if (["matured", "deposited", "cleared"].includes(p.status)) {
-        buckets.matured += amt;
-        return;
-      }
-  
-      if (!p.maturity_date) {
-        buckets.over_two_months += amt;
-        return;
-      }
-  
-      const mat = parseDateSafe(p.maturity_date);
-      if (!mat) {
-        buckets.over_two_months += amt;
-        return;
-      }
-  
-      const monthsDiff = differenceInCalendarMonths(startOfMonth(mat), reportStart);
-  
-      if (monthsDiff < 0) buckets.matured += amt;
-      else if (monthsDiff === 0) buckets.this_month += amt;
-      else if (monthsDiff === 1) buckets.next_month += amt;
-      else if (monthsDiff === 2) buckets.two_months += amt;
-      else buckets.over_two_months += amt;
-    });
-  
-    return buckets;
-  }
-  
-  /**
-   * Partition PDCs into lists by bucket (returns object with arrays and totals)
-   */
-  export function partitionPdcList(pdcList = [], reportMonth = null) {
-    const now = new Date();
-    const reportStart = reportMonth
-      ? startOfMonth(parseDateSafe(`${reportMonth}-01`))
-      : startOfMonth(now);
-  
-    const result = {
-      matured: [],
-      this_month: [],
-      next_month: [],
-      two_months: [],
-      over_two_months: [],
-      total: 0,
-    };
-  
-    (pdcList || []).forEach((raw) => {
-      const p = normalizePdc(raw);
-      result.total += p.amount;
-  
-      if (["matured", "deposited", "cleared"].includes(p.status)) {
-        result.matured.push(p);
-        return;
-      }
-  
-      if (!p.maturity_date) {
-        result.over_two_months.push(p);
-        return;
-      }
-  
-      const mat = parseDateSafe(p.maturity_date);
-      if (!mat) {
-        result.over_two_months.push(p);
-        return;
-      }
-  
-      const monthsDiff = differenceInCalendarMonths(startOfMonth(mat), reportStart);
-  
-      if (monthsDiff < 0) result.matured.push(p);
-      else if (monthsDiff === 0) result.this_month.push(p);
-      else if (monthsDiff === 1) result.next_month.push(p);
-      else if (monthsDiff === 2) result.two_months.push(p);
-      else result.over_two_months.push(p);
-    });
-  
-    return result;
-  }
+/**
+ * Bucket PDCs by maturity relative to reportMonth (YYYY-MM).
+ * Returns { matured, this_month, next_month, two_months, over_two_months, total }
+ * NOTE: Returned PDCs are excluded from all counts (they are no longer receivables)
+ */
+export function bucketPdcList(pdcList = [], reportMonth = null) {
+  const now = new Date();
+  const reportStart = reportMonth
+    ? startOfMonth(parseDateSafe(`${reportMonth}-01`))
+    : startOfMonth(now);
+
+  const buckets = {
+    matured: 0,
+    this_month: 0,
+    next_month: 0,
+    two_months: 0,
+    over_two_months: 0,
+    total: 0,
+  };
+
+  (pdcList || []).forEach((raw) => {
+    const p = normalizePdc(raw);
+    
+    // Skip returned PDCs - they are no longer receivables
+    if (p.status === "returned") {
+      return;
+    }
+    
+    const amt = p.amount;
+    buckets.total += amt;
+
+    if (["matured", "deposited", "cleared"].includes(p.status)) {
+      buckets.matured += amt;
+      return;
+    }
+
+    if (!p.maturity_date) {
+      buckets.over_two_months += amt;
+      return;
+    }
+
+    const mat = parseDateSafe(p.maturity_date);
+    if (!mat) {
+      buckets.over_two_months += amt;
+      return;
+    }
+
+    const monthsDiff = differenceInCalendarMonths(startOfMonth(mat), reportStart);
+
+    if (monthsDiff < 0) buckets.matured += amt;
+    else if (monthsDiff === 0) buckets.this_month += amt;
+    else if (monthsDiff === 1) buckets.next_month += amt;
+    else if (monthsDiff === 2) buckets.two_months += amt;
+    else buckets.over_two_months += amt;
+  });
+
+  return buckets;
+}
+
+/**
+ * Partition PDCs into lists by bucket (returns object with arrays and totals)
+ * NOTE: Returned PDCs are excluded from all counts (they are no longer receivables)
+ */
+export function partitionPdcList(pdcList = [], reportMonth = null) {
+  const now = new Date();
+  const reportStart = reportMonth
+    ? startOfMonth(parseDateSafe(`${reportMonth}-01`))
+    : startOfMonth(now);
+
+  const result = {
+    matured: [],
+    this_month: [],
+    next_month: [],
+    two_months: [],
+    over_two_months: [],
+    total: 0,
+  };
+
+  (pdcList || []).forEach((raw) => {
+    const p = normalizePdc(raw);
+    
+    // Skip returned PDCs - they are no longer receivables
+    if (p.status === "returned") {
+      return;
+    }
+    
+    result.total += p.amount;
+
+    if (["matured", "deposited", "cleared"].includes(p.status)) {
+      result.matured.push(p);
+      return;
+    }
+
+    if (!p.maturity_date) {
+      result.over_two_months.push(p);
+      return;
+    }
+
+    const mat = parseDateSafe(p.maturity_date);
+    if (!mat) {
+      result.over_two_months.push(p);
+      return;
+    }
+
+    const monthsDiff = differenceInCalendarMonths(startOfMonth(mat), reportStart);
+
+    if (monthsDiff < 0) result.matured.push(p);
+    else if (monthsDiff === 0) result.this_month.push(p);
+    else if (monthsDiff === 1) result.next_month.push(p);
+    else if (monthsDiff === 2) result.two_months.push(p);
+    else result.over_two_months.push(p);
+  });
+
+  return result;
+}
   
   /**
    * Compute totals from a partition object

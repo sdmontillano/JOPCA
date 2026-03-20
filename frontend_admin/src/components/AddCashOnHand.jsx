@@ -15,11 +15,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import api from "../services/tokenService";
 
 export default function AddCashOnHand({ open, onClose, onCreated = null }) {
-  const today = new Date().toISOString().slice(0, 10);
-
-  const [form, setForm] = useState({
+  const getDefaultForm = () => ({
     particulars: "",
-    date: today,
+    date: new Date().toISOString().slice(0, 10),
     beginning: "",
     disbursements: "",
     replenishments: "",
@@ -27,20 +25,14 @@ export default function AddCashOnHand({ open, onClose, onCreated = null }) {
     notes: "",
   });
 
+  const [form, setForm] = useState(getDefaultForm);
+
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
 
   useEffect(() => {
     if (!open) return;
-    setForm({
-      particulars: "",
-      date: today,
-      beginning: "",
-      disbursements: "",
-      replenishments: "",
-      ending: "",
-      notes: "",
-    });
+    setForm(getDefaultForm());
     setAlert(null);
   }, [open]);
 

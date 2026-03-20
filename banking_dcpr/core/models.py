@@ -9,7 +9,13 @@ import logging
 from django.utils import timezone
 from django.contrib.auth.models import User
 
-from .constants import INFLOW_TYPES, OUTFLOW_TYPES, is_inflow, is_outflow
+from .constants import INFLOW_TYPES, OUTFLOW_TYPES
+
+def _is_inflow(tx_type):
+    return (tx_type or "").strip().lower() in INFLOW_TYPES
+
+def _is_outflow(tx_type):
+    return (tx_type or "").strip().lower() in OUTFLOW_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +110,11 @@ class Transaction(models.Model):
     type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    is_reconciled = models.BooleanField(default=False)
+    reconciled_at = models.DateTimeField(blank=True, null=True)
+    reconciled_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reconciled_transactions"
+    )
 
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_transactions"
@@ -242,7 +253,8 @@ class MonthlyReport(models.Model):
         self.total_inflows = sum(p.collections for p in positions)
         self.total_disbursements = sum(p.disbursements for p in positions)
         self.total_pdc = sum(p.pdc for p in positions)
-        self.ending_balance = positions.order_by("-date").first().ending_balance if positions.exists() else Decimal('0.00')
+        last_position = positions.order_by("-date").first()
+        self.ending_balance = last_position.ending_balance if last_position else Decimal('0.00')
 
         super().save(*args, **kwargs)
 
@@ -297,7 +309,7 @@ class PettyCashFund(models.Model):
         total_rep = self.total_replenishments
         return max(Decimal('0.00'), total_disb - total_rep)
 
-    def recalc_balance(self):
+    def touch(self):
         self.save(update_fields=['updated_at'])
 
 
@@ -397,20 +409,20 @@ def update_balance_on_delete(sender, instance, **kwargs):
 
 
 # ---------------------------------------------------------------------
-# PCF Signals: auto-update PCF balances
+# PCF Signals: auto-update PCF timestamps
 # ---------------------------------------------------------------------
 @receiver(post_save, sender=PettyCashTransaction)
-def update_pcf_balance_on_save(sender, instance, **kwargs):
+def update_pcf_timestamp_on_save(sender, instance, **kwargs):
     try:
-        instance.pcf.recalc_balance()
+        instance.pcf.touch()
     except Exception:
         logger.exception("Error in post_save handler for PettyCashTransaction")
 
 
 @receiver(post_delete, sender=PettyCashTransaction)
-def update_pcf_balance_on_delete(sender, instance, **kwargs):
+def update_pcf_timestamp_on_delete(sender, instance, **kwargs):
     try:
-        instance.pcf.recalc_balance()
+        instance.pcf.touch()
     except Exception:
         logger.exception("Error in post_delete handler for PettyCashTransaction")
 
@@ -466,3 +478,57 @@ class Pdc(models.Model):
     def __str__(self):
         label = f"{self.customer_name or 'Unknown'} - {self.check_no or 'No#'}"
         return f"{label} ₱{self.amount:.2f} ({self.status})"
+
+
+# ---------------------------------------------------------------------
+# Audit Log Model
+# ---------------------------------------------------------------------
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('CREATE', 'Create'),
+        ('UPDATE', 'Update'),
+        ('DELETE', 'Delete'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+        ('PASSWORD_CHANGE', 'Password Change'),
+        ('VIEW', 'View'),
+        ('EXPORT', 'Export'),
+    ]
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+    )
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    model_name = models.CharField(max_length=100, blank=True, null=True)
+    object_id = models.PositiveIntegerField(blank=True, null=True)
+    details = models.TextField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Audit Log'
+        verbose_name_plural = 'Audit Logs'
+    
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.created_at}"
+
+
+def log_audit(user, action, model_name=None, object_id=None, details=None, request=None):
+    """Helper function to create audit log entries."""
+    kwargs = {
+        'user': user,
+        'action': action,
+        'model_name': model_name,
+        'object_id': object_id,
+        'details': details,
+    }
+    if request:
+        kwargs['ip_address'] = request.META.get('REMOTE_ADDR')
+        kwargs['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
+    AuditLog.objects.create(**kwargs)

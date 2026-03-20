@@ -81,8 +81,14 @@ def pcf_export_excel(request):
         start_date = parse_date(start_str) if start_str else today - timedelta(days=7)
         end_date = parse_date(end_str) if end_str else today
     elif export_type == 'monthly':
-        year = request.query_params.get('year', today.year)
-        month = request.query_params.get('month', today.month)
+        year = int(request.query_params.get('year', today.year))
+        month = int(request.query_params.get('month', today.month))
+        from datetime import date
+        month_start = date(year, month, 1)
+        if month == 12:
+            month_end = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            month_end = date(year, month + 1, 1) - timedelta(days=1)
     else:
         target_date = today
 
@@ -102,9 +108,24 @@ def pcf_export_excel(request):
             daily_txns = PettyCashTransaction.objects.filter(pcf=pcf, date=target_date)
             disbursements = daily_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
             replenishments = daily_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            # Cumulative unreplenished = Total Disbursements - Total Replenishments
             total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
             total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            unreplenished = max(Decimal('0'), total_disb - total_rep)
+            ending = beginning - disbursements + replenishments
+        elif export_type == 'monthly':
+            beginning = pcf.opening_balance
+            previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=month_start)
+            for t in previous_txns:
+                if t.type == 'disbursement':
+                    beginning -= t.amount
+                elif t.type == 'replenishment':
+                    beginning += t.amount
+            
+            monthly_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__gte=month_start, date__lte=month_end)
+            disbursements = monthly_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            replenishments = monthly_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=month_end, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=month_end, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
             unreplenished = max(Decimal('0'), total_disb - total_rep)
             ending = beginning - disbursements + replenishments
         else:
@@ -179,9 +200,40 @@ def pcf_export_excel(request):
 def pcf_export_pdf(request):
     """
     Export PCF data to PDF.
+    Query params:
+    - type: daily, weekly, monthly, unreplenished
+    - date: YYYY-MM-DD (for daily)
+    - start: YYYY-MM-DD (for weekly)
+    - end: YYYY-MM-DD (for weekly)
+    - year: YYYY (for monthly)
+    - month: MM (for monthly)
     """
+    from datetime import date as date_type
     export_type = request.query_params.get('type', 'daily')
     today = now().date()
+
+    target_date = today
+    start_date = None
+    end_date = None
+    month_start = None
+    month_end = None
+
+    if export_type == 'daily':
+        target_date_str = request.query_params.get('date')
+        target_date = parse_date(target_date_str) if target_date_str else today
+    elif export_type == 'weekly':
+        start_str = request.query_params.get('start')
+        end_str = request.query_params.get('end')
+        start_date = parse_date(start_str) if start_str else today - timedelta(days=7)
+        end_date = parse_date(end_str) if end_str else today
+    elif export_type == 'monthly':
+        year = int(request.query_params.get('year', today.year))
+        month = int(request.query_params.get('month', today.month))
+        month_start = date_type(year, month, 1)
+        if month == 12:
+            month_end = date_type(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            month_end = date_type(year, month + 1, 1) - timedelta(days=1)
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="PCF_{export_type}_{today.strftime("%Y%m%d")}.pdf"'
@@ -202,14 +254,50 @@ def pcf_export_pdf(request):
     grand_totals = {'beginning': 0, 'disbursements': 0, 'replenishments': 0, 'unreplenished': 0, 'ending': 0}
 
     for pcf in pcfs:
-        beginning = float(pcf.opening_balance)
-        
-        total_disb = PettyCashTransaction.objects.filter(pcf=pcf, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        total_rep = PettyCashTransaction.objects.filter(pcf=pcf, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        disbursements = float(total_disb)
-        replenishments = float(total_rep)
-        unreplenished = max(0, disbursements - replenishments)
-        ending = beginning - disbursements + replenishments
+        if export_type == 'daily':
+            beginning = float(pcf.opening_balance)
+            previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=target_date)
+            for t in previous_txns:
+                if t.type == 'disbursement':
+                    beginning -= float(t.amount)
+                elif t.type == 'replenishment':
+                    beginning += float(t.amount)
+            
+            daily_txns = PettyCashTransaction.objects.filter(pcf=pcf, date=target_date)
+            total_disb = daily_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            total_rep = daily_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            disbursements = float(total_disb)
+            replenishments = float(total_rep)
+            cum_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            cum_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            unreplenished = max(0, float(cum_disb) - float(cum_rep))
+            ending = beginning - disbursements + replenishments
+        elif export_type == 'monthly' and month_start and month_end:
+            beginning = float(pcf.opening_balance)
+            previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=month_start)
+            for t in previous_txns:
+                if t.type == 'disbursement':
+                    beginning -= float(t.amount)
+                elif t.type == 'replenishment':
+                    beginning += float(t.amount)
+            
+            monthly_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__gte=month_start, date__lte=month_end)
+            total_disb = monthly_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            total_rep = monthly_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            disbursements = float(total_disb)
+            replenishments = float(total_rep)
+            cum_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=month_end, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            cum_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=month_end, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            unreplenished = max(0, float(cum_disb) - float(cum_rep))
+            ending = beginning - disbursements + replenishments
+        else:
+            beginning = float(pcf.opening_balance)
+            total_disb = PettyCashTransaction.objects.filter(pcf=pcf, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            total_rep = PettyCashTransaction.objects.filter(pcf=pcf, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            disbursements = float(total_disb)
+            replenishments = float(total_rep)
+            unreplenished = max(0, disbursements - replenishments)
+            ending = beginning - disbursements + replenishments
 
         data.append([
             pcf.name,

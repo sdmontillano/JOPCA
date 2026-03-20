@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Paper, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableHead, TableBody, TableRow, TableCell, TextField, Alert,
@@ -29,23 +29,25 @@ const CashCountPage = () => {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const fetchSummary = () => {
+  const fetchSummary = useCallback(() => {
     setLoading(true);
     api.get('/summary/cash-counts/')
       .then((res) => {
         const data = res.data || res;
         setSummary(data.summary || []);
-        setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        const msg = err?.response?.data?.detail || err?.message || "Failed to load summary";
+        setError(String(msg));
+      })
+      .finally(() => {
         setLoading(false);
       });
-  };
+  }, []);
 
   useEffect(() => {
     fetchSummary();
-  }, []);
+  }, [fetchSummary]);
 
   const handleOpenDialog = (pcf) => {
     setSelectedPcf(pcf);
@@ -76,9 +78,8 @@ const CashCountPage = () => {
         fetchSummary();
       })
       .catch((err) => {
-        setError(err.message);
-      })
-      .finally(() => {
+        const msg = err?.response?.data?.detail || err?.message || "Failed to save cash count";
+        setError(String(msg));
         setSaving(false);
       });
   };

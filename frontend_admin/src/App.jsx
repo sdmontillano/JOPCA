@@ -14,6 +14,9 @@ import BankDetail from "./components/BankDetail.jsx";
 import DebugPage from "./components/DebugPage.jsx";
 import PdcPage from "./components/PdcPage.jsx";
 import PdcDetail from "./components/PdcDetail.jsx";
+import PcfPage from "./components/PcfPage.jsx";
+import ChangePassword from "./components/ChangePassword.jsx";
+import DashboardSettings from "./components/DashboardSettings.jsx";
 
 export default function App() {
   // ✅ Simple auth check: if token exists, user is logged in
@@ -65,6 +68,24 @@ export default function App() {
         <Route
           path="/pdc/:id"
           element={isAuthenticated ? <PdcDetail /> : <Navigate to="/login" replace />}
+        />
+
+        {/* PCF management (protected) */}
+        <Route
+          path="/pcf"
+          element={isAuthenticated ? <PcfPage /> : <Navigate to="/login" replace />}
+        />
+
+        {/* User management */}
+        <Route
+          path="/change-password"
+          element={isAuthenticated ? <ChangePassword /> : <Navigate to="/login" replace />}
+        />
+
+        {/* Settings */}
+        <Route
+          path="/settings"
+          element={isAuthenticated ? <DashboardSettings /> : <Navigate to="/login" replace />}
         />
 
         {/* Debug (protected) */}

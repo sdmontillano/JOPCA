@@ -26,6 +26,11 @@ from core.views import (
     pcf_unreplenished_aging,
     export_pcf_excel,
     export_pcf_pdf,
+    change_password,
+    user_profile,
+    audit_log,
+    email_reports_config,
+    send_test_report,
 )
 
 router = DefaultRouter()
@@ -47,10 +52,17 @@ urlpatterns = [
 
     # summary endpoints
     path('summary/detailed-daily/', detailed_daily_summary, name='detailed_daily_summary'),
+    path('summary/detailed-daily-report/', detailed_daily_report, name='detailed_daily_report'),
     path('summary/detailed-monthly/', detailed_monthly_report, name='detailed_monthly_report'),
+    path('summary/detailed-monthly-report/', detailed_monthly_report, name='detailed_monthly_report'),
     path('summary/bank-reconciliation/', bank_reconciliation_summary, name='bank_reconciliation_summary'),
     path('summary/cash-counts/', cash_counts_summary, name='cash_counts_summary'),
     path('summary/pcf-alerts/', pcf_alerts, name='pcf_alerts'),
+
+    # user management endpoints
+    path('api/change-password/', change_password, name='change_password'),
+    path('api/user/profile/', user_profile, name='user_profile'),
+    path('api/audit-log/', audit_log, name='audit_log'),
 
     # PCF report endpoints
     path('api/reports/pcf-daily/', pcf_daily_report, name='pcf_daily_report'),
@@ -61,6 +73,10 @@ urlpatterns = [
     # Export endpoints
     path('api/reports/export/excel/', export_pcf_excel, name='export_pcf_excel'),
     path('api/reports/export/pdf/', export_pcf_pdf, name='export_pcf_pdf'),
+
+    # Email reports
+    path('api/reports/email-config/', email_reports_config, name='email_reports_config'),
+    path('api/reports/send-test/', send_test_report, name='send_test_report'),
 
     # router endpoints
     path('', include(router.urls)),

@@ -12,6 +12,7 @@ import {
   Alert,
   CircularProgress,
   IconButton,
+  Paper,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import api from "../services/tokenService";
@@ -98,7 +99,10 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
         account_number: form.account_number?.trim(),
         area: form.area,
         // opening_balance optional: send null when empty
-        opening_balance: form.opening_balance === "" ? null : parseFloat(form.opening_balance),
+        opening_balance: form.opening_balance === "" ? null : (() => {
+          const val = parseFloat(form.opening_balance);
+          return isNaN(val) ? null : val;
+        })(),
       };
 
       const res = await api.post("/bankaccounts/", payload);

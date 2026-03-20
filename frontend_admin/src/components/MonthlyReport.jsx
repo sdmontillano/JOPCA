@@ -22,7 +22,7 @@ export default function MonthlyReport() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get("/monthly-report/")
+    api.get("/summary/detailed-monthly/")
       .then((res) => {
         setReport(res.data || res);
         setLoading(false);
@@ -42,25 +42,27 @@ export default function MonthlyReport() {
         <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold" }}>
           Monthly Report
         </Typography>
-        <Typography sx={{ mb: 2 }}>Month: {report.month}</Typography>
+        <Typography sx={{ mb: 2 }}>Month: {report?.month || 'N/A'}</Typography>
         <Typography sx={{ mb: 2 }}>
-          Total Cash Flow: ₱{new Intl.NumberFormat("en-PH").format(report.total)}
+          Grand Total: ₱{new Intl.NumberFormat("en-PH").format(report?.grand_total || 0)}
         </Typography>
 
-        {report.breakdown && (
+        {report?.line_items && report.line_items.length > 0 && (
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Type</TableCell>
+                <TableCell>Particulars</TableCell>
+                <TableCell>Account</TableCell>
                 <TableCell align="right">Amount (₱)</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {report.breakdown.map((item) => (
-                <TableRow key={item.type}>
-                  <TableCell>{item.type}</TableCell>
+              {report.line_items.map((item, idx) => (
+                <TableRow key={idx}>
+                  <TableCell>{item.bank_account__name || 'N/A'}</TableCell>
+                  <TableCell>{item.bank_account__account_number || 'N/A'}</TableCell>
                   <TableCell align="right">
-                    ₱{new Intl.NumberFormat("en-PH").format(item.amount)}
+                    ₱{new Intl.NumberFormat("en-PH").format(item.total || 0)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -68,7 +70,6 @@ export default function MonthlyReport() {
           </Table>
         )}
 
-        {/* ✅ Back to Dashboard button */}
         <Button
           variant="contained"
           sx={{ mt: 3, bgcolor: "#0ea5e9", "&:hover": { bgcolor: "#0284c7" } }}

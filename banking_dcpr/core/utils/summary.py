@@ -42,7 +42,9 @@ def compute_bank_daily_summary(target_date):
         adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        ending = beginning + _safe_decimal(collections) + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) - _safe_decimal(returned_checks) + _safe_decimal(adjustments)
+        # Note: returned_checks do NOT affect ending balance - they are tracked for reporting only
+        # because a returned check means the original payment never cleared, so no money was received
+        ending = beginning + _safe_decimal(collections) + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments)
 
         rows.append({
             "bank_id": bank.id,

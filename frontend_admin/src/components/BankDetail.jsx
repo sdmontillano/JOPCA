@@ -88,6 +88,7 @@ export default function BankDetail() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, page]);
 
   const handleFilterChange = (e) => {

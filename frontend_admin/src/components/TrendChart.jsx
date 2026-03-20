@@ -2,8 +2,6 @@
 import React, { useState } from "react";
 import { Paper, Typography, Box, ToggleButton, ToggleButtonGroup, CircularProgress } from "@mui/material";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,

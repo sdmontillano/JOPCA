@@ -267,6 +267,10 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
         tx = PettyCashTransaction(**validated_data)
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             tx.created_by = request.user
+        try:
+            tx.full_clean()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"non_field_errors": list(e.messages)})
         tx.save()
         return tx
 
@@ -291,6 +295,10 @@ class CashCountSerializer(serializers.ModelSerializer):
         count = CashCount(**validated_data)
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             count.verified_by = request.user
+        try:
+            count.full_clean()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"non_field_errors": list(e.messages)})
         count.save()
         return count
 

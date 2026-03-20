@@ -21,6 +21,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import WalletIcon from "@mui/icons-material/Wallet";
 import DownloadIcon from "@mui/icons-material/Download";
 import WarningIcon from "@mui/icons-material/Warning";
+import { toCsv } from "../utils/csvUtils";
 
 function formatCurrency(value) {
   return `₱${Number(value ?? 0).toLocaleString("en-PH", {
@@ -74,7 +75,7 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
   const hasUnreplenished = totals.unreplenished > 0;
 
   const handleExport = () => {
-    const csvContent = [
+    const rows = [
       ["Particulars", "Location", "Beginning", "Disbursements", "Replenishments", "Ending", "Unreplenished"],
       ...pcfs.map((p) => [
         p.particulars || p.name,
@@ -86,11 +87,10 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
         p.unreplenished ?? 0,
       ]),
       ["GRAND TOTAL", "", totals.beginning, totals.disbursements, totals.replenishments, totals.ending, totals.unreplenished],
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+    ];
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const csvContent = toCsv(rows);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -102,8 +102,8 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
   return (
     <Paper
       sx={{
-        borderRadius: 2,
-        boxShadow: 2,
+        borderRadius: 3,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
         overflow: "hidden",
       }}
     >
@@ -115,23 +115,23 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
           alignItems: "center",
           justifyContent: "space-between",
           bgcolor: hasUnreplenished ? "warning.main" : "secondary.main",
-          color: hasUnreplenished ? "white" : "black",
+          color: "white",
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <WalletIcon />
+          <WalletIcon sx={{ fontSize: 28 }} />
           <Box>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1rem" }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.1rem", color: "white" }}>
                 CASH ON HAND (PCF)
               </Typography>
               {hasUnreplenished && (
                 <Tooltip title="There are unreplenished funds">
-                  <WarningIcon fontSize="small" />
+                  <WarningIcon fontSize="small" sx={{ color: "warning.contrastText" }} />
                 </Tooltip>
               )}
             </Stack>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+            <Typography variant="caption" sx={{ opacity: 0.9 }}>
               {pcfs.length} fund{pcfs.length !== 1 ? "s" : ""}
               {hasUnreplenished && ` • ${formatCurrency(totals.unreplenished)} unreplenished`}
             </Typography>
@@ -143,19 +143,20 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
             label={`Total: ${formatCurrency(totals.ending)}`}
             size="small"
             sx={{
-              bgcolor: hasUnreplenished ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)",
-              color: "inherit",
+              bgcolor: "rgba(255,255,255,0.2)",
+              color: "white",
               fontWeight: 700,
+              backdropFilter: "blur(4px)",
             }}
           />
           {showExport && (
             <Tooltip title="Export CSV">
-              <IconButton size="small" onClick={handleExport} sx={{ color: "inherit" }}>
+              <IconButton size="small" onClick={handleExport} sx={{ color: "white" }}>
                 <DownloadIcon />
               </IconButton>
             </Tooltip>
           )}
-          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ color: "inherit" }}>
+          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ color: "white" }}>
             {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
         </Stack>
@@ -166,26 +167,26 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
         <Box sx={{ overflowX: "auto" }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: "grey.100" }}>
-                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", minWidth: 150 }}>
+              <TableRow>
+                <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", minWidth: 150 }}>
                   Particulars
                 </TableCell>
-                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap" }}>
                   Location
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap" }}>
                   Beginning
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap" }}>
                   Disbursements
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap" }}>
                   Replenishments
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap" }}>
                   Ending
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap", bgcolor: "warning.light" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "warning.dark" }}>
                   Unreplenished
                 </TableCell>
               </TableRow>
@@ -213,14 +214,15 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
                   return (
                     <React.Fragment key={location}>
                       {/* Location Header */}
-                      <TableRow sx={{ bgcolor: "primary.main", color: "white" }}>
+                      <TableRow sx={{ bgcolor: "secondary.dark" }}>
                         <TableCell
                           colSpan={7}
                           sx={{
                             fontWeight: 700,
-                            fontSize: "0.8rem",
+                            fontSize: "0.75rem",
                             color: "white",
-                            py: 0.5,
+                            py: 0.75,
+                            letterSpacing: "0.5px",
                           }}
                         >
                           {getLocationName(location)}
@@ -236,28 +238,30 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
                             "&:nth-of-type(even)": { bgcolor: "grey.50" },
                           }}
                         >
-                          <TableCell sx={{ fontWeight: 500, whiteSpace: "nowrap", pl: 3 }}>
+                          <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap", pl: 3 }}>
                             {pcf.particulars || pcf.name || `PCF ${index + 1}`}
                           </TableCell>
-                          <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ whiteSpace: "nowrap", color: "text.secondary" }}>
                             {pcf.location_display || pcf.location || "-"}
                           </TableCell>
-                          <TableCell align="right">{formatCurrency(pcf.beginning ?? 0)}</TableCell>
-                          <TableCell align="right" sx={{ color: "error.main" }}>
+                          <TableCell align="right" sx={{ color: "text.secondary" }}>
+                            {formatCurrency(pcf.beginning ?? 0)}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: "error.main", fontWeight: 500 }}>
                             {formatCurrency(pcf.disbursements ?? 0)}
                           </TableCell>
-                          <TableCell align="right" sx={{ color: "success.main" }}>
+                          <TableCell align="right" sx={{ color: "success.dark", fontWeight: 500 }}>
                             {formatCurrency(pcf.replenishments ?? 0)}
                           </TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 700 }}>
+                          <TableCell align="right" sx={{ fontWeight: 700, color: "secondary.dark" }}>
                             {formatCurrency(pcf.ending ?? 0)}
                           </TableCell>
                           <TableCell
                             align="right"
                             sx={{
                               fontWeight: 700,
-                              bgcolor: "warning.light",
-                              color: (pcf.unreplenished ?? 0) > 0 ? "warning.dark" : "text.secondary",
+                              bgcolor: (pcf.unreplenished ?? 0) > 0 ? "warning.light" : "grey.100",
+                              color: (pcf.unreplenished ?? 0) > 0 ? "warning.dark" : "text.disabled",
                             }}
                           >
                             {(pcf.unreplenished ?? 0) > 0 ? formatCurrency(pcf.unreplenished) : "-"}
@@ -266,8 +270,8 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
                       ))}
 
                       {/* Location Subtotal */}
-                      <TableRow sx={{ bgcolor: "primary.light" }}>
-                        <TableCell sx={{ fontWeight: 700, color: "white", pl: 3 }}>
+                      <TableRow sx={{ bgcolor: "secondary.light" }}>
+                        <TableCell sx={{ fontWeight: 700, color: "white", pl: 3, fontSize: "0.8rem" }}>
                           SUBTOTAL - {getLocationName(location)}
                         </TableCell>
                         <TableCell sx={{ color: "white" }} />
@@ -287,7 +291,7 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
                           align="right"
                           sx={{
                             fontWeight: 700,
-                            color: groupTotals.unreplenished > 0 ? "#FFD54F" : "white",
+                            color: groupTotals.unreplenished > 0 ? "white" : "rgba(255,255,255,0.5)",
                           }}
                         >
                           {groupTotals.unreplenished > 0 ? formatCurrency(groupTotals.unreplenished) : "-"}
@@ -300,28 +304,29 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
 
               {/* Grand Total Row */}
               {pcfs.length > 0 && (
-                <TableRow sx={{ bgcolor: "primary.dark" }}>
-                  <TableCell sx={{ fontWeight: 900, color: "white", fontSize: "0.95rem" }} colSpan={2}>
+                <TableRow sx={{ bgcolor: "#0D47A1" }}>
+                  <TableCell sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1rem", letterSpacing: "0.5px" }} colSpan={2}>
                     GRAND TOTAL
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.beginning)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.disbursements)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.replenishments)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1rem" }}>
+                  <TableCell align="right" sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1.1rem", bgcolor: "rgba(255,213,74,0.2)" }}>
                     {formatCurrency(totals.ending)}
                   </TableCell>
                   <TableCell
                     align="right"
                     sx={{
                       fontWeight: 900,
-                      color: totals.unreplenished > 0 ? "#FFD54F" : "white",
+                      color: totals.unreplenished > 0 ? "#FF7043" : "rgba(255,255,255,0.5)",
                       fontSize: "1rem",
+                      bgcolor: totals.unreplenished > 0 ? "rgba(255,112,67,0.2)" : "transparent",
                     }}
                   >
                     {totals.unreplenished > 0 ? formatCurrency(totals.unreplenished) : "-"}
@@ -337,37 +342,37 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
       {expanded && pcfs.length > 0 && (
         <Box
           sx={{
-            p: 1.5,
+            p: 2,
             bgcolor: "grey.50",
             borderTop: "1px solid",
             borderColor: "divider",
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent: "flex-start",
           }}
         >
-          <Stack direction="row" spacing={3}>
+          <Stack direction="row" spacing={4}>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Total Disbursements
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700, color: "error.main" }}>
+              <Typography variant="body1" sx={{ fontWeight: 700, color: "error.main" }}>
                 -{formatCurrency(totals.disbursements)}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Total Replenishments
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700, color: "success.main" }}>
+              <Typography variant="body1" sx={{ fontWeight: 700, color: "success.dark" }}>
                 +{formatCurrency(totals.replenishments)}
               </Typography>
             </Box>
             {hasUnreplenished && (
               <Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   Pending Replenishment
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: "warning.main" }}>
+                <Typography variant="body1" sx={{ fontWeight: 700, color: "warning.dark" }}>
                   {formatCurrency(totals.unreplenished)}
                 </Typography>
               </Box>

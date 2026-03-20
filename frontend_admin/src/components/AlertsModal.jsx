@@ -13,6 +13,11 @@ import {
 
 import api from '../services/tokenService';
 
+const safeFormatCurrency = (value) => {
+  const num = Number(value ?? 0) || 0;
+  return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 const AlertsModal = ({ open, onClose }) => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,16 +31,19 @@ const AlertsModal = ({ open, onClose }) => {
       const data = response.data || response;
       setAlerts(data.alerts || []);
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to load alerts';
+      setError(String(errorMsg));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    let cancelled = false;
     if (open) {
       fetchAlerts();
     }
+    return () => { cancelled = true; };
   }, [open]);
 
   const lowBalanceAlerts = alerts.filter(a => a.type === 'low_balance');
@@ -43,13 +51,13 @@ const AlertsModal = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <NotificationsIcon color="primary" />
-        <Typography variant="h6">PCF Alerts</Typography>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'primary.main', color: 'white' }}>
+        <NotificationsIcon sx={{ color: 'white' }} />
+        <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>PCF Alerts</Typography>
         {alerts.length > 0 && (
           <Chip 
             label={alerts.length} 
-            color="error" 
+            color="warning" 
             size="small" 
             sx={{ ml: 1 }}
           />
@@ -57,18 +65,31 @@ const AlertsModal = ({ open, onClose }) => {
       </DialogTitle>
       <DialogContent dividers>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
             <CircularProgress />
+            <Typography sx={{ ml: 2, color: 'text.secondary' }}>Loading alerts...</Typography>
           </Box>
         ) : error ? (
           <Alert severity="error">{error}</Alert>
         ) : alerts.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 3 }}>
-            <NotificationsIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-            <Typography variant="h6" color="success.main">
+          <Box sx={{ textAlign: 'center', p: 4 }}>
+            <Box sx={{ 
+              width: 80, 
+              height: 80, 
+              borderRadius: '50%', 
+              bgcolor: 'success.light', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 2
+            }}>
+              <NotificationsIcon sx={{ fontSize: 48, color: 'success.main' }} />
+            </Box>
+            <Typography variant="h6" color="success.main" fontWeight={700}>
               All Clear!
             </Typography>
-            <Typography color="text.secondary">
+            <Typography color="text.secondary" sx={{ mt: 1 }}>
               No alerts at this time. All PCFs are healthy.
             </Typography>
           </Box>
@@ -93,16 +114,16 @@ const AlertsModal = ({ open, onClose }) => {
                         secondary={
                           <Box component="span">
                             <Typography variant="body2" component="span">
-                              {alert.location_display}
+                              {alert.location_display || 'N/A'}
                             </Typography>
                             <br />
                             <Typography variant="body2" component="span" color="error.main" fontWeight="bold">
-                              Current: ₱{alert.current_balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                              Current: {safeFormatCurrency(alert.current_balance)}
                             </Typography>
-                            <Typography variant="body2" component="span" color="text.secondary"> | Threshold: ₱{alert.threshold.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</Typography>
+                            <Typography variant="body2" component="span" color="text.secondary"> | Threshold: {safeFormatCurrency(alert.threshold)}</Typography>
                             <br />
                             <Typography variant="caption" component="span" color="error.main">
-                              Deficit: ₱{alert.deficit.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                              Deficit: {safeFormatCurrency(alert.deficit)}
                             </Typography>
                           </Box>
                         }
@@ -133,13 +154,13 @@ const AlertsModal = ({ open, onClose }) => {
                         secondary={
                           <Box component="span">
                             <Typography variant="body2" component="span">
-                              {alert.location_display}
+                              {alert.location_display || 'N/A'}
                             </Typography>
                             <br />
                             <Typography variant="body2" component="span" sx={{ color: '#ed6c02', fontWeight: 'bold' }}>
-                              Unreplenished: ₱{alert.unreplenished.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                              Unreplenished: {safeFormatCurrency(alert.unreplenished)}
                             </Typography>
-                            <Typography variant="body2" component="span" color="text.secondary"> (threshold: ₱{alert.threshold.toLocaleString('en-PH', { minimumFractionDigits: 2 })})</Typography>
+                            <Typography variant="body2" component="span" color="text.secondary"> (threshold: {safeFormatCurrency(alert.threshold)})</Typography>
                           </Box>
                         }
                       />

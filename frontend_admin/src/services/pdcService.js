@@ -22,9 +22,10 @@ export const depositPdc = (id, bankAccountId, depositDate = null, reference = ""
 };
 
 export const recordPdcReturned = (id, returnedDate = null, reason = "") => {
+  const date = returnedDate || new Date().toISOString().slice(0, 10);
   return api.post(`${BASE}${id}/record_returned/`, {
-    returned_date: returnedDate,
-    returned_reason: reason,
+    returned_date: date,
+    returned_reason: reason || "",
   });
 };
 

@@ -47,22 +47,15 @@ export default function Login() {
 
   // Helper: persist token and set axios header
   function persistToken(token, rememberFlag = true) {
-    // Save via your tokenService (may set axios headers internally)
     try {
       saveTokenToService(token, rememberFlag);
     } catch (e) {
       console.warn("tokenService.setAccessToken threw an error", e);
-      // fallback: store in localStorage/sessionStorage and set axios header
-      try {
-        if (rememberFlag) localStorage.setItem("token", token);
-        else sessionStorage.setItem("token", token);
-      } catch (err) {
-        console.warn("storage set failed", err);
-      }
-      axios.defaults.headers.common["Authorization"] = `Token ${token}`;
+      if (rememberFlag) localStorage.setItem("token", token);
+      else sessionStorage.setItem("token", token);
+      api.defaults.headers.common["Authorization"] = `Token ${token}`;
     }
-    // Ensure axios default header is set for subsequent requests
-    axios.defaults.headers.common["Authorization"] = `Token ${token}`;
+    api.defaults.headers.common["Authorization"] = `Token ${token}`;
   }
 
   async function handleLogin(e) {

@@ -20,6 +20,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import DownloadIcon from "@mui/icons-material/Download";
+import { toCsv } from "../utils/csvUtils";
 
 function formatCurrency(value) {
   return `₱${Number(value ?? 0).toLocaleString("en-PH", {
@@ -64,7 +65,7 @@ export default function CashInBankTable({
   );
 
   const handleExport = () => {
-    const csvContent = [
+    const rows = [
       ["Particulars", "Account #", "Beginning", "Collections", "Local Deposits", "Disbursements", "Fund Transfers", "Returned Checks", "Bank Charges", "Interbank Transfers", "Adjustments", "Ending"],
       ...banks.map(b => [
         b.particulars || b.name,
@@ -81,11 +82,10 @@ export default function CashInBankTable({
         b.ending ?? 0,
       ]),
       ["GRAND TOTAL", "", totals.beginning, totals.collections, totals.local_deposits, totals.disbursements, totals.fund_transfers, totals.returned_checks, totals.bank_charges, totals.interbank_transfers, totals.adjustments, totals.ending],
-    ]
-      .map(row => row.join(","))
-      .join("\n");
+    ];
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const csvContent = toCsv(rows);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -252,39 +252,39 @@ export default function CashInBankTable({
 
               {/* Grand Total Row */}
               {banks.length > 0 && (
-                <TableRow sx={{ bgcolor: "primary.main", color: "white" }}>
-                  <TableCell sx={{ fontWeight: 800, color: "white", fontSize: "0.9rem" }}>
+                <TableRow sx={{ bgcolor: "#0D47A1" }}>
+                  <TableCell sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1rem", letterSpacing: "0.5px" }}>
                     GRAND TOTAL
                   </TableCell>
                   <TableCell sx={{ color: "white" }} />
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.beginning)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.collections)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.local_deposits)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.disbursements)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.fund_transfers)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.returned_checks)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.bank_charges)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.interbank_transfers)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: "white" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "white" }}>
                     {formatCurrency(totals.adjustments)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1rem" }}>
+                  <TableCell align="right" sx={{ fontWeight: 900, color: "#FFFFFF", fontSize: "1.2rem", bgcolor: "rgba(255,255,255,0.15)" }}>
                     {formatCurrency(totals.ending)}
                   </TableCell>
                 </TableRow>

@@ -20,8 +20,11 @@ import {
   TextField,
   MenuItem,
   IconButton,
+  Chip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import WarningIcon from "@mui/icons-material/Warning";
 import api from "../services/tokenService";
 import pdcService from "../services/pdcService";
 import { normalizePdc, partitionPdcList, pdcTotalsFromPartition } from "../utils/pdcUtils";
@@ -230,18 +233,25 @@ export default function PdcDetail({
   };
 
   const renderPdcRow = (p) => (
-    <TableRow key={p.id}>
-      <TableCell>{p.customer ?? "-"}</TableCell>
-      <TableCell>{p.check_number ?? "-"}</TableCell>
+    <TableRow key={p.id} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+      <TableCell sx={{ fontWeight: 500 }}>{p.customer ?? "-"}</TableCell>
+      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.85rem" }}>{p.check_number ?? "-"}</TableCell>
       <TableCell>{p.maturity_date ?? "-"}</TableCell>
-      <TableCell align="right">
-        {Number(p.amount ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <TableCell align="right" sx={{ fontWeight: 600, color: "primary.dark" }}>
+        ₱{Number(p.amount ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
       </TableCell>
-      <TableCell>{p.status}</TableCell>
       <TableCell>
-        <Stack direction="row" spacing={1}>
+        <Chip 
+          label={p.status?.toUpperCase()} 
+          size="small" 
+          color={p.status === "outstanding" ? "warning" : p.status === "matured" ? "success" : "default"}
+          sx={{ fontWeight: 600 }}
+        />
+      </TableCell>
+      <TableCell>
+        <Stack direction="row" spacing={0.5}>
           {p.status === "outstanding" && (
-            <Button type="button" size="small" variant="contained" onClick={() => markMatured(p)} disabled={actionLoading}>
+            <Button type="button" size="small" variant="contained" color="success" onClick={() => markMatured(p)} disabled={actionLoading} sx={{ fontSize: "0.7rem" }}>
               Mark Matured
             </Button>
           )}
@@ -250,16 +260,17 @@ export default function PdcDetail({
               type="button"
               size="small"
               variant="contained"
-              color="success"
+              color="primary"
               onClick={() => openDeposit(p)}
               disabled={actionLoading || bankAccounts.length === 0}
+              sx={{ fontSize: "0.7rem" }}
             >
               Deposit
             </Button>
           )}
-          {p.status !== "returned" && (
-            <Button type="button" size="small" variant="outlined" color="error" onClick={() => openReturned(p)} disabled={actionLoading}>
-              Record Returned
+          {(p.status === "outstanding" || p.status === "matured") && (
+            <Button type="button" size="small" variant="contained" color="error" onClick={() => openReturned(p)} disabled={actionLoading} sx={{ fontSize: "0.7rem" }}>
+              Record Return
             </Button>
           )}
         </Stack>
@@ -295,46 +306,58 @@ export default function PdcDetail({
 
   return (
     <Dialog open={open} fullWidth maxWidth="lg" onClose={handleClose}>
-      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span>PDC Management</span>
-        <IconButton type="button" onClick={handleClose} aria-label="close">
+      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", bgcolor: "primary.main", color: "white" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <ReceiptLongIcon />
+          <span>PDC Management</span>
+        </Box>
+        <IconButton type="button" onClick={handleClose} aria-label="close" sx={{ color: "white" }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
       <DialogContent dividers>
         <Stack spacing={2}>
-          <Paper sx={{ p: 2 }}>
+          <Paper sx={{ p: 2, bgcolor: "primary.main", color: "white", borderRadius: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">Summary</Typography>
-              <Stack direction="row" spacing={2}>
-                <Typography variant="body2">
-                  This Month: ₱{(totals?.this_month ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                </Typography>
-                <Typography variant="body2">
-                  Matured: ₱{(totals?.matured ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                </Typography>
-                <Typography variant="body2">
-                  Total: ₱{(totals?.total ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                </Typography>
+              <Typography variant="h6" sx={{ color: "white", fontWeight: 700 }}>Summary</Typography>
+              <Stack direction="row" spacing={3}>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)" }}>This Month</Typography>
+                  <Typography variant="body1" sx={{ color: "white", fontWeight: 700 }}>
+                    ₱{(totals?.this_month ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)" }}>Matured</Typography>
+                  <Typography variant="body1" sx={{ color: "#FFD54A", fontWeight: 700 }}>
+                    ₱{(totals?.matured ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)" }}>Total</Typography>
+                  <Typography variant="body1" sx={{ color: "white", fontWeight: 700 }}>
+                    ₱{(totals?.total ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
               </Stack>
             </Stack>
           </Paper>
 
           {/* This Month */}
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700 }}>
+          <Paper sx={{ p: 2, borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700, color: "primary.dark" }}>
               This Month
             </Typography>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Check #</TableCell>
-                  <TableCell>Mat. Date</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Customer</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Check #</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Mat. Date</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Amount</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Status</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -342,7 +365,7 @@ export default function PdcDetail({
                   partition.this_month.map(renderPdcRow)
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
                       No PDCs for this month
                     </TableCell>
                   </TableRow>
@@ -352,19 +375,19 @@ export default function PdcDetail({
           </Paper>
 
           {/* Next Month */}
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700 }}>
+          <Paper sx={{ p: 2, borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700, color: "primary.dark" }}>
               Next Month
             </Typography>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Check #</TableCell>
-                  <TableCell>Mat. Date</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Customer</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Check #</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Mat. Date</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Amount</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Status</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -372,7 +395,7 @@ export default function PdcDetail({
                   partition.next_month.map(renderPdcRow)
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
                       No PDCs for next month
                     </TableCell>
                   </TableRow>
@@ -382,19 +405,19 @@ export default function PdcDetail({
           </Paper>
 
           {/* Two Months */}
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700 }}>
+          <Paper sx={{ p: 2, borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700, color: "primary.dark" }}>
               Two Months
             </Typography>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Check #</TableCell>
-                  <TableCell>Mat. Date</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Customer</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Check #</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Mat. Date</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Amount</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Status</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -402,7 +425,7 @@ export default function PdcDetail({
                   partition.two_months.map(renderPdcRow)
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
                       No PDCs for two months
                     </TableCell>
                   </TableRow>
@@ -412,19 +435,19 @@ export default function PdcDetail({
           </Paper>
 
           {/* Over Two Months */}
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700 }}>
+          <Paper sx={{ p: 2, borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700, color: "primary.dark" }}>
               Over Two Months
             </Typography>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Check #</TableCell>
-                  <TableCell>Mat. Date</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Customer</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Check #</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Mat. Date</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Amount</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Status</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "primary.main" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -432,7 +455,7 @@ export default function PdcDetail({
                   partition.over_two_months.map(renderPdcRow)
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
                       No PDCs over two months
                     </TableCell>
                   </TableRow>
@@ -444,7 +467,7 @@ export default function PdcDetail({
           {/* Matured / Deposited */}
           <Paper sx={{ p: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700 }}>
-              Matured / Deposited
+              Matured / Deposited / Returned
             </Typography>
             <Table size="small">
               <TableHead>
@@ -454,6 +477,7 @@ export default function PdcDetail({
                   <TableCell>Mat. Date</TableCell>
                   <TableCell align="right">Amount</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -463,15 +487,48 @@ export default function PdcDetail({
                       <TableCell>{p.customer}</TableCell>
                       <TableCell>{p.check_number}</TableCell>
                       <TableCell>{p.maturity_date}</TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
                         {Number(p.amount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                       </TableCell>
-                      <TableCell>{p.status}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={p.status?.toUpperCase()} 
+                          size="small" 
+                          color={p.status === "deposited" ? "info" : p.status === "returned" ? "error" : "success"}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={0.5}>
+                          {(p.status === "matured" || p.status === "deposited") && (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="contained"
+                              color="error"
+                              onClick={() => openReturned(p)}
+                              disabled={actionLoading}
+                            >
+                              Record Return
+                            </Button>
+                          )}
+                          {p.status === "deposited" && (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="outlined"
+                              onClick={() => openDeposit(p)}
+                              disabled={actionLoading || bankAccounts.length === 0}
+                            >
+                              Re-deposit
+                            </Button>
+                          )}
+                        </Stack>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={6} align="center">
                       No matured PDCs
                     </TableCell>
                   </TableRow>
@@ -534,8 +591,16 @@ export default function PdcDetail({
 
       {/* Returned Modal */}
       <Dialog open={returnedOpen} onClose={() => setReturnedOpen(false)}>
-        <DialogTitle>Record Returned Check</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "error.main", color: "white" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <WarningIcon />
+            <span>Record Returned Check</span>
+          </Box>
+          <IconButton onClick={() => setReturnedOpen(false)} sx={{ color: "white" }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1, minWidth: 360 }}>
             <TextField
               label="Returned Date"
@@ -546,21 +611,22 @@ export default function PdcDetail({
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Reason"
+              label="Reason (Optional)"
               value={returnedReason}
               onChange={(e) => setReturnedReason(e.target.value)}
               fullWidth
               multiline
               minRows={2}
+              placeholder="Enter reason for returning the check"
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button type="button" onClick={() => setReturnedOpen(false)}>
+        <DialogActions sx={{ p: 2 }}>
+          <Button type="button" onClick={() => setReturnedOpen(false)} variant="outlined">
             Cancel
           </Button>
           <Button type="button" variant="contained" color="error" onClick={submitReturned} disabled={actionLoading}>
-            Record Returned
+            Confirm Return
           </Button>
         </DialogActions>
       </Dialog>

@@ -22,6 +22,13 @@ const formatPeso = (amount) => {
   return `₱${Number(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Invalid Date';
+  return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
 const PcfReports = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
@@ -53,7 +60,8 @@ const PcfReports = () => {
       const response = await api.get(url);
       setReportData(response.data);
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Failed to load report';
+      setError(String(errorMsg));
     } finally {
       setLoading(false);
     }
@@ -84,7 +92,8 @@ const PcfReports = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to export Excel';
+      alert(errorMsg);
     }
   };
 
@@ -113,7 +122,8 @@ const PcfReports = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to export PDF';
+      alert(errorMsg);
     }
   };
 
@@ -288,13 +298,13 @@ const PcfReports = () => {
                   </TableRow>
                 ))}
                 {reportData.totals && (
-                  <TableRow sx={{ backgroundColor: '#1565c0', color: 'white' }}>
-                    <TableCell colSpan={2} sx={{ fontWeight: 'bold', color: 'white' }}>GRAND TOTAL</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.beginning)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.disbursements)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.replenishments)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.unreplenished)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.ending)}</TableCell>
+                  <TableRow sx={{ backgroundColor: '#0D47A1' }}>
+                    <TableCell colSpan={2} sx={{ fontWeight: 900, color: '#FFD54A', fontSize: '1rem', letterSpacing: '0.5px' }}>GRAND TOTAL</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: 'white' }}>{formatPeso(reportData.totals.beginning)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: 'white' }}>{formatPeso(reportData.totals.disbursements)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: 'white' }}>{formatPeso(reportData.totals.replenishments)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: 'white' }}>{formatPeso(reportData.totals.unreplenished)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, color: '#FFD54A', fontSize: '1.1rem', bgcolor: 'rgba(255,213,74,0.2)' }}>{formatPeso(reportData.totals.ending)}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -336,11 +346,11 @@ const PcfReports = () => {
                   </TableRow>
                 ))}
                 {reportData.totals && (
-                  <TableRow sx={{ backgroundColor: '#1565c0', color: 'white' }}>
-                    <TableCell colSpan={2} sx={{ fontWeight: 'bold', color: 'white' }}>GRAND TOTAL</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.disbursements)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.replenishments)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>{formatPeso(reportData.totals.unreplenished)}</TableCell>
+                  <TableRow sx={{ backgroundColor: '#0D47A1' }}>
+                    <TableCell colSpan={2} sx={{ fontWeight: 900, color: '#FFD54A', fontSize: '1rem', letterSpacing: '0.5px' }}>GRAND TOTAL</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: 'white' }}>{formatPeso(reportData.totals.disbursements)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: 'white' }}>{formatPeso(reportData.totals.replenishments)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: reportData.totals.unreplenished > 0 ? '#FF7043' : 'white' }}>{formatPeso(reportData.totals.unreplenished)}</TableCell>
                   </TableRow>
                 )}
               </TableBody>

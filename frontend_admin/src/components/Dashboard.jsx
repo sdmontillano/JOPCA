@@ -56,7 +56,6 @@ import AddTransaction from "./AddTransaction";
 import PdcCreateModal from "./PdcCreateModal";
 import PcfTable from "./PcfTable";
 import AddPcfModal from "./AddPcfModal";
-import ReconciliationPanel from "./ReconciliationPanel";
 import AlertsModal from "./AlertsModal";
 
 import logo from "../assets/jopca-logo.png";
@@ -183,25 +182,48 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
   };
 
   return (
-    <Paper sx={{ p: 2, mt: 2, borderRadius: 2, boxShadow: 3 }}>
+    <Paper sx={{ p: 2, mt: 2, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", border: "1px solid", borderColor: "divider" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Box>
-          <Typography variant="h6">Cash in Bank — Yesterday & Previous Day</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "primary.dark" }}>
+            Cash in Bank — Yesterday & Previous Day
+          </Typography>
           <Typography variant="caption" color="text.secondary">
-            Center (yesterday): {centerDate}
+            Center (yesterday): <strong>{centerDate}</strong>
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Button variant="outlined" size="small" startIcon={<AccountBalanceIcon />} onClick={onToggleCollapse} sx={{ textTransform: "none", px: 2 }}>
-            Show / Hide Recent Days
+          <Button 
+            variant="outlined" 
+            size="small" 
+            startIcon={<AccountBalanceIcon />} 
+            onClick={onToggleCollapse} 
+            sx={{ textTransform: "none", px: 2 }}
+          >
+            {collapsed ? "Show" : "Hide"}
           </Button>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 1 }}>
             <Chip label={dates[0]} size="small" color="primary" variant="outlined" />
-            <Chip label={dates[1]} size="small" sx={{ borderColor: "secondary.main", color: "secondary.main", background: "rgba(255,213,74,0.06)" }} />
+            <Chip 
+              label={dates[1]} 
+              size="small" 
+              sx={{ 
+                borderColor: "secondary.main", 
+                color: "secondary.main", 
+                bgcolor: "rgba(0,137,123,0.08)",
+                fontWeight: 600
+              }} 
+            />
           </Stack>
-          <IconButton size="small" onClick={goPrev} aria-label="previous day"><ArrowBackIosNewIcon fontSize="small" /></IconButton>
-          <IconButton size="small" onClick={goNext} aria-label="next day"><ArrowForwardIosIcon fontSize="small" /></IconButton>
-          <Button size="small" onClick={refresh} disabled={loading}>Refresh</Button>
+          <IconButton size="small" onClick={goPrev} aria-label="previous day">
+            <ArrowBackIosNewIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={goNext} aria-label="next day">
+            <ArrowForwardIosIcon fontSize="small" />
+          </IconButton>
+          <Button size="small" onClick={refresh} disabled={loading} variant="contained" color="primary">
+            Refresh
+          </Button>
         </Stack>
       </Stack>
 
@@ -216,72 +238,96 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                 const dayData = dataMap[dateIso] || { cash_in_bank: [], accounts: [] };
                 const rows = Array.isArray(dayData.cash_in_bank) ? dayData.cash_in_bank : [];
                 const totals = totalsFor(dateIso);
+                const isToday = dateIso === centerDate;
                 return (
                   <Grid item xs={12} md={6} key={dateIso}>
-                    <Paper variant="outlined" sx={{ p: 1, height: "100%", borderRadius: 1 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>{dateIso}</Typography>
+                    <Paper 
+                      variant="outlined" 
+                      sx={{ 
+                        p: 2, 
+                        height: "100%", 
+                        borderRadius: 2,
+                        border: "2px solid",
+                        borderColor: isToday ? "primary.main" : "divider",
+                        bgcolor: isToday ? "rgba(21,101,192,0.02)" : "white"
+                      }}
+                    >
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: isToday ? "primary.main" : "text.primary" }}>
+                            {dateIso}
+                          </Typography>
+                          {isToday && <Chip label="TODAY" size="small" color="primary" sx={{ height: 18, fontSize: "0.65rem" }} />}
+                        </Box>
                         <Typography variant="caption" color="text.secondary">
                           {dayData.accounts?.length ? `${dayData.accounts.length} accounts` : "No accounts"}
                         </Typography>
                       </Box>
                       <Table size="small">
                         <TableHead>
-                          <TableRow>
-                            <TableCell><strong>Particulars</strong></TableCell>
-                            <TableCell align="right"><strong>Beg</strong></TableCell>
-                            <TableCell align="right"><strong>Coll</strong></TableCell>
-                            <TableCell align="right"><strong>Local</strong></TableCell>
-                            <TableCell align="right"><strong>Disb</strong></TableCell>
-                            <TableCell align="right"><strong>Fund</strong></TableCell>
-                            <TableCell align="right"><strong>Ret</strong></TableCell>
-                            <TableCell align="right"><strong>End</strong></TableCell>
+                          <TableRow sx={{ "& th": { bgcolor: isToday ? "primary.main" : "grey.600" } }}>
+                            <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Particulars</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Beg</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Coll</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Local</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Disb</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Fund</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>Ret</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem" }}>End</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {rows.length === 0 ? (
-                            <TableRow><TableCell colSpan={8} align="center">No data</TableCell></TableRow>
+                            <TableRow>
+                              <TableCell colSpan={8} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                                No data available
+                              </TableCell>
+                            </TableRow>
                           ) : (
                             rows.map((r, idx) => (
-                              <TableRow key={r.bank_id ?? `${r.particulars}-${r.account_number}-${idx}`}>
-                                <TableCell sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }}>
+                              <TableRow key={r.bank_id ?? `${r.particulars}-${r.account_number}-${idx}`} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+                                <TableCell sx={{ fontWeight: 500, fontSize: "0.8rem" }}>
                                   {r.particulars}
-                                  <Typography variant="caption" display="block">{r.account_number ?? ""}</Typography>
+                                  <Typography variant="caption" display="block" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>
+                                    {r.account_number ?? ""}
+                                  </Typography>
                                 </TableCell>
-                                <TableCell align="right">{formatCurrency(r.beginning ?? r.beginning_balance ?? 0)}</TableCell>
-                                <TableCell align="right">{formatCurrency(r.collections ?? 0)}</TableCell>
-                                <TableCell align="right">{formatCurrency(r.local_deposits ?? 0)}</TableCell>
-                                <TableCell align="right">{formatCurrency(r.disbursements ?? 0)}</TableCell>
-                                <TableCell align="right">{formatCurrency(r.fund_transfers ?? r.transfers ?? 0)}</TableCell>
-                                <TableCell align="right">{formatCurrency(r.returned_checks ?? 0)}</TableCell>
-                                <TableCell align="right">{formatCurrency(r.ending ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "text.secondary" }}>{formatCurrency(r.beginning ?? r.beginning_balance ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "success.dark" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "success.dark" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "error.main" }}>{formatCurrency(r.disbursements ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "info.main" }}>{formatCurrency(r.fund_transfers ?? r.transfers ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "warning.main" }}>{formatCurrency(r.returned_checks ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "primary.dark" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
                               </TableRow>
                             ))
                           )}
-                          <TableRow sx={{ backgroundColor: "rgba(14,165,233,0.06)" }}>
-                            <TableCell sx={{ fontWeight: 700 }}>Totals</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.beginning)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.collections)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.local_deposits)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.disbursements)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.fund_transfers)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.returned_checks)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 900 }}>{formatCurrency(totals.ending)}</TableCell>
+                          <TableRow sx={{ bgcolor: isToday ? "#0D47A1" : "#37474F" }}>
+                            <TableCell sx={{ fontWeight: 800, color: "#FFD54A", fontSize: "0.85rem" }}>TOTALS</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.beginning)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: "0.8rem" }}>{formatCurrency(totals.returned_checks)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 900, color: "#FFD54A", fontSize: "1.1rem" }}>{formatCurrency(totals.ending)}</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" sx={{ display: "block", mb: 0.5 }}>Accounts</Typography>
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                      <Box sx={{ mt: 1.5, pt: 1, borderTop: "1px dashed", borderColor: "divider" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Accounts
+                        </Typography>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.5 }}>
                           {(dayData.accounts || []).length > 0 ? (
                             (dayData.accounts || []).slice(0, 4).map((a) => (
-                              <Box key={a.id} sx={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                                <span>{a.name}</span>
-                                <span>₱{formatCurrency(a.balance)}</span>
+                              <Box key={a.id} sx={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>{a.name}</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.dark" }}>₱{formatCurrency(a.balance)}</Typography>
                               </Box>
                             ))
                           ) : (
-                            <Typography variant="caption">No accounts</Typography>
+                            <Typography variant="caption" color="text.secondary">No accounts</Typography>
                           )}
                         </Box>
                       </Box>
@@ -403,11 +449,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
 
 // Main Dashboard Component
 export default function Dashboard() {
-  return (
-    <ThemeProvider theme={jopcaTheme}>
-      <DashboardInner />
-    </ThemeProvider>
-  );
+  return <DashboardInner />;
 }
 
 function DashboardInner() {
@@ -431,7 +473,6 @@ function DashboardInner() {
   // UI states
   const [showCashInBank, setShowCashInBank] = useState(false);
   const [cashCollapsed, setCashCollapsed] = useState(false);
-  const [reconciliationCollapsed, setReconciliationCollapsed] = useState(true);
   const [actionAlert, setActionAlert] = useState(null);
   const [pcfData, setPcfData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
@@ -510,6 +551,7 @@ function DashboardInner() {
       setAlertCount(alerts.length);
     } catch (err) {
       console.error("Failed to fetch alerts", err);
+      setAlertCount(0);
     }
   };
 
@@ -722,50 +764,144 @@ function DashboardInner() {
         {/* Header */}
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: "primary.main" }}>
-              JOPCA CORPORATION DAILY CASH POSITION REPORT
+            <Typography variant="h4" sx={{ fontWeight: 800, color: "primary.dark", letterSpacing: "-0.5px" }}>
+              JOPCA CORPORATION
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography variant="h6" sx={{ fontWeight: 500, color: "text.secondary" }}>
+              Daily Cash Position Report
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
               {dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE"} — {dailyReport?.date || ""}
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="Refresh data from server">
-              <IconButton color="primary" onClick={() => { fetchAll(manualMonth || null); fetchAlertsCount(); }} disabled={refreshing}>
+              <IconButton 
+                color="primary" 
+                onClick={() => { fetchAll(manualMonth || null); fetchAlertsCount(); }} 
+                disabled={refreshing}
+                sx={{ 
+                  bgcolor: 'primary.main', 
+                  color: 'white',
+                  '&:hover': { bgcolor: 'primary.dark' },
+                  '&:disabled': { bgcolor: 'grey.300' }
+                }}
+              >
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
-            <TextField size="small" label="Month (YYYY-MM)" value={manualMonth} onChange={(e) => setManualMonth(e.target.value)} placeholder="2026-03" />
+            <TextField 
+              size="small" 
+              label="Month (YYYY-MM)" 
+              value={manualMonth} 
+              onChange={(e) => setManualMonth(e.target.value)} 
+              placeholder="2026-03"
+              sx={{ minWidth: 140 }}
+            />
           </Stack>
         </Stack>
 
         {/* KPI Cards Row */}
-        <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "stretch", flexWrap: "wrap" }}>
-          <Paper sx={{ p: 2, minWidth: 200, flex: 1, borderRadius: 2, boxShadow: 2 }}>
-            <Typography variant="caption" color="text.secondary">Total Cash in Bank</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: "primary.main", mt: 0.5 }}>{formatPeso(totalEndingAllBanks)}</Typography>
+        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2 }}>
+          {/* Cash in Bank Card */}
+          <Paper sx={{ 
+            p: 2.5, 
+            borderRadius: 3, 
+            boxShadow: "0 4px 12px rgba(21, 101, 192, 0.15)",
+            border: "1px solid",
+            borderColor: "primary.light",
+            background: "linear-gradient(135deg, #FFFFFF 0%, #E3F2FD 100%)",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 16px rgba(21, 101, 192, 0.2)" }
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+              <AccountBalanceIcon sx={{ color: "primary.main", mr: 1, fontSize: 20 }} />
+              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Cash in Bank
+              </Typography>
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: "primary.dark", letterSpacing: "-0.5px" }}>
+              {formatPeso(totalEndingAllBanks)}
+            </Typography>
           </Paper>
 
-          <Paper sx={{ p: 2, minWidth: 200, flex: 1, borderRadius: 2, boxShadow: 2, bgcolor: "secondary.light" }}>
-            <Typography variant="caption" color="text.secondary">Total PCF Balance</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>{formatPeso(totalPcfBalance)}</Typography>
+          {/* PCF Balance Card */}
+          <Paper sx={{ 
+            p: 2.5, 
+            borderRadius: 3, 
+            boxShadow: "0 4px 12px rgba(0, 137, 123, 0.15)",
+            border: "1px solid",
+            borderColor: "secondary.light",
+            background: "linear-gradient(135deg, #FFFFFF 0%, #E0F2F1 100%)",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 16px rgba(0, 137, 123, 0.2)" }
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+              <WalletIcon sx={{ color: "secondary.main", mr: 1, fontSize: 20 }} />
+              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                PCF Balance
+              </Typography>
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.dark", letterSpacing: "-0.5px" }}>
+              {formatPeso(totalPcfBalance)}
+            </Typography>
           </Paper>
 
-          <Paper sx={{ p: 2, minWidth: 180, flex: 1, borderRadius: 2, boxShadow: 1 }}>
-            <Typography variant="caption" color="text.secondary">PDC This Month</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(effectivePdcSummary.this_month ?? 0)}</Typography>
+          {/* PDC This Month Card */}
+          <Paper sx={{ 
+            p: 2.5, 
+            borderRadius: 3, 
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor: "divider",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }
+          }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              PDC This Month
+            </Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "info.dark", mt: 0.5 }}>
+              {formatPeso(effectivePdcSummary.this_month ?? 0)}
+            </Typography>
           </Paper>
 
-          <Paper sx={{ p: 2, minWidth: 180, flex: 1, borderRadius: 2, boxShadow: 1 }}>
-            <Typography variant="caption" color="text.secondary">PDC Total</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{formatPeso(effectivePdcSummary.total ?? 0)}</Typography>
+          {/* PDC Total Card */}
+          <Paper sx={{ 
+            p: 2.5, 
+            borderRadius: 3, 
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor: "divider",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }
+          }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              PDC Total
+            </Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "info.main", mt: 0.5 }}>
+              {formatPeso(effectivePdcSummary.total ?? 0)}
+            </Typography>
           </Paper>
 
+          {/* Unreplenished Card */}
           {totalPcfUnreplenished > 0 && (
-            <Paper sx={{ p: 2, minWidth: 180, flex: 1, borderRadius: 2, boxShadow: 1, bgcolor: "warning.light" }}>
-              <Typography variant="caption" color="warning.dark">Unreplenished PCF</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: "warning.dark", mt: 0.5 }}>
-                <WarningIcon sx={{ fontSize: 16, mr: 0.5 }} />
+            <Paper sx={{ 
+              p: 2.5, 
+              borderRadius: 3, 
+              boxShadow: "0 4px 12px rgba(245, 124, 0, 0.15)",
+              border: "1px solid",
+              borderColor: "warning.light",
+              background: "linear-gradient(135deg, #FFFFFF 0%, #FFF3E0 100%)",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 16px rgba(245, 124, 0, 0.2)" }
+            }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                <WarningIcon sx={{ color: "warning.main", mr: 0.5, fontSize: 18 }} />
+                <Typography variant="caption" sx={{ color: "warning.dark", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Unreplenished
+                </Typography>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: "warning.dark" }}>
                 {formatPeso(totalPcfUnreplenished)}
               </Typography>
             </Paper>
@@ -774,78 +910,98 @@ function DashboardInner() {
 
         {/* PCF Cash on Hand Section */}
         <Box sx={{ mb: 3 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: "secondary.main" }}>
-              <WalletIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-              CASH ON HAND (PCF)
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button variant="contained" color="secondary" size="small" startIcon={<WalletIcon />} onClick={handleOpenAddPcf}>
-                Add PCF
-              </Button>
-            </Stack>
-          </Stack>
           <PcfTable pcfs={cashOnHand} showExport={true} defaultExpanded={true} />
         </Box>
 
         {/* Cash in Bank Section */}
         <Box sx={{ mb: 3 }}>
-          <Paper sx={{ p: 2, boxShadow: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                <AccountBalanceIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-                CASH IN BANK
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant={showCashInBank ? "contained" : "outlined"}
-                  startIcon={<AccountBalanceIcon />}
-                  onClick={() => { setShowCashInBank((s) => !s); if (!showCashInBank) setCashCollapsed(false); }}
-                  size="small"
-                >
-                  Yesterday & Prev
-                </Button>
-              </Stack>
-            </Stack>
+          <Paper sx={{ p: 0, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+            {/* Section Header */}
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: "primary.main",
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center"
+            }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <AccountBalanceIcon sx={{ color: "white", mr: 1.5, fontSize: 24 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: "white", letterSpacing: "0.5px" }}>
+                  CASH IN BANK
+                </Typography>
+              </Box>
+              <Button
+                variant={showCashInBank ? "contained" : "outlined"}
+                startIcon={<AccountBalanceIcon />}
+                onClick={() => { setShowCashInBank((s) => !s); if (!showCashInBank) setCashCollapsed(false); }}
+                size="small"
+                sx={{ 
+                  color: showCashInBank ? "primary.main" : "white",
+                  borderColor: "white",
+                  "&:hover": { bgcolor: "rgba(255,255,255,0.1)" }
+                }}
+              >
+                Yesterday & Prev
+              </Button>
+            </Box>
 
-            {showCashInBank && <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} />}
+            {showCashInBank && (
+              <Box sx={{ p: 2, bgcolor: "grey.50" }}>
+                <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} />
+              </Box>
+            )}
 
-            <Table size="small" sx={{ mt: 1 }}>
+            <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>PARTICULARS</TableCell>
-                  <TableCell>Account #</TableCell>
-                  <TableCell align="right">Beginning</TableCell>
-                  <TableCell align="right">Collections</TableCell>
-                  <TableCell align="right">Local Deposits</TableCell>
-                  <TableCell align="right">Disbursements</TableCell>
-                  <TableCell align="right">Fund Transfers</TableCell>
-                  <TableCell align="right">Returned Checks</TableCell>
-                  <TableCell align="right">Ending</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700 }}>PARTICULARS</TableCell>
+                  <TableCell sx={{ color: "white", fontWeight: 700 }}>Account #</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Beginning</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Collections</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Local Deposits</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Disbursements</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Fund Transfers</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Returned</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Ending</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {cashInBank.length > 0 ? (
                   cashInBank.map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{r.particulars || `Bank ${i + 1}`}</TableCell>
-                      <TableCell>{r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}</TableCell>
-                      <TableCell align="right">{formatPeso(r.beginning ?? 0)}</TableCell>
-                      <TableCell align="right">{formatPeso(r.collections ?? 0)}</TableCell>
-                      <TableCell align="right">{formatPeso(r.local_deposits ?? 0)}</TableCell>
-                      <TableCell align="right">{formatPeso(r.disbursements ?? 0)}</TableCell>
-                      <TableCell align="right">{formatPeso(r.fund_transfers ?? 0)}</TableCell>
-                      <TableCell align="right">{formatPeso(r.returned_checks ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatPeso(r.ending ?? 0)}</TableCell>
+                    <TableRow key={i} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+                      <TableCell sx={{ fontWeight: 600, color: "text.primary" }}>{r.particulars || `Bank ${i + 1}`}</TableCell>
+                      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.85rem", color: "text.secondary" }}>
+                        {r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "text.primary" }}>{formatPeso(r.beginning ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#2E7D32" }}>{formatPeso(r.collections ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#2E7D32" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#C62828" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#0277BD" }}>{formatPeso(r.fund_transfers ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#F57C00" }}>{formatPeso(r.returned_checks ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: "#0D47A1" }}>{formatPeso(r.ending ?? 0)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={9} align="center">No bank transactions</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={9} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                      No bank transactions found
+                    </TableCell>
+                  </TableRow>
                 )}
-                <TableRow sx={{ backgroundColor: "rgba(0,0,0,0.03)" }}>
-                  <TableCell sx={{ fontWeight: 800 }}>Grand Total</TableCell>
-                  <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
-                  <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.1em" }}>{formatPeso(totalEndingAllBanks)}</TableCell>
+                <TableRow sx={{ bgcolor: "#0D47A1" }}>
+                  <TableCell colSpan={2} sx={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "1px", color: "#FFD54A", backgroundColor: "#0D47A1" }}>
+                    GRAND TOTAL
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.4rem", p: 1, color: "#FFD54A", backgroundColor: "#0D47A1" }}>
+                    {formatPeso(totalEndingAllBanks)}
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -853,56 +1009,85 @@ function DashboardInner() {
         </Box>
 
         {/* PDC Summary */}
-        <Paper sx={{ p: 3, mb: 3, boxShadow: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              <ReceiptLongIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-              PDC SUMMARY
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Box sx={{ textAlign: "right" }}>
-                <Typography variant="caption">This Month</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(effectivePdcSummary.this_month ?? 0)}</Typography>
+        <Paper sx={{ p: 3, mb: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <ReceiptLongIcon sx={{ color: "primary.main", mr: 1.5, fontSize: 28 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
+                PDC SUMMARY
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={3} alignItems="center">
+              <Box sx={{ textAlign: "center", px: 2, py: 1, bgcolor: "grey.50", borderRadius: 2 }}>
+                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
+                  This Month
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: "info.dark" }}>
+                  {formatPeso(effectivePdcSummary.this_month ?? 0)}
+                </Typography>
               </Box>
-              <Box sx={{ textAlign: "right" }}>
-                <Typography variant="caption">Total</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPeso(effectivePdcSummary.total ?? 0)}</Typography>
+              <Box sx={{ textAlign: "center", px: 2, py: 1, bgcolor: "grey.50", borderRadius: 2 }}>
+                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
+                  Total Outstanding
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: "info.main" }}>
+                  {formatPeso(effectivePdcSummary.total ?? 0)}
+                </Typography>
               </Box>
-              <Button variant="contained" onClick={() => navigate("/pdc")}>View Details</Button>
-              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={handleOpenAddPdc}>Add PDC</Button>
+              <Button variant="contained" onClick={() => navigate("/pdc")} size="small">
+                View Details
+              </Button>
+              <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={handleOpenAddPdc} size="small">
+                Add PDC
+              </Button>
             </Stack>
-          </Stack>
+          </Box>
         </Paper>
 
-        {/* Bank Reconciliation Panel */}
-        <ReconciliationPanel
-          collapsed={reconciliationCollapsed}
-          onToggleCollapse={() => setReconciliationCollapsed(!reconciliationCollapsed)}
-        />
-
         {/* Transactions Section */}
-        <Paper sx={{ p: 3, mt: 3, borderRadius: 2, boxShadow: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>TRANSACTIONS FOR THIS MONTH</Typography>
-            <Button variant="outlined" size="small" onClick={() => navigate("/transactions")}>View All</Button>
-          </Stack>
+        <Paper sx={{ p: 0, mt: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: "secondary.main",
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center"
+          }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "white" }}>
+              TRANSACTIONS THIS MONTH
+            </Typography>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={() => navigate("/transactions")}
+              sx={{ 
+                color: "white", 
+                borderColor: "white",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.1)", borderColor: "white" }
+              }}
+            >
+              View All
+            </Button>
+          </Box>
           <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>PARTICULARS</TableCell>
-                <TableCell align="right">Amount (₱)</TableCell>
-              </TableRow>
-            </TableHead>
             <TableBody>
               {(monthlyReport?.transactions || []).length > 0 ? (
                 (monthlyReport.transactions || []).slice(0, 10).map((t, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{t.particulars || t.type || `Txn ${i + 1}`}</TableCell>
-                    <TableCell align="right">{formatPeso(t.total ?? t.amount ?? 0)}</TableCell>
+                  <TableRow key={i} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>
+                      {t.particulars || t.type || `Transaction ${i + 1}`}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, color: "primary.dark" }}>
+                      {formatPeso(t.total ?? t.amount ?? 0)}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={2} align="center">No transactions for this month</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={2} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                    No transactions for this month
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

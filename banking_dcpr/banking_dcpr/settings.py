@@ -9,9 +9,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+# For development: DEBUG defaults to True if not set
+# For production: Set DEBUG=False or use environment variable
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*"]  # Allow all hosts in development
 
 INSTALLED_APPS = [
     # Default Django apps
@@ -29,6 +31,7 @@ INSTALLED_APPS = [
     # Third-party
     'rest_framework',
     'rest_framework.authtoken',   # ✅ required for authtoken login
+    'rest_framework.renderers',     # ✅ for browsable API
     'corsheaders',
 ]
 
@@ -43,11 +46,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-CORS_ALLOW_CREDENTIALS = True
+# CORS settings - allow all origins in development
+if os.environ.get('DJANGO_ENV', 'development') == 'production':
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    CORS_ALLOW_CREDENTIALS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = True  # Dev only
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -105,3 +112,20 @@ STATICFILES_DIRS = [
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email Report Settings
+EMAIL_REPORT_ENABLED = False  # Set to True to enable email reports
+EMAIL_REPORT_RECIPIENTS = []   # List of email addresses
+EMAIL_REPORT_FREQUENCY = 'daily'  # daily, weekly, monthly
+EMAIL_REPORT_INCLUDE_CASH_IN_BANK = True
+EMAIL_REPORT_INCLUDE_PCF = True
+EMAIL_REPORT_INCLUDE_PDC = True
+
+# Email Configuration (for sending reports)
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.example.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'reports@example.com'
+# EMAIL_HOST_PASSWORD = 'your-password-here'
+# DEFAULT_FROM_EMAIL = 'JOPCA DCPR <reports@example.com>'
