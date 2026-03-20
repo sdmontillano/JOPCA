@@ -1,7 +1,7 @@
 # core/views.py
 import logging
 from django.utils.timezone import now, timezone
-from django.db.models import Sum
+from django.db.models import Sum, Count, F
 from datetime import datetime
 from datetime import date as _date
 from datetime import timedelta
@@ -14,7 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
-from django.db import transaction
+from django.db import transaction, models
 from django.utils.dateparse import parse_date
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ class DailyCashPositionViewSet(viewsets.ModelViewSet):
 
 
 class TransactionListCreate(generics.ListCreateAPIView):
-    queryset = Transaction.objects.all().order_by('-created_at')
+    queryset = Transaction.objects.all().order_by('-date', '-id')
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -95,17 +95,25 @@ class TransactionListCreate(generics.ListCreateAPIView):
         account_number = self.request.query_params.get("account_number")
         tx_type = self.request.query_params.get("type")
         date = self.request.query_params.get("date")
+        search = self.request.query_params.get("search")
 
         if bank_id:
             qs = qs.filter(bank_account_id=bank_id)
         if account_number:
-            qs = qs.filter(bank_account__account_number=account_number)
+            qs = qs.filter(bank_account__account_number__icontains=account_number)
         if tx_type:
             qs = qs.filter(type=tx_type)
         if date:
             qs = qs.filter(date=date)
+        if search:
+            qs = qs.filter(
+                models.Q(description__icontains=search) |
+                models.Q(bank_account__name__icontains=search) |
+                models.Q(bank_account__account_number__icontains=search) |
+                models.Q(type__icontains=search)
+            )
 
-        return qs
+        return qs.order_by('-date', '-id')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -179,14 +187,161 @@ def detailed_monthly_report(request):
 
     accounts = BankAccount.objects.all().values("name", "account_number", "balance")
 
-    monthly = MonthlyReport.objects.filter(month=month_date).first()
-    ending_balance = monthly.ending_balance if monthly else 0
+    grand_total = transactions.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
     return Response({
         "month": month_date.strftime("%Y-%m"),
         "line_items": list(grouped),
         "accounts": list(accounts),
-        "grand_total": ending_balance
+        "grand_total": float(grand_total)
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def monthly_full_report(request):
+    """
+    GET /summary/monthly-full/?month=YYYY-MM
+    Returns complete monthly report with all transactions
+    """
+    month_str = request.GET.get("month")
+    if not month_str:
+        return Response({"detail": "Month parameter required (YYYY-MM)."}, status=400)
+    
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date()
+    except ValueError:
+        return Response({"detail": "Invalid month format."}, status=400)
+    
+    # 1. BANK TRANSACTIONS
+    bank_transactions = Transaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month
+    ).select_related('bank_account').order_by('date', '-id')
+    
+    bank_txn_list = [
+        {
+            "id": t.id,
+            "date": str(t.date),
+            "bank_name": t.bank_account.name if t.bank_account else "N/A",
+            "account_number": t.bank_account.account_number if t.bank_account else "N/A",
+            "type": t.type,
+            "description": t.description or "",
+            "amount": float(t.amount),
+        }
+        for t in bank_transactions
+    ]
+    
+    # 2. PCF TRANSACTIONS
+    pcf_transactions = PettyCashTransaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month
+    ).select_related('pcf').order_by('date', '-id')
+    
+    pcf_txn_list = [
+        {
+            "id": t.id,
+            "date": str(t.date),
+            "pcf_name": t.pcf.name if t.pcf else "N/A",
+            "location": t.pcf.get_location_display() if t.pcf else (t.pcf.location if t.pcf else "N/A"),
+            "type": t.type,
+            "description": t.description or "",
+            "amount": float(t.amount),
+        }
+        for t in pcf_transactions
+    ]
+    
+    # 3. PDC FOR MONTH
+    pdc_this_month = Pdc.objects.filter(
+        maturity_date__year=month_date.year,
+        maturity_date__month=month_date.month
+    ).values(
+        "id", "check_no", "amount", "status", "maturity_date"
+    ).annotate(bank_name=F('deposit_bank__name'))
+    
+    # 4. GROUPED SUMMARIES - BY ACCOUNT
+    bank_by_account = Transaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month
+    ).values(
+        "bank_account__name", "bank_account__account_number"
+    ).annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    )
+    
+    # 5. GROUPED SUMMARIES - BY TYPE (with signed amounts)
+    bank_by_type_query = Transaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month
+    ).values("type").annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    )
+    
+    # Apply signed amounts based on transaction type
+    INFLOW_TYPES = ['collection', 'deposit', 'collections', 'local_deposits']
+    OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer']
+    
+    bank_by_type = []
+    for item in bank_by_type_query:
+        item_type = item['type'].lower()
+        if item_type in OUTFLOW_TYPES:
+            item['total'] = -abs(float(item['total']))  # Make negative
+        else:
+            item['total'] = abs(float(item['total']))  # Keep positive
+        bank_by_type.append(item)
+    
+    # 6. TOTALS - Split inflows and outflows
+    bank_total_query = Transaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month
+    )
+    
+    inflows = Decimal('0.00')
+    outflows = Decimal('0.00')
+    for t in bank_total_query:
+        if t.type.lower() in INFLOW_TYPES:
+            inflows += t.amount
+        elif t.type.lower() in OUTFLOW_TYPES:
+            outflows += t.amount
+    
+    bank_net = inflows - outflows
+    
+    pcf_total_disb = PettyCashTransaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month,
+        type='disbursement'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    pcf_total_rep = PettyCashTransaction.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month,
+        type='replenishment'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    pdc_total = pdc_this_month.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    return Response({
+        "month": month_date.strftime("%Y-%m"),
+        "bank_transactions": bank_txn_list,
+        "pcf_transactions": pcf_txn_list,
+        "pdc_this_month": list(pdc_this_month),
+        "summary": {
+            "bank_txn_count": bank_transactions.count(),
+            "bank_inflows": float(inflows),
+            "bank_outflows": float(outflows),
+            "bank_net": float(bank_net),
+            "bank_total": float(bank_net),
+            "pcf_txn_count": pcf_transactions.count(),
+            "pcf_total_disbursements": float(pcf_total_disb),
+            "pcf_total_replenishments": float(pcf_total_rep),
+            "pcf_net": float(pcf_total_rep - pcf_total_disb),
+            "pdc_count": pdc_this_month.count(),
+            "pdc_total": float(pdc_total),
+        },
+        "grouped_by_account": list(bank_by_account),
+        "grouped_by_type": list(bank_by_type),
     })
 
 
