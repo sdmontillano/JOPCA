@@ -23,7 +23,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
-import api from "../services/tokenService";
+import api, { unwrapResponse } from "../services/tokenService";
 
 export default function AddPcfModal({ open, onClose, onCreated = null }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -55,7 +55,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
       .get("/pcf/")
       .then((res) => {
         if (!mounted) return;
-        const data = res?.data?.results ?? res?.data ?? [];
+        const data = unwrapResponse(res?.data);
         setPcfFunds(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
@@ -118,11 +118,11 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
     });
     setSelectedPcf("");
     setPcfBalance(null);
+    setAlert(null);
   };
 
   const handleClose = () => {
     resetForm();
-    setAlert(null);
     setActiveTab(0);
     if (typeof onClose === "function") onClose();
   };
@@ -318,7 +318,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
 
                 {pcfBalance && (
                   <Alert severity="info" sx={{ py: 0.5 }}>
-                    <div>Available Balance: <strong>₱{Number(pcfBalance.available_balance ?? pcfBalance.current_balance ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</strong></div>
+                    <div>Available Balance: <strong>₱{Number(pcfBalance.current_balance ?? pcfBalance.available_balance ?? pcfBalance.ending ?? pcfBalance.opening_balance ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</strong></div>
                     {pcfBalance.disbursements > 0 && (
                       <div>Total Disbursements: ₱{Number(pcfBalance.disbursements || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</div>
                     )}

@@ -60,17 +60,11 @@ class BankAccount(models.Model):
         This centralizes balance computation and avoids incremental drift.
         """
         inflows = self.transaction_set.filter(
-            type__in=[
-                'deposit', 'deposits', 'collections', 'collection', 'local_deposits', 'local_deposit',
-                'fund_transfer', 'fund_transfers', 'interbank_transfer', 'interbank_transfers', 'transfer'
-            ]
+            type__in=INFLOW_TYPES
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
         outflows = self.transaction_set.filter(
-            type__in=[
-                'disbursement', 'disbursements', 'bank_charges', 'bank_charge',
-                'returned_check', 'returned_checks', 'adjustments'
-            ]
+            type__in=OUTFLOW_TYPES
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
         new_balance = (self.opening_balance or Decimal('0.00')) + _safe_decimal(inflows) - _safe_decimal(outflows)
@@ -289,6 +283,10 @@ class PettyCashFund(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_location_display()})"
+
+    def clean(self):
+        if self.min_balance_threshold < 0:
+            raise ValidationError({'min_balance_threshold': 'Minimum balance threshold must be non-negative.'})
 
     @property
     def current_balance(self):

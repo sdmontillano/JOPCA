@@ -50,7 +50,7 @@ import WalletIcon from "@mui/icons-material/Wallet";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import WarningIcon from "@mui/icons-material/Warning";
 
-import api from "../services/tokenService";
+import api, { unwrapResponse, getResponseCount } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
 

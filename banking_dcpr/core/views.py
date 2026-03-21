@@ -977,7 +977,6 @@ def pcf_monthly_report(request):
         return Response({'detail': 'Invalid year or month'}, status=400)
 
     from calendar import monthrange
-    import calendar
     start_date = _date(year, month, 1)
     end_date = _date(year, month, monthrange(year, month)[1])
 

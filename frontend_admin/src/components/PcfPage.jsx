@@ -17,7 +17,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import WalletIcon from "@mui/icons-material/Wallet";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import EventNoteIcon from "@mui/icons-material/EventNote";
-import api from "../services/tokenService";
+import api, { unwrapResponse } from "../services/tokenService";
 import PcfTable from "./PcfTable";
 import PcfReports from "./PcfReports";
 import CashCountPage from "./CashCountPage";
@@ -35,7 +35,7 @@ export default function PcfPage() {
     setError(null);
     try {
       const res = await api.get("/pcf/");
-      const data = res?.data?.results ?? res?.data ?? [];
+      const data = unwrapResponse(res?.data);
       setPcfs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch PCFs", err);
@@ -114,7 +114,7 @@ export default function PcfPage() {
                   variant="outlined"
                 />
                 <Chip
-                  label={`Total: ₱${pcfs.reduce((sum, p) => sum + (p.current_balance || 0), 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`}
+                  label={`Total: ₱${pcfs.reduce((sum, p) => sum + (p.current_balance || p.available_balance || p.ending || 0), 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`}
                   color="success"
                 />
               </Stack>

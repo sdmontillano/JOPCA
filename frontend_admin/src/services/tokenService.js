@@ -5,6 +5,31 @@ const API_URL = (typeof import.meta !== 'undefined' && import.meta.env && import
 const STORAGE_KEY = "token";
 
 /**
+ * Unwrap API response data to handle both paginated and non-paginated responses.
+ * - If response has .results (paginated), returns .results
+ * - If response is an array, returns the array
+ * - Otherwise returns the data as-is
+ */
+export function unwrapResponse(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.data)) return data.data;
+  return data;
+}
+
+/**
+ * Get total count from paginated response.
+ */
+export function getResponseCount(data) {
+  if (!data) return 0;
+  if (typeof data?.count === 'number') return data.count;
+  if (Array.isArray(data)) return data.length;
+  if (Array.isArray(data?.results)) return data.results.length;
+  return 0;
+}
+
+/**
  * Persist token and apply Authorization header to the shared axios instance.
  * - remember = true -> localStorage
  * - remember = false -> sessionStorage
