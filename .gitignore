@@ -1,0 +1,30 @@
+# Build outputs
+frontend_admin/release/
+frontend_admin/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
