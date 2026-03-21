@@ -1,6 +1,6 @@
 // src/App.jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
@@ -19,11 +19,51 @@ import ChangePassword from "./components/ChangePassword.jsx";
 import DashboardSettings from "./components/DashboardSettings.jsx";
 
 export default function App() {
-  // ✅ Simple auth check: if token exists, user is logged in
+  const [isReady, setIsReady] = useState(false);
   const isAuthenticated = !!localStorage.getItem("token");
+
+  // Check if Django backend is responding before showing app
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api-token-auth/');
+        if (res.ok || res.status === 405) {
+          setIsReady(true);
+        }
+      } catch {
+        setTimeout(checkBackend, 1000);
+      }
+    };
+    checkBackend();
+  }, []);
+
+  // Wait for app to fully initialize
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <Router>
+      {!isReady ? (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          background: '#1E293B',
+          color: 'white',
+          fontFamily: 'system-ui, sans-serif'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>JOPCA</div>
+            <div style={{ fontSize: '14px', opacity: 0.8, marginBottom: '16px' }}>Daily Cash Position System</div>
+            <div style={{ fontSize: '12px', opacity: 0.6 }}>Starting up...</div>
+          </div>
+        </div>
+      ) : (
       <Routes>
         {/* Public route */}
         <Route path="/login" element={<Login />} />
@@ -97,6 +137,7 @@ export default function App() {
         {/* Default redirect */}
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       </Routes>
+      )}
     </Router>
   );
 }

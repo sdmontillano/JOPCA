@@ -85,13 +85,15 @@ export default function Login() {
           return;
         }
 
-        // Prefer SPA navigation; fallback to full reload if router not available
-        try {
-          navigate("/dashboard");
-        } catch (navErr) {
-          console.warn("navigate failed, falling back to window.location", navErr);
-          window.location.href = "/dashboard";
-        }
+        // Small delay to ensure token is saved and app is ready
+        setTimeout(() => {
+          try {
+            navigate("/dashboard");
+          } catch (navErr) {
+            console.warn("navigate failed, falling back to window.location", navErr);
+            window.location.href = "/#/dashboard";
+          }
+        }, 1000);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);

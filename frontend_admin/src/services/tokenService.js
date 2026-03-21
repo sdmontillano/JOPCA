@@ -85,17 +85,19 @@ api.interceptors.request.use(
 
 /**
  * Global response interceptor:
- * - On 401: clear tokens and redirect to /login
+ * - On 401 with explicit auth error: clear tokens and redirect to /login
+ * - On network errors: don't clear token (backend might not be ready yet)
  * - Re-throw other errors for local handling
  */
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     const status = err?.response?.status;
-    if (status === 401) {
+    // Only clear token if it's a real authentication error (401 with explicit message)
+    // Don't clear on network errors (backend not ready) or other errors
+    if (status === 401 && err?.response?.data?.detail) {
       clearTokens();
       try {
-        // SPA-friendly attempt then fallback to full navigation
         window.history.pushState({}, "", "/login");
         window.location.href = "/login";
       } catch {

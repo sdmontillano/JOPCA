@@ -1,0 +1,279 @@
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const path = require('path');
+const { spawn } = require('child_process');
+const fs = require('fs');
+
+// Keep references to prevent garbage collection
+let mainWindow = null;
+let djangoServer = null;
+let viteServer = null;
+
+// Check if running in development or production
+const isDev = !app.isPackaged;
+
+// Paths - different for dev vs production
+const APP_DIR = app.getAppPath();
+let BACKEND_DIR;
+let FRONTEND_DIR;
+
+if (isDev) {
+  // Development: frontend_admin is at the same level as banking_dcpr
+  BACKEND_DIR = path.join(APP_DIR, '..', 'banking_dcpr');
+  FRONTEND_DIR = APP_DIR;
+} else {
+  // Production: in packaged app, backend is in resources folder
+  BACKEND_DIR = path.join(process.resourcesPath, 'banking_dcpr');
+  FRONTEND_DIR = APP_DIR;
+}
+
+console.log('[JOPCA] Starting application...');
+console.log('[JOPCA] App path:', APP_DIR);
+console.log('[JOPCA] Backend path:', BACKEND_DIR);
+console.log('[JOPCA] Is development:', isDev);
+
+function createWindow() {
+  console.log('[JOPCA] Creating main window...');
+  
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1024,
+    minHeight: 700,
+    title: 'JOPCA',
+    icon: path.join(__dirname, '..', 'public', 'jopca-logo.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true,
+    },
+    show: false,
+    backgroundColor: '#1E293B',
+  });
+
+  // Show window when ready
+  mainWindow.once('ready-to-show', () => {
+    console.log('[JOPCA] Window ready to show');
+    mainWindow.show();
+  });
+
+  // Handle external links
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // Load the app
+  if (isDev) {
+    console.log('[JOPCA] Loading development server...');
+    mainWindow.loadURL('http://localhost:5173').catch(err => {
+      console.error('[JOPCA] Failed to load dev server:', err);
+    });
+    mainWindow.webContents.openDevTools();
+  } else {
+    console.log('[JOPCA] Loading production build...');
+    const indexPath = path.join(FRONTEND_DIR, 'dist', 'index.html');
+    console.log('[JOPCA] Looking for index.html at:', indexPath);
+    
+    if (!fs.existsSync(indexPath)) {
+      const errorMsg = 'Frontend build not found at:\n' + indexPath;
+      console.error('[JOPCA] ERROR:', errorMsg);
+      const { dialog } = require('electron');
+      dialog.showErrorBox('JOPCA Error', errorMsg);
+      return;
+    }
+    
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('[JOPCA] Failed to load production build:', err);
+      const { dialog } = require('electron');
+      dialog.showErrorBox('JOPCA Error', 'Failed to load frontend:\n' + err.message);
+    });
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+function startDjangoServer() {
+  console.log('[JOPCA] Starting Django backend...');
+  console.log('[JOPCA] Looking for backend at:', BACKEND_DIR);
+  
+  // Check if backend directory exists
+  if (!fs.existsSync(BACKEND_DIR)) {
+    const errorMsg = 'Backend directory not found at:\n' + BACKEND_DIR + '\n\nThe banking_dcpr folder must be in the same location as the app.';
+    console.error('[JOPCA] ERROR:', errorMsg);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA Startup Error', errorMsg);
+    return;
+  }
+  
+  const dbPath = path.join(BACKEND_DIR, 'db.sqlite3');
+  const managePyPath = path.join(BACKEND_DIR, 'manage.py');
+  
+  if (!fs.existsSync(managePyPath)) {
+    const errorMsg = 'manage.py not found at:\n' + managePyPath + '\n\nPlease ensure banking_dcpr is properly set up.';
+    console.error('[JOPCA] ERROR:', errorMsg);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA Startup Error', errorMsg);
+    return;
+  }
+  
+  if (!fs.existsSync(dbPath)) {
+    console.log('[JOPCA] Database not found, running migrations...');
+    
+    const migrateProcess = spawn('python', ['manage.py', 'migrate'], {
+      cwd: BACKEND_DIR,
+      shell: true,
+      windowsHide: true,
+    });
+    
+    migrateProcess.stdout.on('data', (data) => {
+      console.log('[Django migrate]:', data.toString().trim());
+    });
+    
+    migrateProcess.stderr.on('data', (data) => {
+      console.error('[Django migrate error]:', data.toString().trim());
+    });
+    
+    migrateProcess.on('close', (code) => {
+      if (code === 0) {
+        console.log('[JOPCA] Migrations completed successfully');
+        startDjangoRunServer();
+      } else {
+        console.error('[JOPCA] Migration failed with code:', code);
+      }
+    });
+  } else {
+    startDjangoRunServer();
+  }
+}
+
+function startDjangoRunServer() {
+  console.log('[JOPCA] Starting Django runserver...');
+  
+  djangoServer = spawn('python', ['manage.py', 'runserver', '8000', '--noreload'], {
+    cwd: BACKEND_DIR,
+    shell: true,
+    windowsHide: false,
+    env: { ...process.env, DJANGO_SETTINGS_MODULE: 'banking_dcpr.settings' }
+  });
+  
+  djangoServer.stdout.on('data', (data) => {
+    const output = data.toString().trim();
+    console.log('[Django]:', output);
+    if (output.includes('Starting development server') || 
+        output.includes('Quit the server with') ||
+        output.includes('Starting')) {
+      console.log('[JOPCA] Django server started successfully!');
+    }
+  });
+  
+  djangoServer.stderr.on('data', (data) => {
+    const error = data.toString().trim();
+    console.error('[Django error]:', error);
+    if (error.includes('Error') || error.includes('Exception')) {
+      const { dialog } = require('electron');
+      dialog.showErrorBox('Django Error', 'Backend Error:\n' + error);
+    }
+  });
+  
+  djangoServer.on('error', (err) => {
+    console.error('[JOPCA] Django server error:', err);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA Error', 'Failed to start Django server:\n' + err.message);
+  });
+  
+  djangoServer.on('close', (code) => {
+    console.log('[JOPCA] Django server closed with code:', code);
+  });
+}
+
+function startViteServer() {
+  if (!isDev) return;
+  
+  console.log('[JOPCA] Starting Vite dev server...');
+  
+  viteServer = spawn('npm', ['run', 'dev'], {
+    cwd: FRONTEND_DIR,
+    shell: true,
+    windowsHide: true,
+  });
+  
+  viteServer.stdout.on('data', (data) => {
+    const output = data.toString().trim();
+    if (output.includes('Local:') || output.includes('ready in')) {
+      console.log('[Vite]:', output);
+    }
+  });
+  
+  viteServer.stderr.on('data', (data) => {
+    console.error('[Vite error]:', data.toString().trim());
+  });
+  
+  viteServer.on('error', (err) => {
+    console.error('[JOPCA] Vite server error:', err);
+  });
+}
+
+// IPC handlers
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('get-platform', () => {
+  return process.platform;
+});
+
+function cleanup() {
+  console.log('[JOPCA] Cleaning up...');
+  
+  if (djangoServer) {
+    djangoServer.kill();
+  }
+  
+  if (viteServer) {
+    viteServer.kill();
+  }
+}
+
+app.whenReady().then(() => {
+  console.log('[JOPCA] App ready');
+  
+  startDjangoServer();
+  
+  if (isDev) {
+    startViteServer();
+  }
+  
+  setTimeout(createWindow, 2000);
+});
+
+app.on('window-all-closed', () => {
+  console.log('[JOPCA] All windows closed');
+  cleanup();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+
+app.on('before-quit', () => {
+  console.log('[JOPCA] App quitting...');
+  cleanup();
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[JOPCA] Uncaught exception:', error);
+  const { dialog } = require('electron');
+  dialog.showErrorBox('JOPCA Error', 'Uncaught Exception:\n' + error.message);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[JOPCA] Unhandled rejection at:', promise, 'reason:', reason);
+});

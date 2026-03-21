@@ -552,8 +552,12 @@ function DashboardInner() {
   };
 
   useEffect(() => {
-    fetchAll();
-    fetchAlertsCount();
+    // Small delay to ensure everything is initialized before fetching data
+    const timer = setTimeout(() => {
+      fetchAll();
+      fetchAlertsCount();
+    }, 2000); // 2 second delay for dashboard data fetch
+    return () => clearTimeout(timer);
   }, [fetchAll]);
 
   // Derive data - use pcfData directly for PCF display
