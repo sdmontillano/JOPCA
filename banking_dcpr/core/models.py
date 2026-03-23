@@ -377,7 +377,9 @@ class CashCount(models.Model):
         return f"Cash Count - {self.pcf.name} ({self.count_date})"
 
     def save(self, *args, **kwargs):
-        self.variance = self.actual_count - self.system_balance
+        actual = _safe_decimal(self.actual_count)
+        system = _safe_decimal(self.system_balance)
+        self.variance = actual - system
         super().save(*args, **kwargs)
 
 

@@ -160,8 +160,6 @@ export default function PdcDetail({
 
   // Actions
   const markMatured = async (pdc) => {
-    // eslint-disable-next-line no-console
-    console.log("markMatured clicked", pdc?.id);
     if (!pdc?.id) return;
     setActionLoading(true);
     try {
@@ -177,8 +175,6 @@ export default function PdcDetail({
   };
 
   const openDeposit = (pdc) => {
-    // eslint-disable-next-line no-console
-    console.log("openDeposit clicked", pdc?.id);
     setSelectedPdc(pdc);
     setDepositDate(new Date().toISOString().slice(0, 10));
     setDepositRef("");
@@ -186,8 +182,6 @@ export default function PdcDetail({
   };
 
   const submitDeposit = async () => {
-    // eslint-disable-next-line no-console
-    console.log("submitDeposit clicked", selectedPdc?.id, depositBankId);
     if (!selectedPdc?.id) return;
     setActionLoading(true);
     try {
@@ -205,8 +199,6 @@ export default function PdcDetail({
   };
 
   const openReturned = (pdc) => {
-    // eslint-disable-next-line no-console
-    console.log("openReturned clicked", pdc?.id);
     setSelectedPdc(pdc);
     setReturnedReason("");
     setReturnedDate(new Date().toISOString().slice(0, 10));
@@ -214,8 +206,6 @@ export default function PdcDetail({
   };
 
   const submitReturned = async () => {
-    // eslint-disable-next-line no-console
-    console.log("submitReturned clicked", selectedPdc?.id, returnedDate, returnedReason);
     if (!selectedPdc?.id) return;
     setActionLoading(true);
     try {

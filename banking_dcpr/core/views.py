@@ -135,6 +135,7 @@ class TransactionListCreate(generics.ListCreateAPIView):
 # Summary Endpoints
 # -----------------------------
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def detailed_daily_report(request):
     """Return detailed breakdown of transactions by account + type + ending balances."""
     date_str = request.GET.get("date")
@@ -332,7 +333,6 @@ def monthly_full_report(request):
             "bank_inflows": float(inflows),
             "bank_outflows": float(outflows),
             "bank_net": float(bank_net),
-            "bank_total": float(bank_net),
             "pcf_txn_count": pcf_transactions.count(),
             "pcf_total_disbursements": float(pcf_total_disb),
             "pcf_total_replenishments": float(pcf_total_rep),
@@ -976,7 +976,7 @@ def pcf_monthly_report(request):
     except ValueError:
         return Response({'detail': 'Invalid year or month'}, status=400)
 
-    from calendar import monthrange
+    from calendar import monthrange, month_name
     start_date = _date(year, month, 1)
     end_date = _date(year, month, monthrange(year, month)[1])
 
@@ -1010,7 +1010,7 @@ def pcf_monthly_report(request):
     return Response({
         'year': year,
         'month': month,
-        'month_name': calendar.month_name[month],
+        'month_name': month_name[month],
         'report_type': 'monthly',
         'pufs': pcf_data,
         'totals': {k: float(v) for k, v in totals.items()}
@@ -1199,8 +1199,19 @@ def audit_log(request):
     """
     from .models import AuditLog
     
-    page = int(request.GET.get("page", 1))
-    limit = min(int(request.GET.get("limit", 50)), 100)
+    try:
+        page = int(request.GET.get("page", 1))
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
+    
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 100)
+        if limit < 1:
+            limit = 50
+    except (ValueError, TypeError):
+        limit = 50
     user_id = request.GET.get("user_id")
     
     queryset = AuditLog.objects.select_related('user').order_by('-created_at')

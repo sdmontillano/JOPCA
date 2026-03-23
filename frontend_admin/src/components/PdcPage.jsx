@@ -105,13 +105,11 @@ export default function PdcPage() {
   const handleRecordReturned = async () => {
     if (!returnDialog.pdc) return;
     try {
-      console.log("Recording return for PDC:", returnDialog.pdc.id);
       await pdcService.recordPdcReturned(
         returnDialog.pdc.id,
         new Date().toISOString().slice(0, 10),
         returnDialog.reason
       );
-      console.log("Return recorded successfully");
       handleCloseReturnDialog();
       fetchPdcs();
     } catch (err) {
