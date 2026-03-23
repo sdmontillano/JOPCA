@@ -1,0 +1,334 @@
+// src/components/CashSummary.jsx
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Paper,
+  Typography,
+  CircularProgress,
+  Alert,
+  Stack,
+  Divider,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import api from "../services/tokenService";
+import { useNavigate } from "react-router-dom";
+
+export default function CashSummary() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchData(selectedDate);
+  }, [selectedDate]);
+
+  async function fetchData(date) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get(`/summary/cash-summary/?date=${date}`);
+      setData(res.data);
+    } catch (err) {
+      console.error("Error fetching cash summary", err);
+      setError("Failed to load cash summary.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const formatCurrency = (value) =>
+    `₱${Number(value ?? 0).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
+  const formatShortCurrency = (value) => {
+    const num = Number(value ?? 0);
+    if (num >= 1000000) {
+      return `₱${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `₱${(num / 1000).toFixed(0)}K`;
+    }
+    return formatCurrency(value);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr + "T00:00:00");
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const mainOfficeBanks = data?.areas?.main_office?.banks || [];
+  const tagoloanBanks = data?.areas?.tagoloan_parts?.banks || [];
+  const midsayapBanks = data?.areas?.midsayap_parts?.banks || [];
+  const valenciaBanks = data?.areas?.valencia_parts?.banks || [];
+
+  const maxRows = Math.max(mainOfficeBanks.length, tagoloanBanks.length + midsayapBanks.length + valenciaBanks.length);
+
+  const allPartsBanks = [
+    ...tagoloanBanks.map(b => ({ ...b, area: "Tagoloan Parts" })),
+    ...midsayapBanks.map(b => ({ ...b, area: "Midsayap Parts" })),
+    ...valenciaBanks.map(b => ({ ...b, area: "Valencia Parts" })),
+  ];
+
+  return (
+    <Box sx={{ minHeight: "100vh", bgcolor: "#F9FAFB", p: { xs: 2, md: 4 } }}>
+      {/* Header */}
+      <Paper
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 1,
+          border: "1px solid",
+          borderColor: "#E5E7EB",
+          bgcolor: "#FFFFFF",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 1,
+              bgcolor: "#1E293B",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <AccountBalanceWalletIcon sx={{ color: "#FFFFFF", fontSize: 24 }} />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.dark" }}>
+              Cash Summary
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cash position summary by area
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <TextField
+              type="date"
+              size="small"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              sx={{ width: 150 }}
+            />
+          </Box>
+        </Box>
+      </Paper>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : data ? (
+        <Stack spacing={3}>
+          {/* Main Report Table */}
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "#E5E7EB",
+              bgcolor: "#FFFFFF",
+            }}
+          >
+            {/* Report Header */}
+            <Box sx={{ textAlign: "center", mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                JOPCA CORPORATION
+              </Typography>
+              <Typography variant="h7" sx={{ fontWeight: 600 }}>
+                CASH POSITION SUMMARY
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                As of: {formatDate(data.date)}
+              </Typography>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Main Table */}
+            <TableContainer>
+              <Table size="small" sx={{ borderCollapse: "collapse" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "#F1F5F9" }}>
+                    <TableCell sx={{ fontWeight: 600, width: "30%" }}>AREA</TableCell>
+                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>MAIN OFFICE</TableCell>
+                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>PARTS</TableCell>
+                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>TOTAL</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {/* Main Office Banks */}
+                  {mainOfficeBanks.map((bank, index) => (
+                    <TableRow key={bank.id}>
+                      <TableCell sx={{ pl: 3 }}>{bank.account_number}</TableCell>
+                      <TableCell sx={{ textAlign: "right" }}>{formatCurrency(bank.balance)}</TableCell>
+                      <TableCell sx={{ textAlign: "right" }}>-</TableCell>
+                      <TableCell sx={{ textAlign: "right" }}>{formatCurrency(bank.balance)}</TableCell>
+                    </TableRow>
+                  ))}
+
+                  {/* Parts Banks */}
+                  {allPartsBanks.map((bank, index) => (
+                    <TableRow key={`parts-${index}`}>
+                      <TableCell sx={{ pl: 3, fontStyle: "italic", color: "#666" }}>
+                        {bank.area} - {bank.account_number}
+                      </TableCell>
+                      <TableCell sx={{ textAlign: "right" }}>-</TableCell>
+                      <TableCell sx={{ textAlign: "right" }}>{formatCurrency(bank.balance)}</TableCell>
+                      <TableCell sx={{ textAlign: "right" }}>{formatCurrency(bank.balance)}</TableCell>
+                    </TableRow>
+                  ))}
+
+                  {/* Grand Total Row */}
+                  <TableRow sx={{ bgcolor: "#1E293B", color: "#FFFFFF" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#FFFFFF" }}>GRAND TOTAL</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.main_office_total)}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.parts_total)}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.grand_total)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Payables Section */}
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+              PAYABLES:
+            </Typography>
+
+            <TableContainer>
+              <Table size="small" sx={{ borderCollapse: "collapse" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "#F1F5F9" }}>
+                    <TableCell sx={{ fontWeight: 600 }}>DESCRIPTION</TableCell>
+                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>MAIN OFFICE</TableCell>
+                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>PARTS</TableCell>
+                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>TOTAL</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Total Disb. for Today</TableCell>
+                    <TableCell sx={{ textAlign: "right" }}>
+                      {formatCurrency(data.payables?.main_office?.disbursements_today)}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "right" }}>
+                      {formatCurrency(data.payables?.parts?.disbursements_today)}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "right" }}>
+                      {formatCurrency(
+                        (data.payables?.main_office?.disbursements_today || 0) +
+                        (data.payables?.parts?.disbursements_today || 0)
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Outstanding Checks Due</TableCell>
+                    <TableCell sx={{ textAlign: "right" }}>
+                      {data.payables?.main_office?.outstanding_checks > 0
+                        ? formatCurrency(data.payables?.main_office?.outstanding_checks)
+                        : "-"}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "right" }}>
+                      {data.payables?.parts?.outstanding_checks > 0
+                        ? formatCurrency(data.payables?.parts?.outstanding_checks)
+                        : "-"}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "right" }}>
+                      {(data.payables?.main_office?.outstanding_checks > 0 ||
+                        data.payables?.parts?.outstanding_checks > 0)
+                        ? formatCurrency(
+                            (data.payables?.main_office?.outstanding_checks || 0) +
+                            (data.payables?.parts?.outstanding_checks || 0)
+                          )
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                  {/* Grand Total Payables */}
+                  <TableRow sx={{ bgcolor: "#1E293B", color: "#FFFFFF" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#FFFFFF" }}>GRAND TOTAL</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.payables?.main_office?.disbursements_today + data.payables?.main_office?.outstanding_checks)}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.payables?.parts?.disbursements_today + data.payables?.parts?.outstanding_checks)}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(
+                        data.payables?.main_office?.disbursements_today + data.payables?.main_office?.outstanding_checks +
+                        data.payables?.parts?.disbursements_today + data.payables?.parts?.outstanding_checks
+                      )}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Net Balance Section */}
+            <TableContainer>
+              <Table size="small" sx={{ borderCollapse: "collapse" }}>
+                <TableBody>
+                  <TableRow sx={{ bgcolor: "#10B981", color: "#FFFFFF" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#FFFFFF" }}>NET BALANCE</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.net_balance?.main_office)}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.net_balance?.parts)}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                      {formatCurrency(data.net_balance?.total)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Signatures */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4, pt: 2, borderTop: "1px solid #E5E7EB" }}>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>Prepared by:</Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>DORYN ROSE EDULSA</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>Approved by:</Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>JOHN P. CABAÑOG</Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Stack>
+      ) : null}
+    </Box>
+  );
+}

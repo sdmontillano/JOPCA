@@ -1290,3 +1290,125 @@ def send_test_report(request):
         "detail": "Test report email would be sent to configured recipients",
         "note": "Configure EMAIL settings in settings.py to enable actual email sending"
     })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def cash_summary(request):
+    """
+    GET /api/summary/cash-summary/?date=YYYY-MM-DD
+    Returns cash position summary grouped by area (Main Office, Tagoloan Parts, Midsayap Parts, Valencia Parts)
+    with bank account balances, disbursements, outstanding checks, and net balance.
+    """
+    from .models import Transaction, Pdc
+    from django.db.models import Sum as DbSum
+    
+    date_str = request.GET.get("date")
+    try:
+        target_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else now().date()
+    except ValueError:
+        target_date = now().date()
+    
+    AREAS = [
+        ('main_office', 'Main Office'),
+        ('tagoloan_parts', 'Tagoloan Parts'),
+        ('midsayap_parts', 'Midsayap Parts'),
+        ('valencia_parts', 'Valencia Parts'),
+    ]
+    
+    PART_AREAS = {'tagoloan_parts', 'midsayap_parts', 'valencia_parts'}
+    
+    result = {
+        'date': target_date.strftime('%Y-%m-%d'),
+        'areas': {},
+        'parts': {'banks': [], 'total': Decimal('0.00')},
+        'main_office_total': Decimal('0.00'),
+        'parts_total': Decimal('0.00'),
+        'grand_total': Decimal('0.00'),
+        'payables': {
+            'main_office': {'disbursements_today': Decimal('0.00'), 'outstanding_checks': Decimal('0.00')},
+            'parts': {'disbursements_today': Decimal('0.00'), 'outstanding_checks': Decimal('0.00')},
+        },
+        'net_balance': Decimal('0.00'),
+    }
+    
+    for area_code, area_display in AREAS:
+        banks = BankAccount.objects.filter(area=area_code).order_by('name', 'account_number')
+        area_total = Decimal('0.00')
+        banks_data = []
+        
+        for bank in banks:
+            bank_data = {
+                'id': bank.id,
+                'name': bank.name or '',
+                'account_number': bank.account_number,
+                'balance': float(bank.balance or Decimal('0.00')),
+                'balance_raw': bank.balance or Decimal('0.00'),
+            }
+            banks_data.append(bank_data)
+            area_total += bank.balance or Decimal('0.00')
+        
+        is_part = area_code in PART_AREAS
+        
+        result['areas'][area_code] = {
+            'display_name': area_display,
+            'banks': banks_data,
+            'total': float(area_total),
+            'total_raw': area_total,
+            'is_part': is_part,
+        }
+        
+        if is_part:
+            result['parts']['banks'].extend(banks_data)
+            result['parts']['total'] += area_total
+            result['parts_total'] += area_total
+        else:
+            result['main_office_total'] += area_total
+    
+    result['grand_total'] = result['main_office_total'] + result['parts_total']
+    result['parts']['total'] = float(result['parts']['total'])
+    result['main_office_total'] = float(result['main_office_total'])
+    result['parts_total'] = float(result['parts_total'])
+    result['grand_total'] = float(result['grand_total'])
+    
+    today_disbursements = Transaction.objects.filter(
+        date=target_date,
+        type__in=['disbursement', 'bank_charges']
+    ).values('bank_account__area').annotate(total=DbSum('amount'))
+    
+    for item in today_disbursements:
+        area = item['bank_account__area']
+        amount = item['total'] or Decimal('0.00')
+        if area in PART_AREAS:
+            result['payables']['parts']['disbursements_today'] += amount
+        else:
+            result['payables']['main_office']['disbursements_today'] += amount
+    
+    main_office_bank_ids = list(BankAccount.objects.filter(area='main_office').values_list('id', flat=True))
+    parts_bank_ids = list(BankAccount.objects.filter(area__in=PART_AREAS).values_list('id', flat=True))
+    
+    outstanding_pdcs = Pdc.objects.exclude(status__in=['deposited', 'returned'])
+    
+    main_office_pdcs_total = outstanding_pdcs.filter(
+        deposit_bank_id__in=main_office_bank_ids
+    ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+    
+    parts_pdcs_total = outstanding_pdcs.filter(
+        deposit_bank_id__in=parts_bank_ids
+    ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+    
+    result['payables']['main_office']['outstanding_checks'] = float(main_office_pdcs_total)
+    result['payables']['parts']['outstanding_checks'] = float(parts_pdcs_total)
+    result['payables']['main_office']['disbursements_today'] = float(result['payables']['main_office']['disbursements_today'])
+    result['payables']['parts']['disbursements_today'] = float(result['payables']['parts']['disbursements_today'])
+    
+    main_office_net = result['main_office_total'] - result['payables']['main_office']['disbursements_today'] - result['payables']['main_office']['outstanding_checks']
+    parts_net = result['parts_total'] - result['payables']['parts']['disbursements_today'] - result['payables']['parts']['outstanding_checks']
+    
+    result['net_balance'] = {
+        'main_office': float(main_office_net),
+        'parts': float(parts_net),
+        'total': float(main_office_net + parts_net),
+    }
+    
+    return Response(result)

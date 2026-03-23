@@ -49,6 +49,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import WalletIcon from "@mui/icons-material/Wallet";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import WarningIcon from "@mui/icons-material/Warning";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 
 import api, { unwrapResponse, getResponseCount } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
@@ -356,6 +357,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: <HomeIcon />, to: "/dashboard" },
     { key: "banks", label: "Banks", icon: <AccountBalanceIcon />, to: "/banks" },
+    { key: "cash-summary", label: "Cash Summary", icon: <AccountBalanceWalletIcon />, to: "/cash-summary" },
     { key: "transactions", label: "Transactions", icon: <ReceiptLongIcon />, to: "/transactions" },
     { key: "monthly", label: "Monthly", icon: <BarChartIcon />, to: "/monthly-report" },
     { key: "pdc", label: "PDC", icon: <ReceiptLongIcon />, to: "/pdc" },

@@ -10,6 +10,7 @@ import Transactions from "./components/Transactions.jsx";
 import MonthlyReport from "./components/MonthlyReport.jsx";
 import Banks from "./components/Banks.jsx";
 import BankDetail from "./components/BankDetail.jsx";
+import CashSummary from "./components/CashSummary.jsx";
 
 import DebugPage from "./components/DebugPage.jsx";
 import PdcPage from "./components/PdcPage.jsx";
@@ -114,6 +115,12 @@ export default function App() {
         <Route
           path="/pcf"
           element={isAuthenticated ? <PcfPage /> : <Navigate to="/login" replace />}
+        />
+
+        {/* Cash Summary */}
+        <Route
+          path="/cash-summary"
+          element={isAuthenticated ? <CashSummary /> : <Navigate to="/login" replace />}
         />
 
         {/* User management */}
