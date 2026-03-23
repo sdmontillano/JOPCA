@@ -1412,3 +1412,113 @@ def cash_summary(request):
     }
     
     return Response(result)
+
+
+@api_view(["GET", "POST", "PUT"])
+@permission_classes([IsAuthenticated])
+def bank_analysis(request):
+    """
+    GET /api/summary/bank-analysis/?date=YYYY-MM-DD
+    Returns bank reconciliation data for all bank accounts.
+    
+    POST/PUT /api/summary/bank-analysis/
+    Save or update bank reconciliation data.
+    """
+    from .models import BankReconciliation
+    
+    if request.method == "GET":
+        date_str = request.GET.get("date")
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else now().date()
+        except ValueError:
+            target_date = now().date()
+        
+        banks = BankAccount.objects.all().order_by('area', 'name', 'account_number')
+        result = {
+            'date': target_date.strftime('%Y-%m-%d'),
+            'banks': []
+        }
+        
+        for bank in banks:
+            reconciliation = BankReconciliation.objects.filter(
+                bank_account=bank,
+                date=target_date
+            ).first()
+            
+            bank_data = {
+                'id': bank.id,
+                'name': bank.name or '',
+                'account_number': bank.account_number,
+                'area': bank.area,
+                'per_dcpr': float(bank.balance or Decimal('0.00')),
+                'reconciliation': None
+            }
+            
+            if reconciliation:
+                bank_data['reconciliation'] = {
+                    'id': reconciliation.id,
+                    'per_bank': float(reconciliation.per_bank),
+                    'outstanding_checks': float(reconciliation.outstanding_checks),
+                    'deposit_in_transit': float(reconciliation.deposit_in_transit),
+                    'returned_checks': float(reconciliation.returned_checks),
+                    'bank_charges': float(reconciliation.bank_charges),
+                    'unbooked_transfers': float(reconciliation.unbooked_transfers),
+                    'remarks': reconciliation.remarks or '',
+                    'dcpr_reconciled': float(reconciliation.dcpr_reconciled),
+                    'bank_reconciled': float(reconciliation.bank_reconciled),
+                    'is_balanced': reconciliation.is_balanced,
+                }
+            
+            result['banks'].append(bank_data)
+        
+        return Response(result)
+    
+    else:
+        data = request.data
+        bank_id = data.get('bank_id')
+        date_str = data.get('date')
+        
+        if not bank_id or not date_str:
+            return Response({'detail': 'bank_id and date are required'}, status=400)
+        
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return Response({'detail': 'Invalid date format'}, status=400)
+        
+        try:
+            bank = BankAccount.objects.get(id=bank_id)
+        except BankAccount.DoesNotExist:
+            return Response({'detail': 'Bank account not found'}, status=404)
+        
+        reconciliation, created = BankReconciliation.objects.get_or_create(
+            bank_account=bank,
+            date=target_date,
+            defaults={'created_by': request.user}
+        )
+        
+        reconciliation.per_bank = Decimal(str(data.get('per_bank', 0)))
+        reconciliation.outstanding_checks = Decimal(str(data.get('outstanding_checks', 0)))
+        reconciliation.deposit_in_transit = Decimal(str(data.get('deposit_in_transit', 0)))
+        reconciliation.returned_checks = Decimal(str(data.get('returned_checks', 0)))
+        reconciliation.bank_charges = Decimal(str(data.get('bank_charges', 0)))
+        reconciliation.unbooked_transfers = Decimal(str(data.get('unbooked_transfers', 0)))
+        reconciliation.remarks = data.get('remarks', '')
+        reconciliation.save()
+        
+        return Response({
+            'id': reconciliation.id,
+            'bank_id': bank.id,
+            'date': target_date.strftime('%Y-%m-%d'),
+            'per_bank': float(reconciliation.per_bank),
+            'outstanding_checks': float(reconciliation.outstanding_checks),
+            'deposit_in_transit': float(reconciliation.deposit_in_transit),
+            'returned_checks': float(reconciliation.returned_checks),
+            'bank_charges': float(reconciliation.bank_charges),
+            'unbooked_transfers': float(reconciliation.unbooked_transfers),
+            'remarks': reconciliation.remarks,
+            'dcpr_reconciled': float(reconciliation.dcpr_reconciled),
+            'bank_reconciled': float(reconciliation.bank_reconciled),
+            'is_balanced': reconciliation.is_balanced,
+            'created': created,
+        })

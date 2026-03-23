@@ -33,6 +33,7 @@ from core.views import (
     email_reports_config,
     send_test_report,
     cash_summary,
+    bank_analysis,
 )
 
 router = DefaultRouter()
@@ -62,6 +63,7 @@ urlpatterns = [
     path('summary/cash-counts/', cash_counts_summary, name='cash_counts_summary'),
     path('summary/pcf-alerts/', pcf_alerts, name='pcf_alerts'),
     path('summary/cash-summary/', cash_summary, name='cash_summary'),
+    path('summary/bank-analysis/', bank_analysis, name='bank_analysis'),
 
     # user management endpoints
     path('api/change-password/', change_password, name='change_password'),

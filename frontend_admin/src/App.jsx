@@ -11,6 +11,7 @@ import MonthlyReport from "./components/MonthlyReport.jsx";
 import Banks from "./components/Banks.jsx";
 import BankDetail from "./components/BankDetail.jsx";
 import CashSummary from "./components/CashSummary.jsx";
+import Analysis from "./components/Analysis.jsx";
 
 import DebugPage from "./components/DebugPage.jsx";
 import PdcPage from "./components/PdcPage.jsx";
@@ -121,6 +122,12 @@ export default function App() {
         <Route
           path="/cash-summary"
           element={isAuthenticated ? <CashSummary /> : <Navigate to="/login" replace />}
+        />
+
+        {/* Analysis */}
+        <Route
+          path="/analysis"
+          element={isAuthenticated ? <Analysis /> : <Navigate to="/login" replace />}
         />
 
         {/* User management */}

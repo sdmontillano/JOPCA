@@ -533,3 +533,92 @@ def log_audit(user, action, model_name=None, object_id=None, details=None, reque
         kwargs['ip_address'] = request.META.get('REMOTE_ADDR')
         kwargs['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
     AuditLog.objects.create(**kwargs)
+
+
+# ---------------------------------------------------------------------
+# Bank Reconciliation Model
+# ---------------------------------------------------------------------
+class BankReconciliation(models.Model):
+    bank_account = models.ForeignKey(
+        BankAccount,
+        on_delete=models.CASCADE,
+        related_name='reconciliations'
+    )
+    date = models.DateField()
+    per_bank = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Balance per bank statement'
+    )
+    outstanding_checks = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Outstanding checks (deduct from bank)'
+    )
+    deposit_in_transit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Deposits in transit (add to bank)'
+    )
+    returned_checks = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Returned checks (deduct from DCPR)'
+    )
+    bank_charges = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Bank charges not yet recorded'
+    )
+    unbooked_transfers = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Unbooked fund transfers (add to DCPR)'
+    )
+    remarks = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_reconciliations'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Bank Reconciliation'
+        verbose_name_plural = 'Bank Reconciliations'
+        ordering = ['-date', '-bank_account']
+        unique_together = ['bank_account', 'date']
+
+    def __str__(self):
+        return f"{self.bank_account} - {self.date}"
+
+    @property
+    def per_dcpr(self):
+        return self.bank_account.balance
+
+    @property
+    def dcpr_reconciled(self):
+        base = _safe_decimal(self.per_dcpr)
+        add = _safe_decimal(self.deposit_in_transit) + _safe_decimal(self.unbooked_transfers)
+        deduct = _safe_decimal(self.outstanding_checks) + _safe_decimal(self.returned_checks) + _safe_decimal(self.bank_charges)
+        return base + add - deduct
+
+    @property
+    def bank_reconciled(self):
+        base = _safe_decimal(self.per_bank)
+        add = _safe_decimal(self.deposit_in_transit)
+        deduct = _safe_decimal(self.outstanding_checks) + _safe_decimal(self.returned_checks) + _safe_decimal(self.bank_charges)
+        return base + add - deduct
+
+    @property
+    def is_balanced(self):
+        return abs(self.dcpr_reconciled - self.bank_reconciled) < Decimal('0.01')
