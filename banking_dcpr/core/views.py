@@ -1419,12 +1419,19 @@ def cash_summary(request):
 def bank_analysis(request):
     """
     GET /api/summary/bank-analysis/?date=YYYY-MM-DD
-    Returns bank reconciliation data for all bank accounts.
+    Returns bank reconciliation data for all bank accounts with AUTO-COMPUTED values.
+    
+    Auto-computed values are calculated from transaction history:
+    - Outstanding Checks: from PDC not yet deposited/returned
+    - Deposit in Transit: from collections/deposits transactions
+    - Returned Checks: from returned_check transactions
+    - Bank Charges: from bank_charges transactions
+    - Unbooked Transfers: from fund_transfer/interbank_transfer transactions
     
     POST/PUT /api/summary/bank-analysis/
-    Save or update bank reconciliation data.
+    Save or update bank reconciliation data (only per_bank is manual entry).
     """
-    from .models import BankReconciliation
+    from .models import BankReconciliation, Pdc
     
     if request.method == "GET":
         date_str = request.GET.get("date")
@@ -1445,12 +1452,68 @@ def bank_analysis(request):
                 date=target_date
             ).first()
             
+            # AUTO-COMPUTE values from transactions and PDC
+            # Outstanding Checks: PDC not deposited/returned for this bank
+            outstanding_pdcs = Pdc.objects.filter(
+                deposit_bank=bank
+            ).exclude(status__in=['deposited', 'returned'])
+            outstanding_checks = outstanding_pdcs.aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            
+            # Deposit in Transit: collections, deposit transactions for this bank (up to target date)
+            deposit_in_transit = Transaction.objects.filter(
+                bank_account=bank,
+                date__lte=target_date,
+                type__in=['collections', 'deposit', 'local_deposits']
+            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            
+            # Returned Checks: returned_check transactions
+            returned_checks = Transaction.objects.filter(
+                bank_account=bank,
+                date__lte=target_date,
+                type='returned_check'
+            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            
+            # Bank Charges: bank_charges transactions
+            bank_charges = Transaction.objects.filter(
+                bank_account=bank,
+                date__lte=target_date,
+                type='bank_charges'
+            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            
+            # Unbooked Transfers: fund_transfer, interbank_transfer transactions
+            unbooked_transfers = Transaction.objects.filter(
+                bank_account=bank,
+                date__lte=target_date,
+                type__in=['fund_transfer', 'interbank_transfer']
+            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            
+            per_bank = reconciliation.per_bank if reconciliation else Decimal('0.00')
+            
+            # Calculate reconciled balances
+            per_dcpr = bank.balance or Decimal('0.00')
+            dcpr_reconciled = (
+                per_dcpr 
+                + deposit_in_transit 
+                + unbooked_transfers
+                - outstanding_checks 
+                - returned_checks 
+                - bank_charges
+            )
+            bank_reconciled = per_bank + deposit_in_transit - outstanding_checks - returned_checks - bank_charges
+            
             bank_data = {
                 'id': bank.id,
                 'name': bank.name or '',
                 'account_number': bank.account_number,
                 'area': bank.area,
-                'per_dcpr': float(bank.balance or Decimal('0.00')),
+                'per_dcpr': float(per_dcpr),
+                'auto_computed': {
+                    'outstanding_checks': float(outstanding_checks),
+                    'deposit_in_transit': float(deposit_in_transit),
+                    'returned_checks': float(returned_checks),
+                    'bank_charges': float(bank_charges),
+                    'unbooked_transfers': float(unbooked_transfers),
+                },
                 'reconciliation': None
             }
             
@@ -1467,6 +1530,22 @@ def bank_analysis(request):
                     'dcpr_reconciled': float(reconciliation.dcpr_reconciled),
                     'bank_reconciled': float(reconciliation.bank_reconciled),
                     'is_balanced': reconciliation.is_balanced,
+                }
+            
+            # If no saved reconciliation, use auto-computed values
+            if not reconciliation:
+                bank_data['reconciliation'] = {
+                    'id': None,
+                    'per_bank': float(per_bank),
+                    'outstanding_checks': float(outstanding_checks),
+                    'deposit_in_transit': float(deposit_in_transit),
+                    'returned_checks': float(returned_checks),
+                    'bank_charges': float(bank_charges),
+                    'unbooked_transfers': float(unbooked_transfers),
+                    'remarks': '',
+                    'dcpr_reconciled': float(dcpr_reconciled),
+                    'bank_reconciled': float(bank_reconciled),
+                    'is_balanced': abs(dcpr_reconciled - bank_reconciled) < Decimal('0.01'),
                 }
             
             result['banks'].append(bank_data)
