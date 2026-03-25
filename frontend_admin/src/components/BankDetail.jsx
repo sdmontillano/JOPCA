@@ -64,9 +64,11 @@ export default function BankDetail() {
       setLoading(true);
       setError(null);
 
+      // Fetch bank details
       const bankRes = await api.get(`/bankaccounts/${id}/`);
       setBank(bankRes.data);
 
+      // Fetch transactions
       const params = new URLSearchParams();
       params.append("bank_account_id", id);
       if (filters.type) params.append("type", filters.type);
@@ -75,12 +77,24 @@ export default function BankDetail() {
 
       const txRes = await api.get(`/transactions/?${params.toString()}`);
       const data = txRes.data;
-      const results = Array.isArray(data) ? data : data.results ?? [];
+      
+      // Handle both paginated and non-paginated responses
+      let results = [];
+      let totalCount = 0;
+      
+      if (Array.isArray(data)) {
+        results = data;
+        totalCount = data.length;
+      } else {
+        results = data.results ?? [];
+        totalCount = data.count ?? results.length;
+      }
+      
       setTransactions(results);
-      setCount(data.count ?? results.length);
+      setCount(totalCount);
     } catch (err) {
-      console.error("Error fetching bank detail", err);
-      setError("❌ Failed to load bank details or transactions.");
+      console.error("Error fetching bank detail:", err.response?.data || err.message);
+      setError("Failed to load bank details or transactions: " + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -89,7 +103,7 @@ export default function BankDetail() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, page]);
+  }, [id, page, filters.type, filters.date]);
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
