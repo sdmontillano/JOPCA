@@ -17,10 +17,29 @@ import {
   MenuItem,
   Pagination,
   IconButton,
+  Chip,
+  TableContainer,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
+
+const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'local_deposits'];
+const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer', 'post_dated_check'];
+
+const typeColors = {
+  collections: { bg: "#DCFCE7", color: "#166534" },
+  local_deposits: { bg: "#DCFCE7", color: "#166534" },
+  deposit: { bg: "#DCFCE7", color: "#166534" },
+  disbursement: { bg: "#FEE2E2", color: "#991B1B" },
+  returned_check: { bg: "#FEF3C7", color: "#B45309" },
+  bank_charges: { bg: "#FEE2E2", color: "#991B1B" },
+  adjustments: { bg: "#F3F4F6", color: "#374151" },
+  fund_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
+  transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
+  interbank_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
+  post_dated_check: { bg: "#F3F4F6", color: "#374151" },
+};
 
 export default function BankDetail() {
   const { id } = useParams(); // bank id from route
@@ -53,11 +72,28 @@ export default function BankDetail() {
     { value: "post_dated_check", label: "Post-Dated Check" },
   ];
 
-  const formatPeso = (value) =>
-    `₱${Number(value ?? 0).toLocaleString("en-PH", {
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const formatAmount = (amount, type) => {
+    const num = Number(amount ?? 0);
+    const prefix = INFLOW_TYPES.includes(type) ? "+" : "-";
+    return `${prefix}₱${Math.abs(num).toLocaleString("en-PH", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  const getTypeColor = (type) => typeColors[type] || { bg: "#F3F4F6", color: "#374151" };
 
   const fetchData = async () => {
     try {
@@ -158,7 +194,7 @@ export default function BankDetail() {
           <Paper sx={{ p: 2, bgcolor: "#1E293B", borderRadius: 1 }}>
             <Typography variant="subtitle2" sx={{ color: "#fff" }}>Current Balance</Typography>
             <Typography variant="h6" sx={{ fontWeight: "bold", color: "#fff" }}>
-              {formatPeso(bank?.balance ?? 0)}
+              {`₱${Number(bank?.balance ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Typography>
           </Paper>
         </Box>
@@ -220,45 +256,66 @@ export default function BankDetail() {
           Transactions
         </Typography>
 
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell align="right">Amount (₱)</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Added By</TableCell>   {/* NEW */}
-              <TableCell>Created At</TableCell> {/* NEW */}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {transactions.length > 0 ? (
-              transactions.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.date ?? "-"}</TableCell>
-                  <TableCell>{t.type ?? "-"}</TableCell>
-                  <TableCell align="right">{formatPeso(t.amount)}</TableCell>
-                  <TableCell>{t.description || "-"}</TableCell>
-                  <TableCell>{t.created_by_username || "-"}</TableCell> {/* NEW */}
-                  <TableCell>
-                    {t.created_at ? new Date(t.created_at).toLocaleString() : "-"}
-                  </TableCell> {/* NEW */}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  No transactions found for this account.
-                </TableCell>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: "#F1F5F9" }}>
+                <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="right">Amount</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Added By</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Created At</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {transactions.length > 0 ? (
+                transactions.map((t) => {
+                  const typeColor = getTypeColor(t.type);
+                  return (
+                    <TableRow key={t.id} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
+                      <TableCell>{formatDate(t.date)}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={t.type?.replace(/_/g, " ") || "-"} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: typeColor.bg, 
+                            color: typeColor.color,
+                            fontWeight: 500,
+                            fontSize: "0.75rem"
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "pre-wrap" }}>{t.description || "-"}</TableCell>
+                      <TableCell align="right" sx={{ 
+                        fontWeight: 600,
+                        color: INFLOW_TYPES.includes(t.type) ? "#166534" : "#991B1B"
+                      }}>
+                        {formatAmount(t.amount, t.type)}
+                      </TableCell>
+                      <TableCell>{t.created_by_username || "-"}</TableCell>
+                      <TableCell sx={{ fontSize: "0.8rem", color: "#666" }}>
+                        {formatDateTime(t.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    No transactions found for this account.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-        {/* ✅ Pagination */}
+        {/* Pagination */}
         <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
           <Pagination
-            count={Math.ceil(count / 10)} // assuming backend page size = 10
+            count={Math.ceil(count / 10)}
             page={page}
             onChange={(e, value) => setPage(value)}
           />
