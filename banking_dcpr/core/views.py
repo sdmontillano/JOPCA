@@ -1457,35 +1457,35 @@ def bank_analysis(request):
             outstanding_pdcs = Pdc.objects.filter(
                 deposit_bank=bank
             ).exclude(status__in=['deposited', 'returned'])
-            outstanding_checks = outstanding_pdcs.aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            outstanding_checks = outstanding_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Deposit in Transit: collections, deposit transactions for this bank (up to target date)
             deposit_in_transit = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
                 type__in=['collections', 'deposit', 'local_deposits']
-            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Returned Checks: returned_check transactions
             returned_checks = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
                 type='returned_check'
-            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Bank Charges: bank_charges transactions
             bank_charges = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
                 type='bank_charges'
-            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Unbooked Transfers: fund_transfer, interbank_transfer transactions
             unbooked_transfers = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
                 type__in=['fund_transfer', 'interbank_transfer']
-            ).aggregate(total=DbSum('amount'))['total'] or Decimal('0.00')
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             per_bank = reconciliation.per_bank if reconciliation else Decimal('0.00')
             
