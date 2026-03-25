@@ -312,14 +312,16 @@ export default function BankDetail() {
           </Table>
         </TableContainer>
 
-        {/* Pagination */}
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-          <Pagination
-            count={Math.ceil(count / 10)}
-            page={page}
-            onChange={(e, value) => setPage(value)}
-          />
-        </Box>
+        {/* Pagination - only show if more than 1 page worth of data */}
+        {count > 10 && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Pagination
+              count={Math.ceil(count / 10)}
+              page={page}
+              onChange={(e, value) => setPage(value)}
+            />
+          </Box>
+        )}
       </Paper>
     </Box>
   );

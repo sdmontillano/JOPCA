@@ -11,6 +11,19 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
+
+
+class NoErrorPagination(PageNumberPagination):
+    """Custom pagination that doesn't raise errors for invalid pages."""
+    def paginate_queryset(self, queryset, request, view=None):
+        try:
+            return super().paginate_queryset(queryset, request, view)
+        except Exception:
+            # Return empty list instead of raising error
+            self.page = None
+            self.request = request
+            return []
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
@@ -88,6 +101,7 @@ class TransactionListCreate(generics.ListCreateAPIView):
     queryset = Transaction.objects.all().order_by('-date', '-id')
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = NoErrorPagination
 
     def get_queryset(self):
         qs = super().get_queryset()
