@@ -13,24 +13,65 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
-
-class NoErrorPagination(PageNumberPagination):
-    """Custom pagination that doesn't raise errors for invalid pages."""
-    def paginate_queryset(self, queryset, request, view=None):
-        try:
-            return super().paginate_queryset(queryset, request, view)
-        except Exception:
-            # Return empty list instead of raising error
-            self.page = None
-            self.request = request
-            return []
-
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.db import transaction, models
 from django.utils.dateparse import parse_date
 
+
+class TransactionPagination(PageNumberPagination):
+    page_size = 7
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 logger = logging.getLogger(__name__)
+
+
+# -----------------------------
+# Auth Endpoints
+# -----------------------------
+@api_view(['POST'])
+@permission_classes([])
+def obtain_auth_token_with_role(request):
+    """
+    Custom auth token view that returns user role (is_staff) along with token.
+    """
+    from django.contrib.auth import authenticate
+    from rest_framework.authtoken.models import Token
+    
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = authenticate(username=username, password=password)
+    
+    if user is None:
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    token, created = Token.objects.get_or_create(user=user)
+    
+    return Response({
+        'token': token.key,
+        'user_id': user.pk,
+        'username': user.username,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def verify_token(request):
+    """Verify if the auth token is valid."""
+    return Response({
+        "valid": True,
+        "user_id": request.user.pk,
+        "username": request.user.username,
+        "is_staff": request.user.is_staff,
+    })
 
 from .serializers import (
     BankAccountSerializer,
@@ -101,7 +142,7 @@ class TransactionListCreate(generics.ListCreateAPIView):
     queryset = Transaction.objects.all().order_by('-date', '-id')
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = NoErrorPagination
+    pagination_class = TransactionPagination
 
     def get_queryset(self):
         qs = super().get_queryset()

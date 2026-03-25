@@ -4,6 +4,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
+import AdminDashboard from "./components/AdminDashboard.jsx";
 import AddBankAccount from "./components/AddBankAccount.jsx";
 import AddTransaction from "./components/AddTransaction.jsx";
 import Transactions from "./components/Transactions.jsx";
@@ -22,7 +23,48 @@ import DashboardSettings from "./components/DashboardSettings.jsx";
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  
+  // Auth check runs on every render - always check localStorage directly
   const isAuthenticated = !!localStorage.getItem("token");
+  const isAdmin = localStorage.getItem("userRole") === "admin";
+
+  // Sync across tabs - reload when token changes in another tab
+  useEffect(() => {
+    const handleStorage = () => {
+      window.location.reload();
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // Session timeout - auto logout after 60 minutes of inactivity
+  useEffect(() => {
+    const SESSION_TIMEOUT = 60 * 60 * 1000; // 60 minutes (1 hour)
+    let timeoutId;
+
+    const resetTimeout = () => {
+      clearTimeout(timeoutId);
+      if (isAuthenticated) {
+        timeoutId = setTimeout(() => {
+          localStorage.removeItem("token");
+          window.location.hash = "#/login";
+          window.location.reload();
+        }, SESSION_TIMEOUT);
+      }
+    };
+
+    // Reset on user activity
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimeout));
+
+    // Initial set
+    resetTimeout();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimeout));
+    };
+  }, [isAuthenticated]);
 
   // Check if Django backend is responding before showing app
   useEffect(() => {
@@ -75,6 +117,17 @@ export default function App() {
           path="/dashboard"
           element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />}
         />
+        
+        {/* Admin routes */}
+        <Route
+          path="/admin"
+          element={isAuthenticated && isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/"
+          element={isAuthenticated && isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
+        />
+        
         <Route
           path="/add-bank"
           element={isAuthenticated ? <AddBankAccount /> : <Navigate to="/login" replace />}
@@ -149,7 +202,7 @@ export default function App() {
         />
 
         {/* Default redirect */}
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? (isAdmin ? "/admin" : "/dashboard") : "/login"} replace />} />
       </Routes>
       )}
     </Router>

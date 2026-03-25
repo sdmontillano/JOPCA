@@ -1,7 +1,7 @@
 // src/components/Dashboard.jsx
 import React, { useEffect, useState, useCallback } from "react";
-import { ThemeProvider } from "@mui/material/styles";
-import jopcaTheme from "../theme/jopcaTheme";
+
+import createAppTheme from "../theme";
 import {
   AppBar,
   Toolbar,
@@ -48,6 +48,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import CloseIcon from "@mui/icons-material/Close";
 import WalletIcon from "@mui/icons-material/Wallet";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import SettingsIcon from "@mui/icons-material/Settings";
 import WarningIcon from "@mui/icons-material/Warning";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AssessmentIcon from "@mui/icons-material/Assessment";
@@ -363,6 +364,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
     { key: "transactions", label: "Transactions", icon: <ReceiptLongIcon />, to: "/transactions" },
     { key: "monthly", label: "Monthly", icon: <BarChartIcon />, to: "/monthly-report" },
     { key: "pdc", label: "PDC", icon: <ReceiptLongIcon />, to: "/pdc" },
+    { key: "settings", label: "Settings", icon: <SettingsIcon />, to: "/settings" },
   ];
 
   const openMenu = (e) => setAnchorEl(e.currentTarget);

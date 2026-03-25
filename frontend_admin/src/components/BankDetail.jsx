@@ -114,17 +114,9 @@ export default function BankDetail() {
       const txRes = await api.get(`/transactions/?${params.toString()}`);
       const data = txRes.data;
       
-      // Handle both paginated and non-paginated responses
-      let results = [];
-      let totalCount = 0;
-      
-      if (Array.isArray(data)) {
-        results = data;
-        totalCount = data.length;
-      } else {
-        results = data.results ?? [];
-        totalCount = data.count ?? results.length;
-      }
+      // Handle paginated response
+      const results = data.results ?? [];
+      const totalCount = data.count ?? results.length;
       
       setTransactions(results);
       setCount(totalCount);
@@ -313,10 +305,10 @@ export default function BankDetail() {
         </TableContainer>
 
         {/* Pagination - only show if more than 1 page worth of data */}
-        {count > 10 && (
+        {count > 7 && (
           <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
             <Pagination
-              count={Math.ceil(count / 10)}
+              count={Math.ceil(count / 7)}
               page={page}
               onChange={(e, value) => setPage(value)}
             />

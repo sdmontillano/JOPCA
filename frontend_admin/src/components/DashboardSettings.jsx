@@ -1,95 +1,43 @@
 // src/components/DashboardSettings.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Paper,
   Typography,
-  FormControlLabel,
-  Switch,
   Button,
   Divider,
   Alert,
   CircularProgress,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/tokenService';
-
-const DEFAULT_SETTINGS = {
-  showCashInBank: true,
-  showPCF: true,
-  showPDC: true,
-  showTrends: true,
-  showAlerts: true,
-  compactMode: false,
-  dateFormat: 'en-PH',
-};
+import { useThemeColor } from '../ThemeContext';
 
 export default function DashboardSettings() {
   const navigate = useNavigate();
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const { colorScheme, setColorScheme, darkMode, setDarkMode, colorSchemes } = useThemeColor();
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('dashboardSettings');
-    if (saved) {
-      try {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) });
-      } catch {
-        setSettings(DEFAULT_SETTINGS);
-      }
-    }
-    setLoading(false);
-  }, []);
-
-  const handleToggle = (key) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const handleSave = () => {
-    setSaving(true);
-    setError(null);
+    setLoading(true);
     setSuccess(null);
-    try {
-      localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+    setTimeout(() => {
       setSuccess('Settings saved successfully!');
+      setLoading(false);
       setTimeout(() => navigate('/dashboard'), 1500);
-    } catch (err) {
-      setError('Failed to save settings');
-    } finally {
-      setSaving(false);
-    }
+    }, 300);
   };
-
-  const handleReset = () => {
-    setSettings(DEFAULT_SETTINGS);
-    localStorage.removeItem('dashboardSettings');
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
       <Paper sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom fontWeight="bold">
-          Dashboard Settings
+          Settings
         </Typography>
         <Divider sx={{ mb: 3 }} />
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
 
         {success && (
           <Alert severity="success" sx={{ mb: 2 }}>
@@ -98,85 +46,75 @@ export default function DashboardSettings() {
         )}
 
         <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-          Components
+          Appearance
         </Typography>
 
         <FormControlLabel
           control={
             <Switch
-              checked={settings.showCashInBank}
-              onChange={() => handleToggle('showCashInBank')}
+              checked={darkMode}
+              onChange={(e) => setDarkMode(e.target.checked)}
             />
           }
-          label="Show Cash in Bank"
-          sx={{ display: 'block', mb: 1 }}
-        />
-
-        <FormControlLabel
-          control={
-            <Switch
-              checked={settings.showPCF}
-              onChange={() => handleToggle('showPCF')}
-            />
-          }
-          label="Show Petty Cash Fund (PCF)"
-          sx={{ display: 'block', mb: 1 }}
-        />
-
-        <FormControlLabel
-          control={
-            <Switch
-              checked={settings.showPDC}
-              onChange={() => handleToggle('showPDC')}
-            />
-          }
-          label="Show Post-Dated Checks (PDC)"
-          sx={{ display: 'block', mb: 1 }}
-        />
-
-        <FormControlLabel
-          control={
-            <Switch
-              checked={settings.showTrends}
-              onChange={() => handleToggle('showTrends')}
-            />
-          }
-          label="Show Trend Charts"
-          sx={{ display: 'block', mb: 1 }}
-        />
-
-        <FormControlLabel
-          control={
-            <Switch
-              checked={settings.showAlerts}
-              onChange={() => handleToggle('showAlerts')}
-            />
-          }
-          label="Show Alert Notifications"
+          label="Dark Mode"
           sx={{ display: 'block', mb: 2 }}
         />
 
         <Divider sx={{ my: 3 }} />
 
         <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-          Display Options
+          Color Scheme
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Choose a color that will apply to the entire application including navbar, buttons, and all pages.
         </Typography>
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={settings.compactMode}
-              onChange={() => handleToggle('compactMode')}
-            />
-          }
-          label="Compact Mode (smaller tables)"
-          sx={{ display: 'block', mb: 2 }}
-        />
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 4 }}>
+          {Object.entries(colorSchemes).map(([key, scheme]) => (
+            <Box
+              key={key}
+              onClick={() => setColorScheme(key)}
+              sx={{
+                cursor: 'pointer',
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: colorScheme === key ? '3px solid' : '2px solid',
+                borderColor: colorScheme === key ? 'primary.main' : '#e5e7eb',
+                transition: 'all 0.2s ease',
+                transform: colorScheme === key ? 'scale(1.05)' : 'scale(1)',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  borderColor: 'primary.main',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  height: 50,
+                  bgcolor: scheme.primary.main,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  {scheme.name}
+                </Typography>
+              </Box>
+              <Box sx={{ bgcolor: darkMode ? '#1e293b' : '#fff', p: 1, display: 'flex', justifyContent: 'center' }}>
+                {colorScheme === key && (
+                  <Typography variant="body2" color="primary" fontWeight="bold">
+                    ✓ Selected
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
 
         <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-          <Button variant="outlined" onClick={handleReset}>
-            Reset to Defaults
-          </Button>
           <Button
             variant="outlined"
             onClick={() => navigate('/dashboard')}
@@ -186,12 +124,12 @@ export default function DashboardSettings() {
           </Button>
           <Button
             variant="contained"
-            startIcon={saving ? <CircularProgress size={18} /> : <SaveIcon />}
+            startIcon={loading ? <CircularProgress size={18} /> : <SaveIcon />}
             onClick={handleSave}
-            disabled={saving}
+            disabled={loading}
             sx={{ flex: 1 }}
           >
-            Save Settings
+            Save Changes
           </Button>
         </Box>
       </Paper>

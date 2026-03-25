@@ -34,6 +34,8 @@ from core.views import (
     send_test_report,
     cash_summary,
     bank_analysis,
+    verify_token,
+    obtain_auth_token_with_role,
 )
 
 router = DefaultRouter()
@@ -48,7 +50,8 @@ router.register(r'cash-counts', CashCountViewSet, basename='cash-count')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
+    path('api-token-auth/', obtain_auth_token_with_role, name='api_token_auth'),
+    path('api/auth/verify/', verify_token, name='verify_token'),
 
     # transactions list endpoint
     path('transactions/', TransactionListCreate.as_view(), name='transactions'),

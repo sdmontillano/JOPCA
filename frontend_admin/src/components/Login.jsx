@@ -9,13 +9,16 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
-  Checkbox,
-  FormControlLabel,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import api, { setAccessToken as saveTokenToService } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../ToastContext";
 import logo from "../assets/jopca-logo.png";
 
 /**
@@ -28,12 +31,13 @@ import logo from "../assets/jopca-logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [loginAs, setLoginAs] = useState("user");
 
   const BRAND = { primary: "#0b74de", primaryDark: "#095fb0", accent: "#06b6d4" };
 
@@ -46,14 +50,12 @@ export default function Login() {
   };
 
   // Helper: persist token and set axios header
-  function persistToken(token, rememberFlag = true) {
+  function persistToken(token) {
     try {
-      saveTokenToService(token, rememberFlag);
+      saveTokenToService(token, true);
     } catch (e) {
       console.warn("tokenService.setAccessToken threw an error", e);
-      if (rememberFlag) localStorage.setItem("token", token);
-      else sessionStorage.setItem("token", token);
-      api.defaults.headers.common["Authorization"] = `Token ${token}`;
+      localStorage.setItem("token", token);
     }
     api.defaults.headers.common["Authorization"] = `Token ${token}`;
   }
@@ -74,10 +76,26 @@ export default function Login() {
 
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
+      const isStaff = res?.data?.is_staff ?? false;
 
       if (res.status === 200 && token) {
+        // Validate role selection against user's is_staff status
+        if (loginAs === "admin" && !isStaff) {
+          setError("Your account is not authorized for admin access.");
+          setLoading(false);
+          return;
+        }
+        
+        if (loginAs === "user" && isStaff) {
+          // Admin user logging in as normal user - allow it
+        }
+
         try {
-          persistToken(token, remember);
+          persistToken(token);
+          // Store user info - use what they SELECTED, not their is_staff
+          localStorage.setItem("userRole", loginAs);
+          localStorage.setItem("isStaff", isStaff);
+          localStorage.setItem("username", res?.data?.username || username);
         } catch (err) {
           console.error("Failed to persist token", err);
           setError("Login succeeded but saving token failed.");
@@ -85,15 +103,15 @@ export default function Login() {
           return;
         }
 
-        // Small delay to ensure token is saved and app is ready
+        showToast("Login successful! Redirecting...", "success");
+
+        // Small delay to ensure token is saved, then redirect
         setTimeout(() => {
-          try {
-            navigate("/dashboard");
-          } catch (navErr) {
-            console.warn("navigate failed, falling back to window.location", navErr);
-            window.location.href = "/#/dashboard";
-          }
-        }, 1000);
+          // Route based on what user SELECTED in dropdown (not their is_staff)
+          const redirectPath = loginAs === "admin" ? "#/admin" : "#/dashboard";
+          window.location.hash = redirectPath;
+          window.location.reload();
+        }, 500);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);
@@ -101,12 +119,24 @@ export default function Login() {
       }
     } catch (err) {
       console.error("Login error", err);
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.message ||
-        err?.response?.data ||
-        "Invalid credentials or server error";
-      setError(String(msg));
+      console.error("Login error response", err?.response?.data);
+      
+      const errorData = err?.response?.data;
+      let msg = errorData?.detail || errorData?.message || errorData?.error || "Invalid credentials or server error";
+
+      // Handle DRF's non_field_errors or other object formats
+      if (typeof msg !== 'string' && errorData) {
+        const firstKey = Object.keys(errorData)[0];
+        const firstValue = errorData[firstKey];
+        msg = Array.isArray(firstValue) ? firstValue[0] : String(firstValue);
+      }
+      
+      // If still not a string, show the whole response for debugging
+      if (typeof msg !== 'string') {
+        msg = "Login failed. Please check your credentials.";
+      }
+       
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -180,6 +210,20 @@ export default function Login() {
           </Box>
 
           <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1 }}>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Login as</InputLabel>
+              <Select
+                value={loginAs}
+                label="Login as"
+                onChange={(e) => setLoginAs(e.target.value)}
+                disabled={loading}
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="user">Normal User</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+              </Select>
+            </FormControl>
+
             <TextField label="Username" fullWidth autoFocus sx={{ mb: 2, "& .MuiInputBase-root": { borderRadius: 2 } }} value={username} onChange={(e) => setUsername(e.target.value)} disabled={loading} />
 
             <TextField
@@ -206,10 +250,6 @@ export default function Login() {
                 {error}
               </Typography>
             )}
-
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-              <FormControlLabel control={<Checkbox checked={remember} onChange={(e) => setRemember(e.target.checked)} />} label={<Typography variant="body2">Remember me</Typography>} />
-            </Box>
 
             <Button
               type="submit"

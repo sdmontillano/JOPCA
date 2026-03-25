@@ -27,6 +27,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import ExportButtons from "./ExportButtons";
 import api from "../services/tokenService";
 
 const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'local_deposits'];
@@ -223,6 +224,11 @@ export default function Transactions() {
             </Box>
           </Box>
           <Stack direction="row" spacing={1} alignItems="center">
+            <ExportButtons 
+              data={transactions} 
+              filename="transactions" 
+              label="Export" 
+            />
             <IconButton
               onClick={() => fetchTransactions(true)}
               disabled={refreshing}
