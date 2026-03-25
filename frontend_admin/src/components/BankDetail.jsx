@@ -16,7 +16,9 @@ import {
   TextField,
   MenuItem,
   Pagination,
+  IconButton,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
 
@@ -29,11 +31,9 @@ export default function BankDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const todayIsoDate = new Date().toISOString().slice(0, 10);
-
   const [filters, setFilters] = useState({
     type: "",
-    date: todayIsoDate,
+    date: "",
   });
 
   const [page, setPage] = useState(1);
@@ -95,6 +95,12 @@ export default function BankDetail() {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
+  const clearFilters = () => {
+    setFilters({ type: "", date: "" });
+    setPage(1);
+    fetchData();
+  };
+
   const applyFilters = () => {
     setPage(1);
     fetchData();
@@ -109,73 +115,94 @@ export default function BankDetail() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Button variant="text" onClick={() => navigate("/banks")}>
-        ← Back to Banks
-      </Button>
+    <Box sx={{ minHeight: "100vh", bgcolor: "#F9FAFB", p: { xs: 2, md: 4 } }}>
+      {/* Header */}
+      <Paper
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 1,
+          border: "1px solid",
+          borderColor: "#E5E7EB",
+          bgcolor: "#FFFFFF",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <IconButton onClick={() => navigate("/banks")}>
+              <ArrowBackIcon />
+            </IconButton>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.dark" }}>
+                {bank ? `${bank.name} (${bank.account_number})` : "Bank Account"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Bank transactions and details
+              </Typography>
+            </Box>
+          </Box>
+          <Paper sx={{ p: 2, bgcolor: "#1E293B", borderRadius: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: "#fff" }}>Current Balance</Typography>
+            <Typography variant="h6" sx={{ fontWeight: "bold", color: "#fff" }}>
+              {formatPeso(bank?.balance ?? 0)}
+            </Typography>
+          </Paper>
+        </Box>
+      </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        sx={{ mt: 2, mb: 2, gap: 2 }}
-      >
-        <Typography variant="h5">
-          {bank ? `${bank.name} (${bank.account_number})` : "Bank Account"}
-        </Typography>
+      {/* Filters */}
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+          <TextField
+            select
+            label="Transaction Type"
+            name="type"
+            value={filters.type}
+            onChange={handleFilterChange}
+            sx={{ minWidth: 180 }}
+            size="small"
+          >
+            <MenuItem value="">All Types</MenuItem>
+            {transactionTypes.map((t) => (
+              <MenuItem key={t.value} value={t.value}>
+                {t.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Date"
+            name="date"
+            type="date"
+            value={filters.date}
+            onChange={handleFilterChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: 180 }}
+            size="small"
+          />
+          <Button
+            variant="contained"
+            onClick={applyFilters}
+            sx={{ bgcolor: "#1E293B", "&:hover": { bgcolor: "#0f172a" } }}
+          >
+            Apply
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={clearFilters}
+          >
+            Clear
+          </Button>
+        </Stack>
+      </Paper>
 
-        <Paper sx={{ p: 2, bgcolor: "#f1f5f9" }}>
-          <Typography variant="subtitle2">Current Balance</Typography>
-          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-            {formatPeso(bank?.balance ?? 0)}
-          </Typography>
-        </Paper>
-      </Stack>
-
-      {/* ✅ Filters */}
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
-        <TextField
-          select
-          label="Type"
-          name="type"
-          value={filters.type}
-          onChange={handleFilterChange}
-          sx={{ minWidth: 180 }}
-        >
-          <MenuItem value="">All</MenuItem>
-          {transactionTypes.map((t) => (
-            <MenuItem key={t.value} value={t.value}>
-              {t.label}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          label="Date"
-          name="date"
-          type="date"
-          value={filters.date}
-          onChange={handleFilterChange}
-          InputLabelProps={{ shrink: true }}
-          sx={{ minWidth: 180 }}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={applyFilters}
-          sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" } }}
-        >
-          Apply Filters
-        </Button>
-      </Stack>
-
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
+      <Paper sx={{ p: 3, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF" }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Transactions
         </Typography>
 
