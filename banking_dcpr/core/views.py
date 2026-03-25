@@ -51,7 +51,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
-    queryset = Transaction.objects.all().order_by('-created_at')  # newest first by timestamp
+    queryset = Transaction.objects.all().order_by('-date', '-id')  # newest first by date
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
