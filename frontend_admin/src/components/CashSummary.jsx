@@ -20,6 +20,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import IconButton from "@mui/material/IconButton";
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 
@@ -28,11 +29,22 @@ export default function CashSummary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchData(selectedDate);
+    fetchUserProfile();
   }, [selectedDate]);
+
+  async function fetchUserProfile() {
+    try {
+      const res = await api.get("/api/user/profile/");
+      setUser(res.data);
+    } catch (err) {
+      console.error("Error fetching user profile", err);
+    }
+  }
 
   async function fetchData(date) {
     setLoading(true);
@@ -97,6 +109,9 @@ export default function CashSummary() {
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <IconButton onClick={() => navigate("/dashboard")} sx={{ mr: 1 }}>
+            <ArrowBackIcon />
+          </IconButton>
           <Box
             sx={{
               width: 48,
@@ -319,7 +334,11 @@ export default function CashSummary() {
             <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4, pt: 2, borderTop: "1px solid #E5E7EB" }}>
               <Box>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>Prepared by:</Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>DORYN ROSE EDULSA</Typography>
+                <Typography variant="body2" sx={{ mt: 1, textTransform: "uppercase" }}>
+                  {user?.first_name && user?.last_name 
+                    ? `${user.first_name} ${user.last_name}` 
+                    : user?.username || "User"}
+                </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>Approved by:</Typography>
