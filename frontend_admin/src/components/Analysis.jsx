@@ -7,7 +7,6 @@ import {
   CircularProgress,
   Alert,
   Stack,
-  Divider,
   TextField,
   Button,
   Table,
@@ -17,14 +16,13 @@ import {
   TableHead,
   TableRow,
   Snackbar,
-  Chip,
+  IconButton,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import SaveIcon from "@mui/icons-material/Save";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorIcon from "@mui/icons-material/Error";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import api from "../services/tokenService";
+import { useNavigate } from "react-router-dom";
 
 export default function Analysis() {
   const [data, setData] = useState(null);
@@ -33,11 +31,24 @@ export default function Analysis() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [user, setUser] = useState(null);
   const [perBankValues, setPerBankValues] = useState({});
+  const [remarksValues, setRemarksValues] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData(selectedDate);
+    fetchUserProfile();
   }, [selectedDate]);
+
+  async function fetchUserProfile() {
+    try {
+      const res = await api.get("/api/user/profile/");
+      setUser(res.data);
+    } catch (err) {
+      console.error("Error fetching user profile", err);
+    }
+  }
 
   async function fetchData(date) {
     setLoading(true);
@@ -45,7 +56,7 @@ export default function Analysis() {
     try {
       const res = await api.get(`/summary/bank-analysis/?date=${date}`);
       setData(res.data);
-      initializePerBankValues(res.data.banks);
+      initializeValues(res.data.banks);
     } catch (err) {
       console.error("Error fetching bank analysis", err);
       setError("Failed to load bank analysis data.");
@@ -54,13 +65,16 @@ export default function Analysis() {
     }
   }
 
-  function initializePerBankValues(banks) {
-    const values = {};
+  function initializeValues(banks) {
+    const perBank = {};
+    const remarks = {};
     banks.forEach((bank) => {
       const reconciliation = bank.reconciliation;
-      values[bank.id] = reconciliation?.per_bank || 0;
+      perBank[bank.id] = reconciliation?.per_bank ?? bank.per_dcpr ?? 0;
+      remarks[bank.id] = reconciliation?.remarks ?? "";
     });
-    setPerBankValues(values);
+    setPerBankValues(perBank);
+    setRemarksValues(remarks);
   }
 
   const handlePerBankChange = (bankId, value) => {
@@ -70,28 +84,31 @@ export default function Analysis() {
     }));
   };
 
+  const handleRemarksChange = (bankId, value) => {
+    setRemarksValues((prev) => ({
+      ...prev,
+      [bankId]: value,
+    }));
+  };
+
   const handleSave = async (bankId) => {
     setSaving(true);
     try {
-      const bank = data.banks.find((b) => b.id === bankId);
-      const autoVals = bank.auto_computed || {};
-      const reconciliation = bank.reconciliation || {};
-      
       await api.post("/summary/bank-analysis/", {
         bank_id: bankId,
         date: selectedDate,
         per_bank: perBankValues[bankId] || 0,
-        outstanding_checks: reconciliation.outstanding_checks || autoVals.outstanding_checks || 0,
-        deposit_in_transit: reconciliation.deposit_in_transit || autoVals.deposit_in_transit || 0,
-        returned_checks: reconciliation.returned_checks || autoVals.returned_checks || 0,
-        bank_charges: reconciliation.bank_charges || autoVals.bank_charges || 0,
-        unbooked_transfers: reconciliation.unbooked_transfers || autoVals.unbooked_transfers || 0,
-        remarks: reconciliation.remarks || "",
+        outstanding_checks: 0,
+        deposit_in_transit: 0,
+        returned_checks: 0,
+        bank_charges: 0,
+        unbooked_transfers: 0,
+        remarks: remarksValues[bankId] || "",
       });
-      setSnackbar({ open: true, message: "Reconciliation saved!", severity: "success" });
+      setSnackbar({ open: true, message: "Saved!", severity: "success" });
       fetchData(selectedDate);
     } catch (err) {
-      console.error("Error saving reconciliation", err);
+      console.error("Error saving", err);
       setSnackbar({ open: true, message: "Failed to save.", severity: "error" });
     } finally {
       setSaving(false);
@@ -103,25 +120,22 @@ export default function Analysis() {
     setSaving(true);
     try {
       for (const bank of data.banks) {
-        const autoVals = bank.auto_computed || {};
-        const reconciliation = bank.reconciliation || {};
-        
         await api.post("/summary/bank-analysis/", {
           bank_id: bank.id,
           date: selectedDate,
           per_bank: perBankValues[bank.id] || 0,
-          outstanding_checks: reconciliation.outstanding_checks || autoVals.outstanding_checks || 0,
-          deposit_in_transit: reconciliation.deposit_in_transit || autoVals.deposit_in_transit || 0,
-          returned_checks: reconciliation.returned_checks || autoVals.returned_checks || 0,
-          bank_charges: reconciliation.bank_charges || autoVals.bank_charges || 0,
-          unbooked_transfers: reconciliation.unbooked_transfers || autoVals.unbooked_transfers || 0,
-          remarks: reconciliation.remarks || "",
+          outstanding_checks: 0,
+          deposit_in_transit: 0,
+          returned_checks: 0,
+          bank_charges: 0,
+          unbooked_transfers: 0,
+          remarks: remarksValues[bank.id] || "",
         });
       }
-      setSnackbar({ open: true, message: "All reconciliations saved!", severity: "success" });
+      setSnackbar({ open: true, message: "All saved!", severity: "success" });
       fetchData(selectedDate);
     } catch (err) {
-      console.error("Error saving reconciliations", err);
+      console.error("Error saving", err);
       setSnackbar({ open: true, message: "Failed to save.", severity: "error" });
     } finally {
       setSaving(false);
@@ -134,13 +148,7 @@ export default function Analysis() {
       maximumFractionDigits: 2,
     })}`;
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr + "T00:00:00");
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
-
-  const getAccountTypeLabel = (accountNumber) => {
+  const getAccountType = (accountNumber) => {
     if (!accountNumber) return "Account";
     if (accountNumber.toLowerCase().includes("ca")) return "Checking Account";
     if (accountNumber.toLowerCase().includes("sa")) return "Savings Account";
@@ -165,35 +173,6 @@ export default function Analysis() {
     valencia_parts: "Valencia Parts",
   };
 
-  const calculateDcprReconciled = (bank) => {
-    const perDcpr = bank.per_dcpr || 0;
-    const autoVals = bank.auto_computed || {};
-    const outstandingChecks = bank.reconciliation?.outstanding_checks ?? autoVals.outstanding_checks ?? 0;
-    const depositInTransit = bank.reconciliation?.deposit_in_transit ?? autoVals.deposit_in_transit ?? 0;
-    const returnedChecks = bank.reconciliation?.returned_checks ?? autoVals.returned_checks ?? 0;
-    const bankCharges = bank.reconciliation?.bank_charges ?? autoVals.bank_charges ?? 0;
-    const unbookedTransfers = bank.reconciliation?.unbooked_transfers ?? autoVals.unbooked_transfers ?? 0;
-    
-    return perDcpr + depositInTransit + unbookedTransfers - outstandingChecks - returnedChecks - bankCharges;
-  };
-
-  const calculateBankReconciled = (bank) => {
-    const perBank = perBankValues[bank.id] || 0;
-    const autoVals = bank.auto_computed || {};
-    const outstandingChecks = bank.reconciliation?.outstanding_checks ?? autoVals.outstanding_checks ?? 0;
-    const depositInTransit = bank.reconciliation?.deposit_in_transit ?? autoVals.deposit_in_transit ?? 0;
-    const returnedChecks = bank.reconciliation?.returned_checks ?? autoVals.returned_checks ?? 0;
-    const bankCharges = bank.reconciliation?.bank_charges ?? autoVals.bank_charges ?? 0;
-    
-    return perBank + depositInTransit - outstandingChecks - returnedChecks - bankCharges;
-  };
-
-  const isBalanced = (bank) => {
-    const dcprRec = calculateDcprReconciled(bank);
-    const bankRec = calculateBankReconciled(bank);
-    return Math.abs(dcprRec - bankRec) < 0.01;
-  };
-
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#F9FAFB", p: { xs: 2, md: 4 } }}>
       {/* Header */}
@@ -209,6 +188,9 @@ export default function Analysis() {
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <IconButton onClick={() => navigate("/dashboard")}>
+              <ArrowBackIcon />
+            </IconButton>
             <Box
               sx={{
                 width: 48,
@@ -227,7 +209,7 @@ export default function Analysis() {
                 Bank Reconciliation Analysis
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Auto-computed from transaction history
+                Daily bank reconciliation
               </Typography>
             </Box>
           </Box>
@@ -279,13 +261,8 @@ export default function Analysis() {
               </Typography>
 
               {banks.map((bank) => {
-                const reconciliation = bank.reconciliation || {};
-                const autoVals = bank.auto_computed || {};
-                const dcprReconciled = calculateDcprReconciled(bank);
-                const bankReconciled = calculateBankReconciled(bank);
-                const balanced = isBalanced(bank);
-                const diff = dcprReconciled - bankReconciled;
-
+                const isChecking = bank.account_number?.toLowerCase().includes("ca");
+                
                 return (
                   <Box
                     key={bank.id}
@@ -298,33 +275,23 @@ export default function Analysis() {
                     }}
                   >
                     {/* Bank Header */}
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                        {getAccountTypeLabel(bank.account_number)} - {bank.account_number}
-                      </Typography>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<SaveIcon />}
-                        onClick={() => handleSave(bank.id)}
-                        disabled={saving}
-                      >
-                        Save
-                      </Button>
-                    </Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                      {getAccountType(bank.account_number)} - {bank.account_number}
+                    </Typography>
 
-                    {/* Balance Header */}
-                    <TableContainer sx={{ mb: 2 }}>
+                    {/* Table */}
+                    <TableContainer>
                       <Table size="small">
                         <TableHead>
                           <TableRow sx={{ bgcolor: "#F1F5F9" }}>
-                            <TableCell sx={{ fontWeight: 600, width: "40%" }}>Description</TableCell>
+                            <TableCell sx={{ fontWeight: 600, width: "45%" }}>Description</TableCell>
                             <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>Per DCPR</TableCell>
                             <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>Per Bank</TableCell>
                             <TableCell sx={{ fontWeight: 600, textAlign: "center" }}>Remarks</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
+                          {/* Ending Balance */}
                           <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Ending Balance</TableCell>
                             <TableCell sx={{ textAlign: "right", fontWeight: 600 }}>
@@ -338,169 +305,156 @@ export default function Analysis() {
                                 onChange={(e) => handlePerBankChange(bank.id, e.target.value)}
                                 inputProps={{ style: { textAlign: "right" } }}
                                 sx={{ width: 150 }}
-                                placeholder="Enter bank balance"
                               />
                             </TableCell>
                             <TableCell sx={{ textAlign: "center" }}>-</TableCell>
                           </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
 
-                    <Divider sx={{ mb: 2 }} />
-
-                    {/* Reconciling Items - Auto Computed */}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: "#666" }}>
-                        Reconciling Items:
-                      </Typography>
-                      <Chip
-                        icon={<AutoAwesomeIcon sx={{ fontSize: 14 }} />}
-                        label="Auto-computed"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    </Box>
-
-                    <TableContainer>
-                      <Table size="small">
-                        <TableBody>
-                          {/* Outstanding Checks */}
+                          {/* Reconciling Items Labels */}
                           <TableRow>
-                            <TableCell sx={{ pl: 3 }}>
-                              a. Outstanding Checks (deduct to Bank)
+                            <TableCell colSpan={4} sx={{ py: 1, bgcolor: "#F8FAFC" }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: "#666" }}>
+                                Reconciling Items:
+                              </Typography>
                             </TableCell>
-                            <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
-                            <TableCell sx={{ textAlign: "right", bgcolor: "#F8FAFC" }}>
-                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: "#059669" }}>
-                                  {formatCurrency(autoVals.outstanding_checks || 0)}
-                                </Typography>
-                                <Chip label="PDC" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "center" }}>-</TableCell>
                           </TableRow>
+                          
+                          {isChecking ? (
+                            // Checking Account items
+                            <>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  a. Outstanding Checks
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
+                                  deduct to Bank
+                                </TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  b. Unbooked Fund Transfers
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
+                                  add to DCPR
+                                </TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  c. Bank Charges
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
+                                  add/deduct to DCPR
+                                </TableCell>
+                              </TableRow>
+                            </>
+                          ) : (
+                            // Savings Account items
+                            <>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  a. Deposit in Transit
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
+                                  add to Bank
+                                </TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  b. Remittance to Checking Account
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
+                                  Deduct to DCPR
+                                </TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  c. Returned Check
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666" }}>-</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
+                                  d. Bank Charges
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
+                                  add/deduct to DCPR
+                                </TableCell>
+                              </TableRow>
+                            </>
+                          )}
 
-                          {/* Unbooked Fund Transfers */}
-                          <TableRow>
-                            <TableCell sx={{ pl: 3 }}>
-                              b. Unbooked Fund Transfers (add to DCPR)
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", bgcolor: "#F8FAFC" }}>
-                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: "#059669" }}>
-                                  {formatCurrency(autoVals.unbooked_transfers || 0)}
-                                </Typography>
-                                <Chip label="XFER" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
-                            <TableCell sx={{ textAlign: "center" }}>-</TableCell>
-                          </TableRow>
-
-                          {/* Deposit in Transit */}
-                          <TableRow>
-                            <TableCell sx={{ pl: 3 }}>
-                              c. Deposit in Transit (add to Bank)
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
-                            <TableCell sx={{ textAlign: "right", bgcolor: "#F8FAFC" }}>
-                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: "#059669" }}>
-                                  {formatCurrency(autoVals.deposit_in_transit || 0)}
-                                </Typography>
-                                <Chip label="COLL" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "center" }}>-</TableCell>
-                          </TableRow>
-
-                          {/* Returned Checks */}
-                          <TableRow>
-                            <TableCell sx={{ pl: 3 }}>
-                              d. Returned Checks (deduct to DCPR)
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", bgcolor: "#F8FAFC" }}>
-                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: "#DC2626" }}>
-                                  {formatCurrency(autoVals.returned_checks || 0)}
-                                </Typography>
-                                <Chip label="RTN" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
-                            <TableCell sx={{ textAlign: "center" }}>-</TableCell>
-                          </TableRow>
-
-                          {/* Bank Charges */}
-                          <TableRow>
-                            <TableCell sx={{ pl: 3 }}>
-                              e. Bank Charges (deduct to DCPR)
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", bgcolor: "#F8FAFC" }}>
-                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: "#DC2626" }}>
-                                  {formatCurrency(autoVals.bank_charges || 0)}
-                                </Typography>
-                                <Chip label="CHRG" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
-                            <TableCell sx={{ textAlign: "center" }}>-</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    {/* Reconciled Balance */}
-                    <TableContainer>
-                      <Table size="small">
-                        <TableBody>
-                          <TableRow sx={{ bgcolor: balanced ? "#10B981" : "#EF4444", color: "#FFFFFF" }}>
-                            <TableCell sx={{ fontWeight: 700, color: "#FFFFFF" }}>
-                              Reconciled Balance
-                              {balanced ? (
-                                <CheckCircleIcon sx={{ ml: 1, fontSize: 16, verticalAlign: "middle" }} />
-                              ) : (
-                                <ErrorIcon sx={{ ml: 1, fontSize: 16, verticalAlign: "middle" }} />
-                              )}
+                          {/* Reconciled Balance - Same as Ending */}
+                          <TableRow sx={{ bgcolor: "#1E293B", color: "#FFFFFF" }}>
+                            <TableCell sx={{ fontWeight: 700, color: "#FFFFFF" }}>Reconciled Balance</TableCell>
+                            <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
+                              {formatCurrency(perBankValues[bank.id] || bank.per_dcpr)}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
-                              {formatCurrency(dcprReconciled)}
+                              {formatCurrency(perBankValues[bank.id] || bank.per_dcpr)}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
-                              {formatCurrency(bankReconciled)}
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 700, textAlign: "center", color: "#FFFFFF" }}>
-                              {balanced ? "Balanced" : `Diff: ${formatCurrency(diff)}`}
-                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, textAlign: "center", color: "#FFFFFF" }}>-</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
                     </TableContainer>
 
-                    {/* Remarks */}
-                    <Box sx={{ mt: 2 }}>
+                    {/* Remarks and Save */}
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2, gap: 2 }}>
                       <TextField
                         label="Remarks"
                         size="small"
                         fullWidth
-                        multiline
-                        rows={2}
-                        value={reconciliation.remarks || ""}
+                        value={remarksValues[bank.id] || ""}
+                        onChange={(e) => handleRemarksChange(bank.id, e.target.value)}
                         placeholder="Add notes..."
-                        disabled={saving}
                       />
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<SaveIcon />}
+                        onClick={() => handleSave(bank.id)}
+                        disabled={saving}
+                      >
+                        Save
+                      </Button>
                     </Box>
                   </Box>
                 );
               })}
             </Paper>
           ))}
+
+          {/* Signatures */}
+          <Paper sx={{ p: 3, borderRadius: 1, border: "1px solid #E5E7EB" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>Prepared by:</Typography>
+                <Typography variant="body2" sx={{ mt: 1, textTransform: "uppercase" }}>
+                  {user?.first_name && user?.last_name 
+                    ? `${user.first_name} ${user.last_name}` 
+                    : user?.username || "User"}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>Approved by:</Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>JOHN P. CABAÑOG</Typography>
+              </Box>
+            </Box>
+          </Paper>
         </Stack>
       ) : null}
 
