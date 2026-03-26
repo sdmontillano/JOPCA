@@ -19,28 +19,35 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  MenuItem,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import WarningIcon from "@mui/icons-material/Warning";
 import pdcService from "../services/pdcService";
+import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../ToastContext";
 
 export default function PdcPage() {
+  const { showToast } = useToast();
   const [pdcList, setPdcList] = useState([]);
+  const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [returnDialog, setReturnDialog] = useState({ open: false, pdc: null, reason: "" });
+  const [depositDialog, setDepositDialog] = useState({ open: false, pdc: null, bankId: null });
   const navigate = useNavigate();
 
   const fetchPdcs = async () => {
     setError(null);
     setLoading(true);
     try {
-      const res = await pdcService.listPdcs();
-      const raw = Array.isArray(res.data) ? res.data : res.data?.results ?? [];
+      const [pdcRes, banksRes] = await Promise.all([pdcService.listPdcs(), api.get("/bankaccounts/")]);
+      
+      const raw = Array.isArray(pdcRes.data) ? pdcRes.data : pdcRes.data?.results ?? [];
       const normalized = raw.map((p) => ({
         id: p.id,
         client_name: p.customer ?? "-",
@@ -52,6 +59,14 @@ export default function PdcPage() {
         maturity_date: p.maturity_date ?? null,
         status: (p.status || "outstanding").toLowerCase(),
       }));
+
+      const rawBanks = Array.isArray(banksRes.data) ? banksRes.data : banksRes.data?.results ?? banksRes.data ?? [];
+      const mappedBanks = rawBanks.map((b) => ({
+        id: b.id ?? b.pk ?? b.bank_account_id,
+        name: b.name ?? b.bank_name ?? b.account_name ?? "",
+        account_number: b.account_number ?? b.account_no ?? b.number ?? "",
+      }));
+      setBankAccounts(mappedBanks);
 
       let filtered = normalized;
       if (filterStatus) filtered = filtered.filter((x) => x.status === filterStatus.toLowerCase());
@@ -77,20 +92,37 @@ export default function PdcPage() {
   const handleMarkMatured = async (id) => {
     try {
       await pdcService.markPdcMatured(id);
+      showToast("PDC marked as matured!", "success");
       fetchPdcs();
     } catch (err) {
       console.error(err);
-      alert("Failed to mark matured");
+      showToast("Failed to mark matured", "error");
     }
   };
 
-  const handleDeposit = async (id, bankId) => {
+  const handleDeposit = (pdc) => {
+    setDepositDialog({ open: true, pdc, bankId: bankAccounts[0]?.id || null });
+  };
+
+  const handleCloseDepositDialog = () => {
+    setDepositDialog({ open: false, pdc: null, bankId: null });
+  };
+
+  const handleConfirmDeposit = async () => {
+    if (!depositDialog.pdc || !depositDialog.pdc.deposit_bank_id) return;
     try {
-      await pdcService.depositPdc(id, bankId, new Date().toISOString().slice(0, 10), "WEB-DEPOSIT");
+      await pdcService.depositPdc(
+        depositDialog.pdc.id, 
+        depositDialog.pdc.deposit_bank_id, 
+        new Date().toISOString().slice(0, 10), 
+        "WEB-DEPOSIT"
+      );
+      showToast("PDC deposited successfully!", "success");
+      handleCloseDepositDialog();
       fetchPdcs();
     } catch (err) {
       console.error(err);
-      alert("Failed to deposit PDC");
+      showToast("Failed to deposit PDC: " + (err?.response?.data?.detail || err?.message), "error");
     }
   };
 
@@ -110,12 +142,13 @@ export default function PdcPage() {
         new Date().toISOString().slice(0, 10),
         returnDialog.reason
       );
+      showToast("Returned recorded successfully!", "success");
       handleCloseReturnDialog();
       fetchPdcs();
     } catch (err) {
       console.error("Record return failed:", err);
       const errorMsg = err?.response?.data?.detail || err?.message || "Failed to record returned check";
-      alert(errorMsg);
+      showToast(errorMsg, "error");
     }
   };
 
@@ -245,7 +278,7 @@ export default function PdcPage() {
                           size="small" 
                           variant="contained" 
                           color="primary"
-                          onClick={() => handleDeposit(p.id, p.deposit_bank_id)}
+                          onClick={() => handleDeposit(p)}
                           sx={{ fontSize: "0.7rem" }}
                         >
                           Deposit
@@ -311,6 +344,45 @@ export default function PdcPage() {
           <Button onClick={handleCloseReturnDialog} variant="outlined">Cancel</Button>
           <Button onClick={handleRecordReturned} variant="contained" color="error">
             Confirm Return
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Deposit Dialog */}
+      <Dialog open={depositDialog.open} onClose={handleCloseDepositDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "primary.main", color: "white" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <span>Deposit PDC</span>
+          </Box>
+          <IconButton onClick={handleCloseDepositDialog} sx={{ color: "white" }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {depositDialog.pdc && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">Check Details:</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {depositDialog.pdc.client_name} - {depositDialog.pdc.check_number}
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: "success.main" }}>
+                {formatPeso(depositDialog.pdc.amount)}
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                <strong>Bank:</strong> {bankAccounts.find(b => b.id === depositDialog.pdc.deposit_bank_id)?.name || "Not assigned"}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseDepositDialog} variant="outlined">Cancel</Button>
+          <Button 
+            onClick={handleConfirmDeposit} 
+            variant="contained" 
+            color="primary"
+            disabled={!depositDialog.pdc?.deposit_bank_id}
+          >
+            Confirm Deposit
           </Button>
         </DialogActions>
       </Dialog>

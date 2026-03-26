@@ -17,6 +17,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../ToastContext";
 
 /**
  * AddBankAccount
@@ -41,6 +42,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
   const [accounts, setAccounts] = useState([]);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -108,6 +110,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
       const res = await api.post("/bankaccounts/", payload);
       const created = res.data ?? res;
 
+      showToast("Bank account created successfully!", "success");
       setMessage({ type: "success", text: "✅ Bank account added successfully!" });
       resetForm();
 
@@ -128,7 +131,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
       }, 700);
     } catch (err) {
       console.error("Failed to add bank account", err);
-      let errMsg = "❌ Failed to add bank account.";
+      let errMsg = "Failed to add bank account.";
       try {
         const data = err?.response?.data;
         if (data && typeof data === "object") {
@@ -140,6 +143,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
           errMsg += ` ${err.message}`;
         }
       } catch {
+      showToast(errMsg, "error");
         // ignore
       }
       setMessage({ type: "error", text: errMsg });

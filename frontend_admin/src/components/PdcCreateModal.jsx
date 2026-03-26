@@ -15,8 +15,10 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import api from "../services/tokenService";
+import { useToast } from "../ToastContext";
 
 export default function PdcCreateModal({ open, onClose, onCreated = null }) {
+  const { showToast } = useToast();
   const today = new Date().toISOString().slice(0, 10);
 
   const [form, setForm] = useState({
@@ -130,6 +132,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
       const res = await api.post("/pdc/", payload);
       const created = res.data ?? res;
 
+      showToast("PDC created successfully!", "success");
       setAlert({ type: "success", text: "PDC created successfully." });
 
       if (typeof onCreated === "function") {
@@ -150,6 +153,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
         (err?.response?.data && JSON.stringify(err.response.data)) ||
         err?.message ||
         "Failed to create PDC";
+      showToast(msg, "error");
       setAlert({ type: "error", text: String(msg) });
     } finally {
       setLoading(false);

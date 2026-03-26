@@ -186,9 +186,9 @@ class DailyCashPosition(models.Model):
     date = models.DateField(unique=True)
     beginning_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     collections = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    local_deposits = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     disbursements = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
-    transfers = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
-    returned_checks = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    adjustments = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     pdc = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     ending_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
@@ -198,29 +198,44 @@ class DailyCashPosition(models.Model):
 
         transactions = Transaction.objects.filter(date=self.date)
 
+        # Collections = Cash Received + Cleared PDCs + Bank Deposits + Other Receipts (POSITIVE)
+        # Note: PDC deposits now create "collections" type transactions
         self.collections = transactions.filter(
-            type__in=["collections", "deposit", "local_deposits"]
+            type="collections"
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
+        # Local Deposits = Cash moved to bank (NEGATIVE - subtract from cash on hand)
+        self.local_deposits = transactions.filter(
+            type="local_deposits"
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
+
+        # Disbursements = Payments + Fund Transfers + Other Outflows
         self.disbursements = transactions.filter(
-            type__in=["disbursement", "bank_charges"]
+            type__in=["disbursement"]
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        self.transfers = transactions.filter(
-            type__in=["transfer", "fund_transfer", "interbank_transfer"]
-        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
-
-        self.returned_checks = transactions.filter(
+        # Adjustments = Returned Checks + Bank Charges + Other Adjustments
+        # These are negative adjustments (reduce cash)
+        returned_checks = transactions.filter(
             type="returned_check"
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
+        
+        bank_charges = transactions.filter(
+            type="bank_charges"
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
+        
+        self.adjustments = -(returned_checks + bank_charges)
 
+        # PDC = Post-dated checks (not yet matured/deposited)
         self.pdc = transactions.filter(
             type="post_dated_check"
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
+        # DCP Formula: Opening Balance + Collections - Local Deposits - Disbursements + Adjustments
+        # Local Deposits is already POSITIVE in DB, so we subtract it
         self.ending_balance = (
             self.beginning_balance + self.collections
-            - self.disbursements - self.returned_checks - self.transfers
+            - self.local_deposits - self.disbursements + self.adjustments
         )
         if self.ending_balance < 0:
             raise ValidationError("Ending balance cannot be negative.")

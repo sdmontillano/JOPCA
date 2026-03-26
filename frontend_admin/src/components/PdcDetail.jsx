@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
   IconButton,
   Chip,
 } from "@mui/material";
@@ -28,6 +27,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import api from "../services/tokenService";
 import pdcService from "../services/pdcService";
 import { normalizePdc, partitionPdcList, pdcTotalsFromPartition } from "../utils/pdcUtils";
+import { useToast } from "../ToastContext";
 
 /**
  * PdcDetail component
@@ -71,6 +71,7 @@ export default function PdcDetail({
   const [returnedReason, setReturnedReason] = useState("");
   const [returnedDate, setReturnedDate] = useState(new Date().toISOString().slice(0, 10));
   const [actionLoading, setActionLoading] = useState(false);
+  const { showToast } = useToast();
 
   // navigation-aware close handler
   const handleClose = () => {
@@ -164,11 +165,12 @@ export default function PdcDetail({
     setActionLoading(true);
     try {
       await pdcService.markPdcMatured(pdc.id);
+      showToast("PDC marked as matured!", "success");
       await refreshAll();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("Failed to mark matured", err);
-      setError("Failed to mark PDC matured");
+      showToast("Failed to mark PDC matured", "error");
     } finally {
       setActionLoading(false);
     }
@@ -176,6 +178,7 @@ export default function PdcDetail({
 
   const openDeposit = (pdc) => {
     setSelectedPdc(pdc);
+    setDepositBankId(pdc.deposit_bank_id);
     setDepositDate(new Date().toISOString().slice(0, 10));
     setDepositRef("");
     setDepositOpen(true);
@@ -186,13 +189,14 @@ export default function PdcDetail({
     setActionLoading(true);
     try {
       await pdcService.depositPdc(selectedPdc.id, depositBankId, depositDate, depositRef);
+      showToast("PDC deposited successfully!", "success");
       setDepositOpen(false);
       setSelectedPdc(null);
       await refreshAll();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("Failed to deposit PDC", err);
-      setError("Failed to deposit PDC");
+      showToast("Failed to deposit PDC", "error");
     } finally {
       setActionLoading(false);
     }
@@ -210,13 +214,14 @@ export default function PdcDetail({
     setActionLoading(true);
     try {
       await pdcService.recordPdcReturned(selectedPdc.id, returnedDate, returnedReason);
+      showToast("Returned recorded successfully!", "success");
       setReturnedOpen(false);
       setSelectedPdc(null);
       await refreshAll();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("Failed to record returned PDC", err);
-      setError("Failed to record returned check");
+      showToast("Failed to record returned check", "error");
     } finally {
       setActionLoading(false);
     }
@@ -543,19 +548,9 @@ export default function PdcDetail({
         <DialogTitle>Deposit PDC</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1, minWidth: 360 }}>
-            <TextField
-              select
-              label="Bank Account"
-              value={depositBankId ?? ""}
-              onChange={(e) => setDepositBankId(e.target.value)}
-              fullWidth
-            >
-              {bankAccounts.map((b) => (
-                <MenuItem key={b.id} value={b.id}>
-                  {b.name} — {b.account_number}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Typography variant="body1">
+              <strong>Bank:</strong> {bankAccounts.find(b => b.id === depositBankId)?.name || "Not assigned"}
+            </Typography>
 
             <TextField
               label="Deposit Date"
@@ -573,7 +568,7 @@ export default function PdcDetail({
           <Button type="button" onClick={() => setDepositOpen(false)}>
             Cancel
           </Button>
-          <Button type="button" variant="contained" onClick={submitDeposit} disabled={actionLoading || bankAccounts.length === 0}>
+          <Button type="button" variant="contained" onClick={submitDeposit} disabled={actionLoading || !depositBankId}>
             Confirm Deposit
           </Button>
         </DialogActions>

@@ -12,8 +12,10 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/tokenService';
+import { useToast } from '../ToastContext';
 
 export default function ChangePassword() {
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     current_password: '',
@@ -47,11 +49,13 @@ export default function ChangePassword() {
     setLoading(true);
     try {
       await api.post('/api/change-password/', form);
+      showToast("Password changed successfully!", "success");
       setSuccess('Password changed successfully!');
       setForm({ current_password: '', new_password: '', confirm_password: '' });
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Failed to change password';
+      showToast(msg, "error");
       setError(msg);
     } finally {
       setLoading(false);

@@ -135,6 +135,7 @@ export default function AlertBanner({
   );
 }
 
+
 function getAlertSeverity(alert) {
   if (alert.type?.includes("critical") || alert.severity === "critical") {
     return "error";

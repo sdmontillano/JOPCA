@@ -44,18 +44,18 @@ class DailyCashPositionAdmin(admin.ModelAdmin):
         "date",
         "beginning_balance",
         "collections",
+        "local_deposits",
         "disbursements",
-        "transfers",
-        "returned_checks",
+        "adjustments",
         "ending_balance",
     )
     ordering = ("-date",)
     readonly_fields = (
         "beginning_balance",
         "collections",
+        "local_deposits",
         "disbursements",
-        "transfers",
-        "returned_checks",
+        "adjustments",
         "ending_balance",
     )
 

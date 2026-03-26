@@ -19,6 +19,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
+import { useToast } from "../ToastContext";
 
 /**
  * AddTransaction component
@@ -52,6 +53,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
@@ -139,6 +141,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
       const res = await api.post("/transactions-crud/", payload);
       const created = res.data ?? res;
 
+      showToast("Transaction created successfully!", "success");
       setMessage({ type: "success", text: "✅ Transaction added successfully!" });
       resetForm();
 
@@ -163,7 +166,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
       }, 700);
     } catch (err) {
       console.error("Failed to add transaction", err);
-      let errMsg = "❌ Failed to add transaction.";
+      let errMsg = "Failed to add transaction.";
       try {
         const data = err?.response?.data;
         if (data && typeof data === "object") {
@@ -179,6 +182,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
       } catch {
         // ignore parsing errors
       }
+      showToast(errMsg, "error");
       setMessage({ type: "error", text: errMsg });
     } finally {
       setLoading(false);

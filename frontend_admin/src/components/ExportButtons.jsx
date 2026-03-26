@@ -2,15 +2,17 @@ import { Button, Menu, MenuItem } from "@mui/material";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { useState } from "react";
 import { downloadCsv } from "../utils/csvUtils";
+import { useToast } from "../ToastContext";
 
 export default function ExportButtons({ data, filename, label = "Export" }) {
   const [anchorEl, setAnchorEl] = useState(null);
+  const { showToast } = useToast();
 
   const handleExport = (format) => {
     setAnchorEl(null);
     
     if (!data || data.length === 0) {
-      alert("No data to export");
+      showToast("No data to export", "warning");
       return;
     }
 
@@ -20,6 +22,7 @@ export default function ExportButtons({ data, filename, label = "Export" }) {
         headers.map(h => item[h])
       );
       downloadCsv([headers, ...rows], `${filename}.csv`);
+      showToast("Report exported successfully!", "success");
     }
   };
 

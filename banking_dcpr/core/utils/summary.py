@@ -34,7 +34,7 @@ def compute_bank_daily_summary(target_date):
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
         collections = today_qs.filter(type__in={"collections"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = today_qs.filter(type__in={"deposit", "local_deposits"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposits = today_qs.filter(type__in={"local_deposits"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         disbursements = today_qs.filter(type__in={"disbursement"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers = today_qs.filter(type__in={"fund_transfer", "interbank_transfer"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers = today_qs.filter(type__in=TRANSFER_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -44,7 +44,8 @@ def compute_bank_daily_summary(target_date):
 
         # Note: returned_checks do NOT affect ending balance - they are tracked for reporting only
         # because a returned check means the original payment never cleared, so no money was received
-        ending = beginning + _safe_decimal(collections) + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments)
+        # Local Deposits is a tracking column only - does NOT affect ending balance
+        ending = beginning + _safe_decimal(collections) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments)
 
         rows.append({
             "bank_id": bank.id,

@@ -13,8 +13,10 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import api from "../services/tokenService";
+import { useToast } from "../ToastContext";
 
 export default function AddCashOnHand({ open, onClose, onCreated = null }) {
+  const { showToast } = useToast();
   const getDefaultForm = () => ({
     particulars: "",
     date: new Date().toISOString().slice(0, 10),
@@ -75,6 +77,7 @@ export default function AddCashOnHand({ open, onClose, onCreated = null }) {
       const res = await api.post("/pcf/", payload);
       const created = res.data ?? res;
 
+      showToast("Cash on hand added successfully!", "success");
       setAlert({ type: "success", text: "PCF row created." });
 
       if (typeof onCreated === "function") {
@@ -93,6 +96,7 @@ export default function AddCashOnHand({ open, onClose, onCreated = null }) {
         (err?.response?.data && JSON.stringify(err.response.data)) ||
         err?.message ||
         "Failed to create PCF";
+      showToast(msg, "error");
       setAlert({ type: "error", text: String(msg) });
     } finally {
       setLoading(false);

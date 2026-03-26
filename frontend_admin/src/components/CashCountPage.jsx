@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/tokenService';
+import { useToast } from '../ToastContext';
 
 const formatPeso = (amount) => {
   return `₱${Number(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -28,6 +29,7 @@ const CashCountPage = () => {
   const [actualCount, setActualCount] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
 
   const fetchSummary = useCallback(() => {
     setLoading(true);
@@ -74,11 +76,13 @@ const CashCountPage = () => {
       notes: notes
     })
       .then(() => {
+        showToast("Cash count submitted successfully!", "success");
         handleCloseDialog();
         fetchSummary();
       })
       .catch((err) => {
         const msg = err?.response?.data?.detail || err?.message || "Failed to save cash count";
+        showToast(msg, "error");
         setError(String(msg));
         setSaving(false);
       });

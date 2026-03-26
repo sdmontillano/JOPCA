@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material';
 
 import api from '../services/tokenService';
+import { useToast } from '../ToastContext';
 
 const formatPeso = (amount) => {
   if (amount === null || amount === undefined) return '₱0.00';
@@ -35,6 +36,7 @@ const PcfReports = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reportData, setReportData] = useState(null);
+  const { showToast } = useToast();
   
   // Date states
   const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0]);
@@ -91,9 +93,10 @@ const PcfReports = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
+      showToast("Report exported successfully!", "success");
     } catch (err) {
       const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to export Excel';
-      alert(errorMsg);
+      showToast(errorMsg, "error");
     }
   };
 
@@ -121,9 +124,10 @@ const PcfReports = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
+      showToast("Report exported successfully!", "success");
     } catch (err) {
       const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to export PDF';
-      alert(errorMsg);
+      showToast(errorMsg, "error");
     }
   };
 

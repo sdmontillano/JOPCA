@@ -24,8 +24,10 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import api, { unwrapResponse } from "../services/tokenService";
+import { useToast } from "../ToastContext";
 
 export default function AddPcfModal({ open, onClose, onCreated = null }) {
+  const { showToast } = useToast();
   const today = new Date().toISOString().slice(0, 10);
   const [activeTab, setActiveTab] = useState(0); // 0 = Add Transaction, 1 = Create New
 
@@ -159,6 +161,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
             amount: Number(form.opening_balance)
           });
 
+          showToast(`₱${Number(form.opening_balance).toLocaleString()} added to ${selectedPcfObj.name}!`, "success");
           setAlert({ type: "success", text: `₱${Number(form.opening_balance).toLocaleString()} added to ${selectedPcfObj.name}!` });
           resetForm();
           fetchPcfFunds();
@@ -193,6 +196,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
 
         await api.post("/pcf/", pcfPayload);
 
+        showToast("PCF created successfully!", "success");
         setAlert({ type: "success", text: "PCF created successfully!" });
         resetForm();
         setActiveTab(0);
@@ -224,6 +228,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
 
         await api.post("/pcf-transactions/", txnPayload);
 
+        showToast("PCF transaction added successfully!", "success");
         setAlert({ type: "success", text: "PCF transaction added successfully!" });
         resetForm();
 
@@ -253,6 +258,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
           errMsg = msgs || errMsg;
         }
       }
+      showToast(errMsg, "error");
       setAlert({ type: "error", text: errMsg });
     } finally {
       setLoading(false);

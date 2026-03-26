@@ -144,7 +144,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
               local_deposits: 0,
               disbursements: 0,
               fund_transfers: 0,
-              returned_checks: 0,
+              adjustments: 0,
               ending: 0,
             }];
         out[d] = { cash_in_bank: bankRows, accounts: Array.isArray(payload.accounts) ? payload.accounts : [] };
@@ -179,11 +179,11 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
         acc.local_deposits += Number(r.local_deposits ?? 0);
         acc.disbursements += Number(r.disbursements ?? 0);
         acc.fund_transfers += Number(r.fund_transfers ?? r.transfers ?? 0);
-        acc.returned_checks += Number(r.returned_checks ?? 0);
+        acc.adjustments += Number(r.adjustments ?? 0);
         acc.ending += Number(r.ending ?? 0);
         return acc;
       },
-      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers: 0, returned_checks: 0, ending: 0 }
+      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers: 0, adjustments: 0, ending: 0 }
     );
   };
 
@@ -278,7 +278,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Local</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Disb</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Fund</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Ret</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Adj</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>End</TableCell>
                           </TableRow>
                         </TableHead>
@@ -300,10 +300,10 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                                 </TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.beginning ?? r.beginning_balance ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.disbursements ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.fund_transfers ?? r.transfers ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#B45309" }}>{formatCurrency(r.returned_checks ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#B45309" }}>{formatCurrency(r.adjustments ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
                               </TableRow>
                             ))
@@ -312,10 +312,10 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell sx={{ fontWeight: 700, fontSize: "0.8rem", color: "#1E293B" }}>TOTALS</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.beginning)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency(totals.returned_checks)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency(totals.adjustments)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.9rem" }}>{formatCurrency(totals.ending)}</TableCell>
                           </TableRow>
                         </TableBody>
@@ -581,7 +581,6 @@ function DashboardInner() {
           local_deposits: 0,
           disbursements: 0,
           fund_transfers: 0,
-          returned_checks: 0,
           adjustments: 0,
           ending: 0,
           raw_rows: [],
@@ -591,12 +590,17 @@ function DashboardInner() {
       }
       const total = Number(t.total ?? t.amount ?? 0) || 0;
       const type = (t.type || "").toString().toLowerCase();
-      if (type.includes("deposit")) row.local_deposits += total;
-      else if (type.includes("collect")) row.collections += total;
+      // Collections = cash received (positive)
+      // Local Deposits = cash moved to bank (NEGATIVE - subtract from cash on hand)
+      if (type.includes("collect")) row.collections += total;
+      else if (type === "local_deposits") row.local_deposits += total;
+      else if (type.includes("deposit")) row.local_deposits += total;
       else if (type.includes("disburse")) row.disbursements += total;
       else row.collections += total;
       row.raw_rows.push(t.raw || t);
-      row.ending = (row.beginning || 0) + (row.collections || 0) + (row.local_deposits || 0) - (row.disbursements || 0) + (row.fund_transfers || 0) - (row.returned_checks || 0) + (row.adjustments || 0);
+      // DCP Formula: Beginning + Collections - Disbursements + Adjustments
+      // Note: Local Deposits is a tracking column only - does NOT affect ending balance
+      row.ending = (row.beginning || 0) + (row.collections || 0) - (row.disbursements || 0) + (row.fund_transfers || 0) + (row.adjustments || 0);
       if (!row.account_number && t.account_number) row.account_number = t.account_number;
       return acc;
     }, []);
@@ -631,7 +635,6 @@ function DashboardInner() {
         local_deposits: 0,
         disbursements: 0,
         fund_transfers: 0,
-        returned_checks: 0,
         adjustments: 0,
         ending: Number(a.balance ?? a.amount ?? 0) || 0,
         raw_rows: [],
@@ -1004,10 +1007,10 @@ function DashboardInner() {
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#6B7280" }}>{formatPeso(r.beginning ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.collections ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#475569" }}>{formatPeso(r.fund_transfers ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.returned_checks ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.adjustments ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>{formatPeso(r.ending ?? 0)}</TableCell>
                     </TableRow>
                   ))

@@ -3,6 +3,7 @@ Django settings for banking_dcpr project.
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,7 +14,13 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change
 # For production: Set DEBUG=False or use environment variable
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ["*"]  # Allow all hosts in development
+# ALLOWED_HOSTS - use environment variable for production
+# Local: localhost, 127.0.0.1
+# Production: your-app.onrender.com (set in environment variable)
+allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
+if DEBUG:
+    ALLOWED_HOSTS.extend(["*"])  # Allow all in debug mode
 
 INSTALLED_APPS = [
     # Default Django apps
@@ -37,6 +44,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # ✅ allow frontend requests
     'django.middleware.common.CommonMiddleware',
@@ -46,15 +54,16 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# CORS settings - allow all origins in development
-if os.environ.get('DJANGO_ENV', 'development') == 'production':
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
+# CORS settings - allow all origins in development, specific origins in production
+# Set CORS_ALLOWED_ORIGINS environment variable for production (comma-separated)
+_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+if _cors_origins:
+    # Production: use specific origins from environment
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
     CORS_ALLOW_CREDENTIALS = True
 else:
-    CORS_ALLOW_ALL_ORIGINS = True  # Dev only
+    # Development: allow all
+    CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -87,12 +96,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'banking_dcpr.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration
+# Production: Use DATABASE_URL from environment (PostgreSQL from ElephantSQL/Render)
+# Local: Use SQLite
+if 'DATABASE_URL' in os.environ:
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -107,11 +124,16 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Collect static files here for production
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
     BASE_DIR / "frontend_admin" / "dist",  # adjust path to your frontend build
 ]
+
+# Whitenoise configuration for serving static files in production
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
