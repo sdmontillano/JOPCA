@@ -1,1 +1,1 @@
-web: cd banking_dcpr && python manage.py migrate && gunicorn banking_dcpr.wsgi --bind 0.0.0.0:$PORT
+web: cd banking_dcpr && python manage.py migrate && python manage.py create_default_user && gunicorn banking_dcpr.wsgi --bind 0.0.0.0:$PORT
