@@ -1,4 +1,4 @@
 {
-  "buildCommand": "cd frontend_admin && npm run build",
-  "outputDirectory": "frontend_admin/dist"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }
