@@ -1671,3 +1671,37 @@ def bank_analysis(request):
             'is_balanced': reconciliation.is_balanced,
             'created': created,
         })
+
+
+# API endpoint to create default admin user
+@api_view(['GET'])
+def create_default_admin(request):
+    """
+    Simple endpoint to create a default admin user.
+    Usage: Visit /api/create-admin/ in browser or make GET request.
+    """
+    from django.contrib.auth.models import User
+    
+    username = 'siegfred'
+    password = 'siegfred321'
+    email = 'admin@jopca.local'
+    
+    if User.objects.filter(username=username).exists():
+        return Response({
+            'status': 'already_exists',
+            'message': f'User "{username}" already exists.',
+            'username': username
+        })
+    
+    user = User.objects.create_superuser(
+        username=username,
+        email=email,
+        password=password
+    )
+    
+    return Response({
+        'status': 'success',
+        'message': f'Admin user "{username}" created successfully!',
+        'username': username,
+        'password': password
+    })

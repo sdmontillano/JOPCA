@@ -36,6 +36,7 @@ from core.views import (
     bank_analysis,
     verify_token,
     obtain_auth_token_with_role,
+    create_default_admin,
 )
 
 router = DefaultRouter()
@@ -52,6 +53,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-token-auth/', obtain_auth_token_with_role, name='api_token_auth'),
     path('api/auth/verify/', verify_token, name='verify_token'),
+    path('api/create-admin/', create_default_admin, name='create_admin'),
 
     # transactions list endpoint
     path('transactions/', TransactionListCreate.as_view(), name='transactions'),
