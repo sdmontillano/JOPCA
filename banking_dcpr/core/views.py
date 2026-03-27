@@ -1675,6 +1675,7 @@ def bank_analysis(request):
 
 # API endpoint to create default admin user
 @api_view(['GET'])
+@permission_classes([permissions.AllowAny])
 def create_default_admin(request):
     """
     Simple endpoint to create a default admin user.
