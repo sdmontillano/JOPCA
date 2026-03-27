@@ -1,6 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from "react";
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { API_URL } from "./services/tokenService";
 
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
@@ -70,7 +71,7 @@ export default function App() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api-token-auth/');
+        const res = await fetch(`${API_URL}/api-token-auth/`);
         if (res.ok || res.status === 405) {
           setIsReady(true);
         }
