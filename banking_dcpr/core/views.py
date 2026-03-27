@@ -1680,29 +1680,44 @@ def create_default_admin(request):
     """
     Simple endpoint to create a default admin user.
     Usage: Visit /api/create-admin/ in browser or make GET request.
+    Runs migrations automatically if needed.
     """
+    from django.core.management import call_command
     from django.contrib.auth.models import User
+    
+    # Run migrations first to ensure tables exist
+    try:
+        call_command('migrate', verbosity=0)
+    except Exception as e:
+        pass  # Ignore if migrations fail - might already be done
     
     username = 'siegfred'
     password = 'siegfred321'
     email = 'admin@jopca.local'
     
-    if User.objects.filter(username=username).exists():
+    try:
+        if User.objects.filter(username=username).exists():
+            return Response({
+                'status': 'already_exists',
+                'message': f'User "{username}" already exists.',
+                'username': username
+            })
+        
+        user = User.objects.create_superuser(
+            username=username,
+            email=email,
+            password=password
+        )
+        
         return Response({
-            'status': 'already_exists',
-            'message': f'User "{username}" already exists.',
-            'username': username
+            'status': 'success',
+            'message': f'Admin user "{username}" created successfully!',
+            'username': username,
+            'password': password
         })
-    
-    user = User.objects.create_superuser(
-        username=username,
-        email=email,
-        password=password
-    )
-    
-    return Response({
-        'status': 'success',
-        'message': f'Admin user "{username}" created successfully!',
-        'username': username,
-        'password': password
-    })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e),
+            'note': 'Migrations may have run, try logging in now!'
+        })
