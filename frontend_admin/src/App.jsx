@@ -125,14 +125,14 @@ export default function App() {
           element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />}
         />
         
-        {/* Admin routes */}
+        {/* Admin routes - redirect /admin to banks */}
         <Route
           path="/admin"
-          element={isAuthenticated && isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
+          element={isAuthenticated && isAdmin ? <Navigate to="/admin/banks" replace /> : <Navigate to="/dashboard" replace />}
         />
         <Route
           path="/admin/"
-          element={isAuthenticated && isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
+          element={isAuthenticated && isAdmin ? <Navigate to="/admin/banks" replace /> : <Navigate to="/dashboard" replace />}
         />
         
         {/* Django-style Admin pages */}
