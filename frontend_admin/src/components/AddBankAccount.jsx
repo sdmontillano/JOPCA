@@ -47,7 +47,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
   useEffect(() => {
     let mounted = true;
     api
-      .get("/bankaccounts/")
+      .get("/api/bankaccounts/")
       .then((res) => {
         if (!mounted) return;
         const data = res.data ?? res;
@@ -107,7 +107,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
         })(),
       };
 
-      const res = await api.post("/bankaccounts/", payload);
+      const res = await api.post("/api/bankaccounts/", payload);
       const created = res.data ?? res;
 
       showToast("Bank account created successfully!", "success");

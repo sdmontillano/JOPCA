@@ -34,7 +34,7 @@ export default function PcfPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/pcf/");
+      const res = await api.get("/api/pcf/");
       const data = unwrapResponse(res?.data);
       setPcfs(Array.isArray(data) ? data : []);
     } catch (err) {

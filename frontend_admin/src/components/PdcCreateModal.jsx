@@ -44,7 +44,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
     let mounted = true;
     setFetchingBanks(true);
     api
-      .get("/bankaccounts/")
+      .get("/api/bankaccounts/")
       .then((res) => {
         if (!mounted) return;
         const data = res.data ?? res;
@@ -129,7 +129,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
         status: form.status || "outstanding",
       };
 
-      const res = await api.post("/pdc/", payload);
+      const res = await api.post("/api/pdc/", payload);
       const created = res.data ?? res;
 
       showToast("PDC created successfully!", "success");

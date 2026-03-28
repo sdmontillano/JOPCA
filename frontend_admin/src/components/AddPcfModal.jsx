@@ -54,7 +54,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
     let mounted = true;
     setFetchingPcf(true);
     api
-      .get("/pcf/")
+      .get("/api/pcf/")
       .then((res) => {
         if (!mounted) return;
         const data = unwrapResponse(res?.data);
@@ -194,7 +194,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
           note: form.note?.trim() || '',
         };
 
-        await api.post("/pcf/", pcfPayload);
+        await api.post("/api/pcf/", pcfPayload);
 
         showToast("PCF created successfully!", "success");
         setAlert({ type: "success", text: "PCF created successfully!" });

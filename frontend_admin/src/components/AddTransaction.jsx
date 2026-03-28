@@ -73,7 +73,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
   useEffect(() => {
     let mounted = true;
     api
-      .get("/bankaccounts/")
+      .get("/api/bankaccounts/")
       .then((res) => {
         if (!mounted) return;
         const data = res.data ?? res;
@@ -138,7 +138,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
         description: form.description?.trim() || null,
       };
 
-      const res = await api.post("/transactions-crud/", payload);
+      const res = await api.post("/api/transactions-crud/", payload);
       const created = res.data ?? res;
 
       showToast("Transaction created successfully!", "success");

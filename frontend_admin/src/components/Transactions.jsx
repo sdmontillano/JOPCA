@@ -104,7 +104,7 @@ export default function Transactions() {
   // Fetch bank accounts for filter dropdown
   const fetchBankAccounts = async () => {
     try {
-      const res = await api.get("/bankaccounts/");
+      const res = await api.get("/api/bankaccounts/");
       const data = res.data?.results ?? res.data ?? [];
       setBankAccounts(Array.isArray(data) ? data : []);
     } catch (err) {

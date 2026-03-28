@@ -74,7 +74,7 @@ export default function AddCashOnHand({ open, onClose, onCreated = null }) {
       };
 
       // Adjust endpoint if your backend uses a different path
-      const res = await api.post("/pcf/", payload);
+      const res = await api.post("/api/pcf/", payload);
       const created = res.data ?? res;
 
       showToast("Cash on hand added successfully!", "success");

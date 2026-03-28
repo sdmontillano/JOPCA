@@ -28,7 +28,7 @@ export default function Banks() {
     let mounted = true;
     async function fetchAccounts() {
       try {
-        const res = await api.get("/bankaccounts/");
+        const res = await api.get("/api/bankaccounts/");
         if (mounted) {
           const data = res.data?.results ?? res.data ?? [];
           setAccounts(Array.isArray(data) ? data : []);

@@ -45,7 +45,7 @@ export default function PdcPage() {
     setError(null);
     setLoading(true);
     try {
-      const [pdcRes, banksRes] = await Promise.all([pdcService.listPdcs(), api.get("/bankaccounts/")]);
+      const [pdcRes, banksRes] = await Promise.all([pdcService.listPdcs(), api.get("/api/bankaccounts/")]);
       
       const raw = Array.isArray(pdcRes.data) ? pdcRes.data : pdcRes.data?.results ?? [];
       const normalized = raw.map((p) => ({
