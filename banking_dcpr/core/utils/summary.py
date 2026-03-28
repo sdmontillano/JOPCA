@@ -2,7 +2,7 @@
 from decimal import Decimal
 from django.db.models import Sum
 from ..models import BankAccount, Transaction
-from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, ADJUSTMENT_TYPES, PDC_TYPES
+from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, ADJUSTMENT_TYPES, PDC_TYPES, LOCAL_DEPOSIT_TYPES
 
 def _safe_decimal(value):
     return Decimal(value or 0)
@@ -34,7 +34,7 @@ def compute_bank_daily_summary(target_date):
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
         collections = today_qs.filter(type__in={"collections"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = today_qs.filter(type__in={"local_deposits"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposits = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         disbursements = today_qs.filter(type__in={"disbursement"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers = today_qs.filter(type__in={"fund_transfer", "interbank_transfer"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers = today_qs.filter(type__in=TRANSFER_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
