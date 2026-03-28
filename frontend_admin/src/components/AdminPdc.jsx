@@ -44,7 +44,7 @@ export default function AdminPdc() {
   const [saving, setSaving] = useState(false);
 
   const breadcrumbs = [
-    { label: "Home", href: "/admin" },
+    { label: "Home", href: "/admin/home" },
     { label: "PDC" },
   ];
 

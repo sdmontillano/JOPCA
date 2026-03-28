@@ -50,7 +50,7 @@ export default function AdminTransactions() {
   const [saving, setSaving] = useState(false);
 
   const breadcrumbs = [
-    { label: "Home", href: "/admin" },
+    { label: "Home", href: "/admin/home" },
     { label: "Transactions" },
   ];
 

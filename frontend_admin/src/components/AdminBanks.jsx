@@ -25,7 +25,7 @@ export default function AdminBanks() {
   const [saving, setSaving] = useState(false);
 
   const breadcrumbs = [
-    { label: "Home", href: "/admin" },
+    { label: "Home", href: "/admin/home" },
     { label: "Banks" },
   ];
 

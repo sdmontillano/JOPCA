@@ -25,7 +25,7 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState(false);
 
   const breadcrumbs = [
-    { label: "Home", href: "/admin" },
+    { label: "Home", href: "/admin/home" },
     { label: "Users" },
   ];
 
