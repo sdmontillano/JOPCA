@@ -18,6 +18,7 @@ from core.views import (
     PettyCashFundViewSet,
     PettyCashTransactionViewSet,
     CashCountViewSet,
+    UserViewSet,
     bank_reconciliation_summary,
     cash_counts_summary,
     pcf_alerts,
@@ -49,6 +50,7 @@ router.register(r'monthlyreports', MonthlyReportViewSet, basename='monthlyreport
 router.register(r'pcf', PettyCashFundViewSet, basename='pcf')
 router.register(r'pcf-transactions', PettyCashTransactionViewSet, basename='pcf-transaction')
 router.register(r'cash-counts', CashCountViewSet, basename='cash-count')
+router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

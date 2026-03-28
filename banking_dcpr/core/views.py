@@ -29,6 +29,42 @@ logger = logging.getLogger(__name__)
 
 
 # -----------------------------
+# User Management
+# -----------------------------
+from django.contrib.auth.models import User
+from rest_framework import serializers
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'is_staff', 'is_superuser', 'date_joined', 'last_login']
+        read_only_fields = ['id', 'date_joined', 'last_login']
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by('username')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'destroy', 'partial_update', 'update']:
+            # Only staff users can modify users
+            if not self.request.user.is_staff:
+                return [permissions.IsAdminUser()]
+        return super().get_permissions()
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_superuser:
+            return Response(
+                {'detail': 'Cannot delete superuser account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
+
+
+# -----------------------------
 # Auth Endpoints
 # -----------------------------
 @api_view(['POST'])

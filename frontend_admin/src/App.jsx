@@ -6,6 +6,12 @@ import { API_URL } from "./services/tokenService";
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
+import AdminLayout from "./components/AdminLayout.jsx";
+import AdminUsers from "./components/AdminUsers.jsx";
+import AdminTransactions from "./components/AdminTransactions.jsx";
+import AdminBanks from "./components/AdminBanks.jsx";
+import AdminPdc from "./components/AdminPdc.jsx";
+import AdminPcf from "./components/AdminPcf.jsx";
 import AddBankAccount from "./components/AddBankAccount.jsx";
 import AddTransaction from "./components/AddTransaction.jsx";
 import Transactions from "./components/Transactions.jsx";
@@ -127,6 +133,28 @@ export default function App() {
         <Route
           path="/admin/"
           element={isAuthenticated && isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
+        />
+        
+        {/* Django-style Admin pages */}
+        <Route
+          path="/admin/users"
+          element={isAuthenticated && isAdmin ? <AdminUsers /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/transactions"
+          element={isAuthenticated && isAdmin ? <AdminTransactions /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/banks"
+          element={isAuthenticated && isAdmin ? <AdminBanks /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/pdc"
+          element={isAuthenticated && isAdmin ? <AdminPdc /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/pcf"
+          element={isAuthenticated && isAdmin ? <AdminPcf /> : <Navigate to="/dashboard" replace />}
         />
         
         <Route
