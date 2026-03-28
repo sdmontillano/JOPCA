@@ -105,7 +105,7 @@ export default function AdminPdc() {
         check_number: pdc.check_number,
         date_received: pdc.date_received,
         maturity_date: pdc.maturity_date,
-        bank_account: pdc.bank_account || "",
+        bank_account: pdc.bank_account?.id || pdc.bank_account || "",
         check_from: pdc.check_from,
         amount: pdc.amount,
         status: pdc.status,
@@ -237,7 +237,7 @@ export default function AdminPdc() {
                       <TableCell sx={{ color: "#64748b" }}>{pdc.id}</TableCell>
                       <TableCell sx={{ fontWeight: 500, fontFamily: "monospace" }}>{pdc.check_number}</TableCell>
                       <TableCell>{pdc.check_from || "-"}</TableCell>
-                      <TableCell>{banks.find(b => b.id === pdc.bank_account)?.name || "-"}</TableCell>
+                      <TableCell>{pdc.bank_account?.name || banks.find(b => b.id === pdc.bank_account)?.name || "-"}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
                         {formatAmount(pdc.amount)}
                       </TableCell>

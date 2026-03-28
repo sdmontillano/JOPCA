@@ -81,7 +81,7 @@ export default function AdminTransactions() {
       t.type?.toLowerCase().includes(search.toLowerCase()) ||
       String(t.amount).includes(search);
     const matchesType = !typeFilter || t.type === typeFilter;
-    const matchesBank = !bankFilter || t.bank_account === parseInt(bankFilter);
+    const matchesBank = !bankFilter || t.bank_account?.id === parseInt(bankFilter) || t.bank_account === parseInt(bankFilter);
     const matchesDateFrom = !dateFrom || t.date >= dateFrom;
     const matchesDateTo = !dateTo || t.date <= dateTo;
     return matchesSearch && matchesType && matchesBank && matchesDateFrom && matchesDateTo;
@@ -123,8 +123,9 @@ export default function AdminTransactions() {
     if (transaction) {
       setIsEditing(true);
       setSelectedTransaction(transaction);
+      const bankId = transaction.bank_account?.id || transaction.bank_account;
       setFormData({
-        bank_account: transaction.bank_account,
+        bank_account: bankId,
         date: transaction.date,
         type: transaction.type,
         amount: transaction.amount,
@@ -269,7 +270,7 @@ export default function AdminTransactions() {
                     <TableRow key={t.id} hover>
                       <TableCell sx={{ color: "#64748b" }}>{t.id}</TableCell>
                       <TableCell>{t.date}</TableCell>
-                      <TableCell>{banks.find(b => b.id === t.bank_account)?.name || t.bank_account}</TableCell>
+                      <TableCell>{t.bank_account?.name || banks.find(b => b.id === t.bank_account)?.name || "-"}</TableCell>
                       <TableCell>
                         <Chip 
                           label={t.type?.replace(/_/g, " ").toUpperCase()} 
