@@ -54,6 +54,51 @@ class UserViewSet(viewsets.ModelViewSet):
                 return [permissions.IsAdminUser()]
         return super().get_permissions()
     
+    def create(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email', '')
+        is_staff = request.data.get('is_staff', False)
+        is_superuser = request.data.get('is_superuser', False)
+        
+        if not username or not password:
+            return Response(
+                {'detail': 'Username and password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'detail': 'Username already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            email=email,
+            is_staff=is_staff,
+            is_superuser=is_superuser
+        )
+        
+        serializer = self.get_serializer(user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        data = request.data.copy()
+        
+        # Handle password change
+        if 'password' in data and data['password']:
+            instance.set_password(data['password'])
+            data.pop('password', None)
+        
+        serializer = self.get_serializer(instance, data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.is_superuser:
