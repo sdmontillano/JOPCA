@@ -95,4 +95,7 @@ urlpatterns = [
 
     # router endpoints
     path('', include(router.urls)),
+    
+    # Add API prefix versions for common endpoints
+    path('api/', include(router.urls)),
 ]
