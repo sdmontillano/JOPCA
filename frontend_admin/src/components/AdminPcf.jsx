@@ -47,7 +47,7 @@ export default function AdminPcf() {
   const fetchPcfs = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/pcf/");
+      const res = await api.get("/api/pcf/");
       setPcfs(res.data.results || res.data);
     } catch (err) {
       console.error("Failed to fetch PCF", err);
@@ -94,10 +94,10 @@ export default function AdminPcf() {
     setSaving(true);
     try {
       if (isEditing) {
-        await api.patch(`/pcf/${selectedPcf.id}/`, formData);
+        await api.patch(`/api/pcf/${selectedPcf.id}/`, formData);
         showToast("PCF updated successfully", "success");
       } else {
-        await api.post("/pcf/", formData);
+        await api.post("/api/pcf/", formData);
         showToast("PCF created successfully", "success");
       }
       setDialogOpen(false);
@@ -112,7 +112,7 @@ export default function AdminPcf() {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/pcf/${selectedPcf.id}/`);
+      await api.delete(`/api/pcf/${selectedPcf.id}/`);
       showToast("PCF deleted successfully", "success");
       setDeleteDialogOpen(false);
       fetchPcfs();

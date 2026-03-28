@@ -56,8 +56,8 @@ export default function AdminPdc() {
     setLoading(true);
     try {
       const [pdcRes, bankRes] = await Promise.all([
-        api.get("/pdc/"),
-        api.get("/bankaccounts/"),
+        api.get("/api/pdc/"),
+        api.get("/api/bankaccounts/"),
       ]);
       setPdcs(pdcRes.data.results || pdcRes.data);
       setBanks(bankRes.data.results || bankRes.data);
@@ -137,10 +137,10 @@ export default function AdminPdc() {
     setSaving(true);
     try {
       if (isEditing) {
-        await api.patch(`/pdc/${selectedPdc.id}/`, formData);
+        await api.patch(`/api/pdc/${selectedPdc.id}/`, formData);
         showToast("PDC updated successfully", "success");
       } else {
-        await api.post("/pdc/", formData);
+        await api.post("/api/pdc/", formData);
         showToast("PDC created successfully", "success");
       }
       setDialogOpen(false);
@@ -155,7 +155,7 @@ export default function AdminPdc() {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/pdc/${selectedPdc.id}/`);
+      await api.delete(`/api/pdc/${selectedPdc.id}/`);
       showToast("PDC deleted successfully", "success");
       setDeleteDialogOpen(false);
       fetchData();

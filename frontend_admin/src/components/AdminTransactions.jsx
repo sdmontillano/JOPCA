@@ -62,8 +62,8 @@ export default function AdminTransactions() {
     setLoading(true);
     try {
       const [txRes, bankRes] = await Promise.all([
-        api.get("/transactions-crud/"),
-        api.get("/bankaccounts/"),
+        api.get("/api/transactions-crud/"),
+        api.get("/api/bankaccounts/"),
       ]);
       setTransactions(txRes.data.results || txRes.data);
       setBanks(bankRes.data.results || bankRes.data);
@@ -147,10 +147,10 @@ export default function AdminTransactions() {
     setSaving(true);
     try {
       if (isEditing) {
-        await api.patch(`/transactions-crud/${selectedTransaction.id}/`, formData);
+        await api.patch(`/api/transactions-crud/${selectedTransaction.id}/`, formData);
         showToast("Transaction updated successfully", "success");
       } else {
-        await api.post("/transactions-crud/", formData);
+        await api.post("/api/transactions-crud/", formData);
         showToast("Transaction created successfully", "success");
       }
       setDialogOpen(false);
@@ -165,7 +165,7 @@ export default function AdminTransactions() {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/transactions-crud/${selectedTransaction.id}/`);
+      await api.delete(`/api/transactions-crud/${selectedTransaction.id}/`);
       showToast("Transaction deleted successfully", "success");
       setDeleteDialogOpen(false);
       fetchData();

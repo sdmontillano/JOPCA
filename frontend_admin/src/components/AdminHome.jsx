@@ -29,10 +29,10 @@ export default function AdminHome() {
     setLoading(true);
     try {
       const [banksRes, usersRes, txRes, pdcRes] = await Promise.all([
-        api.get("/bankaccounts/"),
+        api.get("/api/bankaccounts/"),
         api.get("/api/users/"),
-        api.get("/transactions-crud/"),
-        api.get("/pdc/"),
+        api.get("/api/transactions-crud/"),
+        api.get("/api/pdc/"),
       ]);
 
       const banks = banksRes.data.results || banksRes.data;

@@ -36,7 +36,7 @@ export default function AdminBanks() {
   const fetchBanks = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/bankaccounts/");
+      const res = await api.get("/api/bankaccounts/");
       setBanks(res.data.results || res.data);
     } catch (err) {
       console.error("Failed to fetch banks", err);
@@ -73,10 +73,10 @@ export default function AdminBanks() {
     setSaving(true);
     try {
       if (isEditing) {
-        await api.patch(`/bankaccounts/${selectedBank.id}/`, formData);
+        await api.patch(`/api/bankaccounts/${selectedBank.id}/`, formData);
         showToast("Bank updated successfully", "success");
       } else {
-        await api.post("/bankaccounts/", formData);
+        await api.post("/api/bankaccounts/", formData);
         showToast("Bank created successfully", "success");
       }
       setDialogOpen(false);
@@ -91,7 +91,7 @@ export default function AdminBanks() {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/bankaccounts/${selectedBank.id}/`);
+      await api.delete(`/api/bankaccounts/${selectedBank.id}/`);
       showToast("Bank deleted successfully", "success");
       setDeleteDialogOpen(false);
       fetchBanks();
