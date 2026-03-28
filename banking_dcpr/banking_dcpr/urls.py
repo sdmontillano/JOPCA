@@ -93,6 +93,7 @@ urlpatterns = [
     path('api/reports/email-config/', email_reports_config, name='email_reports_config'),
     path('api/reports/send-test/', send_test_report, name='send_test_report'),
 
-    # router endpoints - use /api/ prefix only
+    # router endpoints - both /api/ prefix and root level for compatibility
     path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]

@@ -78,8 +78,8 @@ export default function App() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const res = await fetch(`${API_URL}/api-token-auth/`);
-        if (res.ok || res.status === 405) {
+        const res = await fetch(`${API_URL}/api/bankaccounts/`);
+        if (res.ok || res.status === 401) {
           setIsReady(true);
         }
       } catch {
