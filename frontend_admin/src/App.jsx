@@ -74,27 +74,11 @@ export default function App() {
     };
   }, [isAuthenticated]);
 
-  // Check if Django backend is responding before showing app
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/bankaccounts/`);
-        // Consider server up if we get any response (200, 401, etc) - means server is running
-        if (res.status !== 0) {
-          setIsReady(true);
-        }
-      } catch {
-        setTimeout(checkBackend, 1000);
-      }
-    };
-    checkBackend();
-  }, []);
-
-  // Wait for app to fully initialize
+  // Simple delay to ensure app is ready
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsReady(true);
-    }, 3000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
 
