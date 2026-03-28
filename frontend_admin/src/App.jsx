@@ -126,14 +126,14 @@ export default function App() {
           element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />}
         />
         
-        {/* Admin routes - redirect /admin to banks */}
+        {/* Admin routes - redirect /admin to home */}
         <Route
           path="/admin"
-          element={isAuthenticated && isAdmin ? <Navigate to="/admin/banks" replace /> : <Navigate to="/dashboard" replace />}
+          element={isAuthenticated && isAdmin ? <Navigate to="/admin/home" replace /> : <Navigate to="/dashboard" replace />}
         />
         <Route
           path="/admin/"
-          element={isAuthenticated && isAdmin ? <Navigate to="/admin/banks" replace /> : <Navigate to="/dashboard" replace />}
+          element={isAuthenticated && isAdmin ? <Navigate to="/admin/home" replace /> : <Navigate to="/dashboard" replace />}
         />
         
         {/* Admin Home with stats and chart */}
