@@ -1721,3 +1721,44 @@ def create_default_admin(request):
             'message': str(e),
             'note': 'Migrations may have run, try logging in now!'
         })
+
+
+# API endpoint to create regular user
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def create_user(request):
+    """
+    Create a regular (non-admin) user.
+    Usage: /api/create-user/?username=USERNAME&password=PASSWORD
+    """
+    from django.contrib.auth.models import User
+    
+    username = request.GET.get('username', '').strip()
+    password = request.GET.get('password', '')
+    email = request.GET.get('email', '')
+    
+    if not username or not password:
+        return Response({
+            'status': 'error',
+            'message': 'Username and password are required',
+            'usage': '/api/create-user/?username=USERNAME&password=PASSWORD'
+        })
+    
+    if User.objects.filter(username=username).exists():
+        return Response({
+            'status': 'already_exists',
+            'message': f'User "{username}" already exists.'
+        })
+    
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        email=email if email else f'{username}@jopca.local'
+    )
+    
+    return Response({
+        'status': 'success',
+        'message': f'User "{username}" created successfully!',
+        'username': username,
+        'login_url': '/'
+    })

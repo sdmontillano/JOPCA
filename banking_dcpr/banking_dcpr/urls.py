@@ -37,6 +37,7 @@ from core.views import (
     verify_token,
     obtain_auth_token_with_role,
     create_default_admin,
+    create_user,
 )
 
 router = DefaultRouter()
@@ -54,6 +55,7 @@ urlpatterns = [
     path('api-token-auth/', obtain_auth_token_with_role, name='api_token_auth'),
     path('api/auth/verify/', verify_token, name='verify_token'),
     path('api/create-admin/', create_default_admin, name='create_admin'),
+    path('api/create-user/', create_user, name='create_user'),
 
     # transactions list endpoint
     path('transactions/', TransactionListCreate.as_view(), name='transactions'),
