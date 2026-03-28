@@ -79,7 +79,8 @@ export default function App() {
     const checkBackend = async () => {
       try {
         const res = await fetch(`${API_URL}/api/bankaccounts/`);
-        if (res.ok || res.status === 401) {
+        // Consider server up if we get any response (200, 401, etc) - means server is running
+        if (res.status !== 0) {
           setIsReady(true);
         }
       } catch {
