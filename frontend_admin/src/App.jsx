@@ -7,6 +7,7 @@ import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import AdminLayout from "./components/AdminLayout.jsx";
+import AdminHome from "./components/AdminHome.jsx";
 import AdminUsers from "./components/AdminUsers.jsx";
 import AdminTransactions from "./components/AdminTransactions.jsx";
 import AdminBanks from "./components/AdminBanks.jsx";
@@ -133,6 +134,12 @@ export default function App() {
         <Route
           path="/admin/"
           element={isAuthenticated && isAdmin ? <Navigate to="/admin/banks" replace /> : <Navigate to="/dashboard" replace />}
+        />
+        
+        {/* Admin Home with stats and chart */}
+        <Route
+          path="/admin/home"
+          element={isAuthenticated && isAdmin ? <AdminHome /> : <Navigate to="/dashboard" replace />}
         />
         
         {/* Django-style Admin pages */}

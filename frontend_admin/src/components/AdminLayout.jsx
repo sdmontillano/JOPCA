@@ -14,7 +14,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 const DRAWER_WIDTH = 280;
 
 const adminSections = [
-  { id: "home", title: "Home", path: "/admin", icon: <DashboardIcon /> },
+  { id: "home", title: "Home", path: "/admin/home", icon: <DashboardIcon /> },
   { id: "transactions", title: "Transactions", path: "/admin/transactions", icon: <ReceiptIcon /> },
   { id: "banks", title: "Banks", path: "/admin/banks", icon: <AccountBalanceIcon /> },
   { id: "pdc", title: "PDC", path: "/admin/pdc", icon: <EventNoteIcon /> },
@@ -39,8 +39,8 @@ export default function AdminLayout({ children, title, breadcrumbs }) {
 
   const getCurrentSection = () => {
     const path = location.pathname;
-    if (path === "/admin" || path === "/admin/") return "home";
-    const section = adminSections.find(s => path.startsWith(s.path) && s.path !== "/admin");
+    if (path === "/admin" || path === "/admin/" || path === "/admin/home") return "home";
+    const section = adminSections.find(s => path.startsWith(s.path) && s.path !== "/admin/home");
     return section ? section.id : "home";
   };
 
