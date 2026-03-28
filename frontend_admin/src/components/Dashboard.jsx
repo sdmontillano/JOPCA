@@ -61,6 +61,7 @@ import AddBankAccount from "./AddBankAccount";
 import AddTransaction from "./AddTransaction";
 import PdcCreateModal from "./PdcCreateModal";
 import PcfTable from "./PcfTable";
+import CashOnHandCollections from "./CashOnHandCollections";
 import AddPcfModal from "./AddPcfModal";
 import AlertsModal from "./AlertsModal";
 
@@ -942,6 +943,11 @@ function DashboardInner() {
         {/* PCF Cash on Hand Section */}
         <Box sx={{ mb: 3 }}>
           <PcfTable pcfs={cashOnHand} showExport={true} defaultExpanded={true} />
+        </Box>
+
+        {/* Cash on Hand Collections Section */}
+        <Box sx={{ mb: 3 }}>
+          <CashOnHandCollections showExport={true} defaultExpanded={true} />
         </Box>
 
         {/* Cash in Bank Section */}

@@ -243,11 +243,12 @@ class DailyCashPosition(models.Model):
             type="post_dated_check"
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        # DCP Formula: Opening Balance + Collections - Local Deposits - Disbursements + Adjustments
-        # Local Deposits is already POSITIVE in DB, so we subtract it
+        # DCP Formula: Beginning + Collections - Disbursements + Adjustments
+        # Note: Local Deposits is tracking only (NOT in formula per Option B)
+        # Fund Transfers are handled separately in the Cash in Bank table
         self.ending_balance = (
             self.beginning_balance + self.collections
-            - self.local_deposits - self.disbursements + self.adjustments
+            - self.disbursements + self.adjustments
         )
         if self.ending_balance < 0:
             raise ValidationError("Ending balance cannot be negative.")
