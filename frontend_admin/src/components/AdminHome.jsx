@@ -107,7 +107,7 @@ export default function AdminHome() {
     <AdminLayout title="Home" breadcrumbs={breadcrumbs}>
       <Grid container spacing={3}>
         {/* Stats Cards */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ bgcolor: "#dbeafe", p: 1, borderRadius: 2 }}>
               <AccountBalanceIcon sx={{ color: "#1d4ed8" }} />
@@ -118,7 +118,7 @@ export default function AdminHome() {
             </Box>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ bgcolor: "#dcfce7", p: 1, borderRadius: 2 }}>
               <ReceiptIcon sx={{ color: "#166534" }} />
@@ -129,7 +129,7 @@ export default function AdminHome() {
             </Box>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ bgcolor: "#fef3c7", p: 1, borderRadius: 2 }}>
               <EventNoteIcon sx={{ color: "#b45309" }} />
@@ -140,7 +140,7 @@ export default function AdminHome() {
             </Box>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ bgcolor: "#f3e8ff", p: 1, borderRadius: 2 }}>
               <PeopleIcon sx={{ color: "#6b21a8" }} />
@@ -153,7 +153,7 @@ export default function AdminHome() {
         </Grid>
 
         {/* Chart - Last 7 Days */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Paper sx={{ p: 3 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
               <TrendingUpIcon sx={{ color: "#0ea5e9" }} />
@@ -185,7 +185,7 @@ export default function AdminHome() {
         </Grid>
 
         {/* Recent Activity */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper sx={{ p: 3, height: "100%" }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Recent Transactions</Typography>
             <List dense>
@@ -215,15 +215,15 @@ export default function AdminHome() {
         </Grid>
 
         {/* Recent PDCs */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Recent PDCs</Typography>
             <Grid container spacing={2}>
               {recentPdcs.length === 0 ? (
-                <Grid item xs={12}><Typography color="text.secondary">No PDCs yet</Typography></Grid>
+                <Grid size={{ xs: 12 }}><Typography color="text.secondary">No PDCs yet</Typography></Grid>
               ) : (
                 recentPdcs.map((pdc) => (
-                  <Grid item xs={12} sm={6} md={4} key={pdc.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pdc.id}>
                     <Box sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 2 }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
                         <Typography variant="body2" fontWeight="bold">{pdc.check_number}</Typography>

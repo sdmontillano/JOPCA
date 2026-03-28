@@ -26,7 +26,7 @@ export default function AdminDashboard() {
 
       <Grid container spacing={3}>
         {adminItems.map((item) => (
-          <Grid item xs={12} sm={6} md={4} key={item.title}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.title}>
             <Card 
               sx={{ cursor: "pointer", transition: "transform 0.2s", "&:hover": { transform: "translateY(-4px)" } }}
               onClick={() => navigate(item.path)}
