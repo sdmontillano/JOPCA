@@ -14,6 +14,7 @@ INFLOW_TYPES = frozenset([
 OUTFLOW_TYPES = frozenset([
     "disbursement", "disbursements",
     "bank_charges", "bank_charge",
+    "returned_check", "returned_checks",
 ])
 
 TRANSFER_TYPES = frozenset([
@@ -56,3 +57,23 @@ def is_transfer(tx_type):
 def is_local_deposit(tx_type):
     """Check if transaction type is a local deposit (tracking only, neutral in formula)."""
     return (tx_type or "").strip().lower() in LOCAL_DEPOSIT_TYPES
+
+
+def is_returned_check(tx_type):
+    """Check if transaction type is a returned check."""
+    return (tx_type or "").strip().lower() in RETURNED_TYPES
+
+
+def is_pdc(tx_type):
+    """Check if transaction type is a post-dated check."""
+    return (tx_type or "").strip().lower() in PDC_TYPES
+
+
+def is_adjustment(tx_type):
+    """Check if transaction type is an adjustment."""
+    return (tx_type or "").strip().lower() in ADJUSTMENT_TYPES
+
+
+def get_all_transaction_types():
+    """Return all known transaction types as a frozenset."""
+    return INFLOW_TYPES | OUTFLOW_TYPES | RETURNED_TYPES | ADJUSTMENT_TYPES | LOCAL_DEPOSIT_TYPES | PDC_TYPES

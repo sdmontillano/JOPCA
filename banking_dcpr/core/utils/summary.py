@@ -34,7 +34,7 @@ def compute_bank_daily_summary(target_date):
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_outflows = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES.union(RETURNED_TYPES).union(ADJUSTMENT_TYPES))
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES.union(ADJUSTMENT_TYPES))
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
 
@@ -42,20 +42,24 @@ def compute_bank_daily_summary(target_date):
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
-        collections = today_qs.filter(type__in={"collections"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # Use frozensets that include both singular and plural forms
+        COLLECTION_TYPES = frozenset(["collections", "collection"])
+        DISBURSEMENT_TYPES = frozenset(["disbursement", "disbursements"])
+        
+        collections = today_qs.filter(type__in=COLLECTION_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_qs.filter(type__in={"disbursement"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        fund_transfers = today_qs.filter(type__in={"fund_transfer", "interbank_transfer"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_qs.filter(type__in=DISBURSEMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        fund_transfers = today_qs.filter(type__in={"fund_transfer", "fund_transfers", "interbank_transfer", "interbank_transfers"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers = today_qs.filter(type__in=TRANSFER_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         returned_checks = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # Note: returned_checks do NOT affect ending balance - they are tracked for reporting only
-        # because a returned check means the original payment never cleared, so no money was received
-        # Collections are NOT included - they are shown in Cash on Hand Collections table (not in Cash in Bank)
+        # Bank Account Formula: Beginning + Local Deposits + Fund Transfers - Disbursements + Adjustments - Returned Checks
+        # Note: Collections are NOT included - they are shown in Cash on Hand Collections table (not in Cash in Bank)
         # Local Deposits = money deposited INTO the bank (increases bank balance)
-        ending = beginning + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments)
+        # Returned checks = money returned (decreases bank balance)
+        ending = beginning + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
 
         rows.append({
             "bank_id": bank.id,

@@ -216,39 +216,42 @@ class DailyCashPosition(models.Model):
             type="collections"
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        # Local Deposits = Cash moved to bank (NEGATIVE - subtract from cash on hand)
+        # Local Deposits = Cash moved to bank (tracking only)
         self.local_deposits = transactions.filter(
-            type="local_deposits"
+            type__in=["local_deposits", "local_deposit"]
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         # Disbursements = Payments + Fund Transfers + Other Outflows
+        # Include both singular and plural forms
+        DISBURSEMENT_TYPES = {"disbursement", "disbursements"}
         self.disbursements = transactions.filter(
-            type__in=["disbursement"]
+            type__in=DISBURSEMENT_TYPES
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        # Adjustments = Returned Checks + Bank Charges + Other Adjustments
+        # Adjustments = Bank Charges + Other Adjustments (not returned checks - those are outflows)
         # These are negative adjustments (reduce cash)
-        returned_checks = transactions.filter(
-            type="returned_check"
-        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
-        
         bank_charges = transactions.filter(
-            type="bank_charges"
+            type__in=["bank_charges", "bank_charge"]
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
         
-        self.adjustments = -(returned_checks + bank_charges)
+        self.adjustments = -bank_charges
+
+        # Returned Checks - handled as part of outflows
+        returned_checks = transactions.filter(
+            type__in=["returned_check", "returned_checks"]
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         # PDC = Post-dated checks (not yet matured/deposited)
         self.pdc = transactions.filter(
-            type="post_dated_check"
+            type__in=["post_dated_check", "post_dated_checks"]
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        # DCP Formula: Beginning + Collections - Disbursements + Adjustments
-        # Note: Local Deposits is tracking only (NOT in formula per Option B)
-        # Fund Transfers are handled separately in the Cash in Bank table
+        # DCP Formula: Beginning + Collections - Disbursements - Returned Checks + Adjustments
+        # Note: Local Deposits is tracking only (NOT in formula)
+        # Collections = Cash on Hand (not in bank)
         self.ending_balance = (
             self.beginning_balance + self.collections
-            - self.disbursements + self.adjustments
+            - self.disbursements - returned_checks + self.adjustments
         )
         if self.ending_balance < 0:
             raise ValidationError("Ending balance cannot be negative.")

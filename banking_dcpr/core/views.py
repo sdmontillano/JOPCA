@@ -489,13 +489,16 @@ def compute_collections_summary(target_date):
     from django.db.models import Sum
     from .constants import LOCAL_DEPOSIT_TYPES
     
+    # Use sets that include both singular and plural forms
+    COLLECTION_TYPES = {"collections", "collection"}
+    
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
         # Calculate beginning balance (prior day's ending)
         prior_collections = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type="collections")
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=COLLECTION_TYPES)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_local_deposits = (
@@ -507,7 +510,7 @@ def compute_collections_summary(target_date):
         # Today's transactions
         today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
         
-        collections = today_txns.filter(type="collections").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        collections = today_txns.filter(type__in=COLLECTION_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # Ending = Beginning + Collections - Local Deposits
@@ -522,7 +525,7 @@ def compute_collections_summary(target_date):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in today_txns.filter(type__in=["collections"]).order_by("-date", "-id")
+            for t in today_txns.filter(type__in=COLLECTION_TYPES).order_by("-date", "-id")
         ]
         # Also add local deposits transactions
         local_deposit_txns = [

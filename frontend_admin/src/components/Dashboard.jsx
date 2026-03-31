@@ -568,7 +568,7 @@ function DashboardInner() {
     const timer = setTimeout(() => {
       fetchAll();
       fetchAlertsCount();
-    }, 2000); // 2 second delay for dashboard data fetch
+    }, 500); // 0.5 second delay for dashboard data fetch
     return () => clearTimeout(timer);
   }, [fetchAll]);
 
@@ -587,6 +587,7 @@ function DashboardInner() {
           local_deposits: 0,
           disbursements: 0,
           fund_transfers: 0,
+          returned_checks: 0,
           adjustments: 0,
           ending: 0,
           raw_rows: [],
@@ -596,18 +597,25 @@ function DashboardInner() {
       }
       const total = Number(t.total ?? t.amount ?? 0) || 0;
       const type = (t.type || "").toString().toLowerCase();
-      // Collections = cash received (positive) - shown in Cash on Hand table
-      // Local Deposits = cash moved to bank (adds to bank balance)
+      // Transaction categorization:
+      // - Collections: cash received (goes to Cash on Hand, NOT bank)
+      // - Local Deposits: cash deposited TO bank (increases bank balance)
+      // - Disbursements: payments from bank (decreases bank balance)
+      // - Fund Transfers: transfers between accounts
+      // - Returned Checks: checks returned (decreases bank balance)
+      // - Adjustments: bank charges, etc.
       if (type.includes("collect")) row.collections += total;
-      else if (type === "local_deposits") row.local_deposits += total;
-      else if (type.includes("deposit")) row.local_deposits += total;
+      else if (type.includes("local_deposit")) row.local_deposits += total;
+      else if (type.includes("deposit") && !type.includes("local")) row.local_deposits += total;
       else if (type.includes("disburse")) row.disbursements += total;
-      else row.collections += total;
+      else if (type.includes("fund") || type.includes("interbank")) row.fund_transfers += total;
+      else if (type.includes("return")) row.returned_checks += total;
+      else if (type.includes("adjust") || type.includes("bank_charge")) row.adjustments += total;
       row.raw_rows.push(t.raw || t);
-      // Cash in Bank Formula: Beginning + Local Deposits - Disbursements + Fund Transfers + Adjustments
+      // Cash in Bank Formula: Beginning + Local Deposits + Fund Transfers - Disbursements - Returned Checks + Adjustments
       // Note: Collections NOT included - they are shown in Cash on Hand Collections table
       // Local Deposits = money deposited TO bank (adds to bank balance)
-      row.ending = (row.beginning || 0) + (row.local_deposits || 0) - (row.disbursements || 0) + (row.fund_transfers || 0) + (row.adjustments || 0);
+      row.ending = (row.beginning || 0) + (row.local_deposits || 0) + (row.fund_transfers || 0) - (row.disbursements || 0) - (row.returned_checks || 0) + (row.adjustments || 0);
       if (!row.account_number && t.account_number) row.account_number = t.account_number;
       return acc;
     }, []);
