@@ -80,6 +80,13 @@ export default function Login() {
       const isSuperuser = res?.data?.is_superuser ?? false;
 
       if (res.status === 200 && token) {
+        // Block login if user has no role assigned (both checkboxes unchecked)
+        if (!isStaff && !isSuperuser) {
+          setError("Your account has no access. Please contact admin to assign a role.");
+          setLoading(false);
+          return;
+        }
+
         // Validate role selection against user's is_staff or is_superuser status
         // Admin access requires is_staff OR is_superuser
         if (loginAs === "admin" && !isStaff && !isSuperuser) {
