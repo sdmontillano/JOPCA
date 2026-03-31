@@ -171,8 +171,8 @@ export default function AdminPdc() {
   };
 
   const formatAmount = (amount) => {
-    const num = parseFloat(amount);
-    return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(num);
+    const num = parseFloat(amount || 0);
+    return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(isNaN(num) ? 0 : num);
   };
 
   return (

@@ -70,13 +70,19 @@ export default function AdminBanks() {
       return;
     }
 
+    // Convert opening_balance to number
+    const payload = {
+      ...formData,
+      opening_balance: parseFloat(formData.opening_balance) || 0
+    };
+
     setSaving(true);
     try {
       if (isEditing) {
-        await api.patch(`/api/bankaccounts/${selectedBank.id}/`, formData);
+        await api.patch(`/api/bankaccounts/${selectedBank.id}/`, payload);
         showToast("Bank updated successfully", "success");
       } else {
-        await api.post("/api/bankaccounts/", formData);
+        await api.post("/api/bankaccounts/", payload);
         showToast("Bank created successfully", "success");
       }
       setDialogOpen(false);

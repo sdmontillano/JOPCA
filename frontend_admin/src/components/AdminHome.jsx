@@ -61,6 +61,7 @@ export default function AdminHome() {
       setChartData(last7Days);
     } catch (err) {
       console.error("Failed to fetch data", err);
+      showToast("Failed to fetch dashboard data", "error");
     } finally {
       setLoading(false);
     }
@@ -81,10 +82,27 @@ export default function AdminHome() {
   const getTxTypeColor = (type) => {
     const colors = {
       collections: "#22c55e",
+      collection: "#22c55e",
       deposit: "#3b82f6",
+      deposits: "#3b82f6",
       disbursement: "#ef4444",
+      disbursements: "#ef4444",
       local_deposits: "#f59e0b",
+      local_deposit: "#f59e0b",
       fund_transfer: "#8b5cf6",
+      fund_transfers: "#8b5cf6",
+      interbank_transfer: "#8b5cf6",
+      interbank_transfers: "#8b5cf6",
+      adjustments: "#ec4899",
+      adjustment: "#ec4899",
+      bank_charges: "#64748b",
+      bank_charge: "#64748b",
+      returned_check: "#ef4444",
+      returned_checks: "#ef4444",
+      post_dated_check: "#f97316",
+      post_dated_checks: "#f97316",
+      transfer: "#8b5cf6",
+      transfers: "#8b5cf6",
     };
     return colors[type] || "#64748b";
   };

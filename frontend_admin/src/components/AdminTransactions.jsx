@@ -81,7 +81,7 @@ export default function AdminTransactions() {
       t.type?.toLowerCase().includes(search.toLowerCase()) ||
       String(t.amount).includes(search);
     const matchesType = !typeFilter || t.type === typeFilter;
-    const matchesBank = !bankFilter || t.bank_account?.id === parseInt(bankFilter) || t.bank_account === parseInt(bankFilter);
+    const matchesBank = !bankFilter || bankFilter === "" || t.bank_account?.id === parseInt(bankFilter) || t.bank_account === parseInt(bankFilter);
     const matchesDateFrom = !dateFrom || t.date >= dateFrom;
     const matchesDateTo = !dateTo || t.date <= dateTo;
     return matchesSearch && matchesType && matchesBank && matchesDateFrom && matchesDateTo;
