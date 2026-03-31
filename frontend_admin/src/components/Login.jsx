@@ -77,10 +77,12 @@ export default function Login() {
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
       const isStaff = res?.data?.is_staff ?? false;
+      const isSuperuser = res?.data?.is_superuser ?? false;
 
       if (res.status === 200 && token) {
-        // Validate role selection against user's is_staff status
-        if (loginAs === "admin" && !isStaff) {
+        // Validate role selection against user's is_staff or is_superuser status
+        // Admin access requires is_staff OR is_superuser
+        if (loginAs === "admin" && !isStaff && !isSuperuser) {
           setError("Your account is not authorized for admin access.");
           setLoading(false);
           return;
@@ -95,6 +97,7 @@ export default function Login() {
           // Store user info - use what they SELECTED, not their is_staff
           localStorage.setItem("userRole", loginAs);
           localStorage.setItem("isStaff", isStaff);
+          localStorage.setItem("isSuperuser", isSuperuser);
           localStorage.setItem("username", res?.data?.username || username);
         } catch (err) {
           console.error("Failed to persist token", err);
