@@ -1,7 +1,6 @@
 // src/components/Dashboard.jsx
 import React, { useEffect, useState, useCallback } from "react";
 
-import createAppTheme from "../theme";
 import {
   AppBar,
   Toolbar,
@@ -52,6 +51,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import WarningIcon from "@mui/icons-material/Warning";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import PaidIcon from "@mui/icons-material/Paid";
 
 import api, { unwrapResponse, getResponseCount } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
@@ -475,6 +475,7 @@ function DashboardInner() {
   const [cashCollapsed, setCashCollapsed] = useState(false);
   const [actionAlert, setActionAlert] = useState(null);
   const [pcfData, setPcfData] = useState([]);
+  const [collectionsData, setCollectionsData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
   
   // FAB Menu State
@@ -536,6 +537,10 @@ function DashboardInner() {
       } else {
         setPcfData([]);  // No PCF data available
       }
+
+      // Extract Collections data from rawDaily.cash_collections
+      const rawCollections = rawDaily?.cash_collections || [];
+      setCollectionsData(rawCollections);
     } catch (err) {
       console.error("Error fetching dashboard data", err);
       const msg = err?.response?.data?.detail || err?.response?.data || err?.message || "Failed to load dashboard data";
@@ -591,17 +596,18 @@ function DashboardInner() {
       }
       const total = Number(t.total ?? t.amount ?? 0) || 0;
       const type = (t.type || "").toString().toLowerCase();
-      // Collections = cash received (positive)
-      // Local Deposits = cash moved to bank (NEGATIVE - subtract from cash on hand)
+      // Collections = cash received (positive) - shown in Cash on Hand table
+      // Local Deposits = cash moved to bank (adds to bank balance)
       if (type.includes("collect")) row.collections += total;
       else if (type === "local_deposits") row.local_deposits += total;
       else if (type.includes("deposit")) row.local_deposits += total;
       else if (type.includes("disburse")) row.disbursements += total;
       else row.collections += total;
       row.raw_rows.push(t.raw || t);
-      // DCP Formula: Beginning + Collections - Disbursements + Adjustments
-      // Note: Local Deposits is a tracking column only - does NOT affect ending balance
-      row.ending = (row.beginning || 0) + (row.collections || 0) - (row.disbursements || 0) + (row.fund_transfers || 0) + (row.adjustments || 0);
+      // Cash in Bank Formula: Beginning + Local Deposits - Disbursements + Fund Transfers + Adjustments
+      // Note: Collections NOT included - they are shown in Cash on Hand Collections table
+      // Local Deposits = money deposited TO bank (adds to bank balance)
+      row.ending = (row.beginning || 0) + (row.local_deposits || 0) - (row.disbursements || 0) + (row.fund_transfers || 0) + (row.adjustments || 0);
       if (!row.account_number && t.account_number) row.account_number = t.account_number;
       return acc;
     }, []);
@@ -686,6 +692,9 @@ function DashboardInner() {
   const totalPcfBalance = pcfData.reduce((s, p) => s + Number(p.current_balance || p.ending || 0), 0);
   const totalPcfDisbursements = pcfData.reduce((s, p) => s + Number(p.disbursements || 0), 0);
   const totalPcfUnreplenished = pcfData.reduce((s, p) => s + Number(p.unreplenished || p.unreplenished_amount || 0), 0);
+
+  // Collections totals (from cash_collections API)
+  const totalCollections = collectionsData.reduce((s, c) => s + Number(c.collections || 0), 0);
 
   const handleOpenAddTransaction = () => {
     if (!banksList || banksList.length === 0) {
@@ -788,7 +797,38 @@ function DashboardInner() {
         </Stack>
 
         {/* KPI Cards Row - Modern Minimal */}
-        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 2 }}>
+        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2 }}>
+          {/* Collections Card */}
+          <Paper elevation={0} sx={{ 
+            p: 2.5, 
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: "#E5E7EB",
+            bgcolor: "#FFFFFF",
+            transition: "all 0.15s ease",
+            "&:hover": { borderColor: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Box sx={{ 
+                width: 32, 
+                height: 32, 
+                borderRadius: 1, 
+                bgcolor: "#ECFDF5",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <PaidIcon sx={{ fontSize: 16, color: "#166534" }} />
+              </Box>
+              <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}>
+                Collections
+              </Typography>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#166534", letterSpacing: "-0.01em" }}>
+              {formatPeso(totalCollections)}
+            </Typography>
+          </Paper>
+
           {/* Cash in Bank Card */}
           <Paper elevation={0} sx={{ 
             p: 2.5, 
@@ -995,7 +1035,6 @@ function DashboardInner() {
                   <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>PARTICULARS</TableCell>
                   <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Account #</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Beginning</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Collections</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Local Deposits</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Disbursements</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Fund Transfers</TableCell>
@@ -1012,7 +1051,6 @@ function DashboardInner() {
                         {r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#6B7280" }}>{formatPeso(r.beginning ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.collections ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#475569" }}>{formatPeso(r.fund_transfers ?? 0)}</TableCell>
@@ -1022,7 +1060,7 @@ function DashboardInner() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
                       No bank transactions found
                     </TableCell>
                   </TableRow>
@@ -1031,7 +1069,6 @@ function DashboardInner() {
                   <TableCell colSpan={2} sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#FFFFFF" }}>
                     GRAND TOTAL
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>

@@ -20,8 +20,17 @@ def compute_bank_daily_summary(target_date):
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
-        prior_inflows = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=INFLOW_TYPES)
+        # Beginning balance should include:
+        # - Opening balance
+        # - Prior local deposits (money deposited TO bank)
+        # - Prior fund transfers (money transferred in)
+        # - NOT prior collections (that's cash on hand, not in bank)
+        prior_local_deposits = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=LOCAL_DEPOSIT_TYPES)
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_fund_transfers = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in={"fund_transfer", "interbank_transfer"})
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_outflows = (
@@ -29,7 +38,7 @@ def compute_bank_daily_summary(target_date):
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
 
-        beginning = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_inflows) - _safe_decimal(prior_outflows)
+        beginning = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_local_deposits) + _safe_decimal(prior_fund_transfers) - _safe_decimal(prior_outflows)
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
@@ -44,8 +53,9 @@ def compute_bank_daily_summary(target_date):
 
         # Note: returned_checks do NOT affect ending balance - they are tracked for reporting only
         # because a returned check means the original payment never cleared, so no money was received
-        # Local Deposits is a tracking column only - does NOT affect ending balance
-        ending = beginning + _safe_decimal(collections) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments)
+        # Collections are NOT included - they are shown in Cash on Hand Collections table (not in Cash in Bank)
+        # Local Deposits = money deposited INTO the bank (increases bank balance)
+        ending = beginning + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments)
 
         rows.append({
             "bank_id": bank.id,

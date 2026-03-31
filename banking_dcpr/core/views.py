@@ -481,12 +481,83 @@ def monthly_full_report(request):
     })
 
 
+def compute_collections_summary(target_date):
+    """
+    Compute collections summary grouped by bank, similar to PCF.
+    Returns list of dicts with: bank_name, location, beginning, collections, local_deposits, ending, transactions.
+    """
+    from django.db.models import Sum
+    from .constants import LOCAL_DEPOSIT_TYPES
+    
+    rows = []
+    banks = BankAccount.objects.all().order_by("name", "account_number")
+
+    for bank in banks:
+        # Calculate beginning balance (prior day's ending)
+        prior_collections = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type="collections")
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_local_deposits = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=LOCAL_DEPOSIT_TYPES)
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        beginning = prior_collections - prior_local_deposits
+
+        # Today's transactions
+        today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
+        
+        collections = today_txns.filter(type="collections").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposits = today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+        # Ending = Beginning + Collections - Local Deposits
+        ending = beginning + collections - local_deposits
+
+        # Get today's transactions with descriptions (both collections and local_deposits)
+        transactions = [
+            {
+                "id": t.id,
+                "type": t.type,
+                "amount": float(t.amount),
+                "description": t.description or "",
+                "date": str(t.date)
+            }
+            for t in today_txns.filter(type__in=["collections"]).order_by("-date", "-id")
+        ]
+        # Also add local deposits transactions
+        local_deposit_txns = [
+            {
+                "id": t.id,
+                "type": t.type,
+                "amount": float(t.amount),
+                "description": t.description or "",
+                "date": str(t.date)
+            }
+            for t in today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).order_by("-date", "-id")
+        ]
+        transactions.extend(local_deposit_txns)
+
+        rows.append({
+            "bank_id": bank.id,
+            "name": bank.name,
+            "account_number": bank.account_number,
+            "location": "BANK",
+            "beginning": float(beginning),
+            "collections": float(collections),
+            "local_deposits": float(local_deposits),
+            "ending": float(ending),
+            "transactions": transactions,
+        })
+
+    return rows
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def detailed_daily_summary(request):
     """
     GET /summary/detailed-daily/?date=YYYY-MM-DD
-    Returns cash_in_bank rows, accounts list, and cash_on_hand (PCF) for the Dashboard.
+    Returns cash_in_bank rows, accounts list, cash_on_hand (PCF), and cash_collections for the Dashboard.
     """
     date_str = request.query_params.get("date")
     if date_str:
@@ -582,11 +653,15 @@ def detailed_daily_summary(request):
         'matured': float(matured_total),
     }
 
+    # Compute collections summary (grouped by bank)
+    cash_collections = compute_collections_summary(target_date)
+
     return Response({
         "date": target_date.isoformat(),
         "cash_in_bank": bank_rows,
         "accounts": accounts,
         "cash_on_hand": cash_on_hand,
+        "cash_collections": cash_collections,
         "pdc_summary": pdc_summary,
     })
 
@@ -636,9 +711,13 @@ def detailed_daily_summary_range(request):
                 "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
             })
 
+        # Compute collections for this date
+        cash_collections = compute_collections_summary(cur)
+
         result[cur.isoformat()] = {
             "cash_in_bank": bank_rows,
             "accounts": accounts,
+            "cash_collections": cash_collections,
         }
         cur = cur + timedelta(days=1)
 
