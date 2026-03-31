@@ -164,8 +164,8 @@ export default function AdminUsers() {
                 <TableRow sx={{ bgcolor: "#f8fafc" }}>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Username</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Staff</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Superuser</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Normal User</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Admin</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Date Joined</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Actions</TableCell>
                 </TableRow>
@@ -187,8 +187,8 @@ export default function AdminUsers() {
                           label={user.is_staff ? "Yes" : "No"} 
                           size="small" 
                           sx={{ 
-                            bgcolor: user.is_staff ? "#dbeafe" : "#f1f5f9",
-                            color: user.is_staff ? "#1d4ed8" : "#64748b",
+                            bgcolor: user.is_staff ? "#dcfce7" : "#f1f5f9",
+                            color: user.is_staff ? "#166534" : "#64748b",
                             fontWeight: 500
                           }} 
                         />
@@ -199,7 +199,7 @@ export default function AdminUsers() {
                           size="small" 
                           sx={{ 
                             bgcolor: user.is_superuser ? "#fef3c7" : "#f1f5f9",
-                            color: user.is_superuser ? "#b45309" : "#64748b",
+                            color: user.is_superuser ? "#92400e" : "#64748b",
                             fontWeight: 500
                           }} 
                         />
@@ -261,7 +261,7 @@ export default function AdminUsers() {
                     onChange={(e) => setFormData({ ...formData, is_staff: e.target.checked })}
                   />
                 }
-                label="Staff"
+                label="Normal User"
               />
               <FormControlLabel
                 control={
@@ -270,7 +270,7 @@ export default function AdminUsers() {
                     onChange={(e) => setFormData({ ...formData, is_superuser: e.target.checked })}
                   />
                 }
-                label="Superuser"
+                label="Admin"
               />
             </Box>
           </Box>
