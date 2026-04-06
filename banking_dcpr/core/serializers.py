@@ -245,7 +245,7 @@ class PettyCashFundMinimalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PettyCashFund
-        fields = ['id', 'name', 'location', 'location_display', 'note', 'current_balance', 'unreplenished_amount']
+        fields = ['id', 'name', 'location', 'location_display', 'note', 'current_balance', 'unreplenished_amount', 'created_at']
 
 
 class PettyCashTransactionSerializer(serializers.ModelSerializer):

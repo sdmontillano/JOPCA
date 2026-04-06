@@ -58,8 +58,8 @@ export default function AdminPcf() {
   };
 
   const filteredPcfs = pcfs.filter(p => 
-    p.pcf_name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.responsible_person?.toLowerCase().includes(search.toLowerCase())
+    p.name?.toLowerCase().includes(search.toLowerCase()) ||
+    (p.note && p.note.toLowerCase().includes(search.toLowerCase()))
   );
 
   const handleOpenDialog = (pcf = null) => {
@@ -67,10 +67,10 @@ export default function AdminPcf() {
       setIsEditing(true);
       setSelectedPcf(pcf);
       setFormData({
-        pcf_name: pcf.pcf_name,
+        pcf_name: pcf.name,
         location: pcf.location,
-        fund_amount: pcf.fund_amount,
-        responsible_person: pcf.responsible_person || ""
+        fund_amount: pcf.opening_balance || pcf.current_balance || 0,
+        responsible_person: pcf.note || ""
       });
     } else {
       setIsEditing(false);
@@ -91,13 +91,20 @@ export default function AdminPcf() {
       return;
     }
 
+    const payload = {
+      name: formData.pcf_name,
+      location: formData.location,
+      opening_balance: parseFloat(formData.fund_amount) || 0,
+      note: formData.responsible_person || ""
+    };
+
     setSaving(true);
     try {
       if (isEditing) {
-        await api.patch(`/api/pcf/${selectedPcf.id}/`, formData);
+        await api.patch(`/api/pcf/${selectedPcf.id}/`, payload);
         showToast("PCF updated successfully", "success");
       } else {
-        await api.post("/api/pcf/", formData);
+        await api.post("/api/pcf/", payload);
         showToast("PCF created successfully", "success");
       }
       setDialogOpen(false);
@@ -172,8 +179,9 @@ export default function AdminPcf() {
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>ID</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>PCF Name</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Location</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Responsible Person</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Fund Amount</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Notes</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Opening Balance</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Current Balance</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Created</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Actions</TableCell>
                 </TableRow>
@@ -189,17 +197,20 @@ export default function AdminPcf() {
                   filteredPcfs.map((pcf) => (
                     <TableRow key={pcf.id} hover>
                       <TableCell sx={{ color: "#64748b" }}>{pcf.id}</TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>{pcf.pcf_name}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{pcf.name}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={pcf.location?.toUpperCase()} 
+                          label={pcf.location_display || pcf.location?.toUpperCase()} 
                           size="small"
                           sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 500, fontSize: 11 }}
                         />
                       </TableCell>
-                      <TableCell>{pcf.responsible_person || "-"}</TableCell>
+                      <TableCell>{pcf.note || "-"}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
-                        {formatAmount(pcf.fund_amount)}
+                        {formatAmount(pcf.opening_balance)}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#166534" }}>
+                        {formatAmount(pcf.current_balance)}
                       </TableCell>
                       <TableCell sx={{ color: "#64748b" }}>
                         {pcf.created_at ? new Date(pcf.created_at).toLocaleDateString() : "-"}
