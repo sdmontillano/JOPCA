@@ -1720,7 +1720,9 @@ def bank_analysis(request):
                 type__in=['fund_transfer', 'interbank_transfer']
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
-            per_bank = reconciliation.per_bank if reconciliation else Decimal('0.00')
+            # Per Bank defaults to the bank's opening balance (actual bank statement balance)
+            # This is pre-filled automatically - user updates when they get new bank statement
+            per_bank = reconciliation.per_bank if reconciliation else (bank.opening_balance or Decimal('0.00'))
             
             # Calculate reconciled balances
             per_dcpr = bank.balance or Decimal('0.00')

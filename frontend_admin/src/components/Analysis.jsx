@@ -93,7 +93,8 @@ export default function Analysis() {
   };
 
   const calculateReconciledBalance = (bank) => {
-    const perBank = perBankValues[bank.id] || bank.per_dcpr || 0;
+    // Per Bank: use saved value, or opening_balance (auto-filled), or default to per_dcpr
+    const perBank = perBankValues[bank.id] || (bank.reconciliation?.per_bank ?? (bank.per_dcpr || 0));
     const auto = bank.auto_computed || {};
     const rec = bank.reconciliation || {};
     
@@ -209,7 +210,9 @@ export default function Analysis() {
     
     data.banks.forEach(bank => {
       totalPerDcpr += parseFloat(bank.per_dcpr) || 0;
-      totalPerBank += parseFloat(perBankValues[bank.id]) || 0;
+      // Per Bank: use saved value, or opening_balance (auto-filled), or default to per_dcpr
+      const perBank = perBankValues[bank.id] || (bank.reconciliation?.per_bank ?? (bank.per_dcpr || 0));
+      totalPerBank += parseFloat(perBank) || 0;
       totalReconciled += calculateReconciledBalance(bank);
     });
     
@@ -353,18 +356,10 @@ export default function Analysis() {
                             <TableCell sx={{ textAlign: "right", fontWeight: 600 }}>
                               {formatCurrency(bank.per_dcpr)}
                             </TableCell>
-                            <TableCell sx={{ textAlign: "right" }}>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={perBankValues[bank.id] || ""}
-                                onChange={(e) => handlePerBankChange(bank.id, e.target.value)}
-                                inputProps={{ style: { textAlign: "right" } }}
-                                sx={{ width: 150 }}
-                                placeholder="Enter bank balance"
-                              />
+                            <TableCell sx={{ textAlign: "right", fontWeight: 500, color: "#1E293B" }}>
+                              {formatCurrency(perBankValues[bank.id] || bank.reconciliation?.per_bank || bank.per_dcpr || 0)}
                             </TableCell>
-                            <TableCell sx={{ textAlign: "center", color: "#999" }}>-</TableCell>
+                            <TableCell sx={{ textAlign: "center", color: "#999" }}>auto-filled</TableCell>
                           </TableRow>
 
                           {/* Reconciling Items Label */}
