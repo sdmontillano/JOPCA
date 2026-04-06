@@ -416,9 +416,8 @@ def monthly_full_report(request):
         count=Count('id')
     )
     
-    # Apply signed amounts based on transaction type
-    INFLOW_TYPES = ['collection', 'deposit', 'collections', 'local_deposits']
-    OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer']
+    # Apply signed amounts based on transaction type - import from constants
+    from .constants import INFLOW_TYPES, OUTFLOW_TYPES
     
     bank_by_type = []
     for item in bank_by_type_query:
