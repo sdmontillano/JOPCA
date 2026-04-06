@@ -17,6 +17,7 @@ import {
   TableRow,
   Snackbar,
   IconButton,
+  Divider,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
@@ -91,18 +92,40 @@ export default function Analysis() {
     }));
   };
 
+  const calculateReconciledBalance = (bank) => {
+    const perBank = perBankValues[bank.id] || bank.per_dcpr || 0;
+    const auto = bank.auto_computed || {};
+    const rec = bank.reconciliation || {};
+    
+    // Use saved values if available, otherwise use auto-computed
+    const depositInTransit = rec.deposit_in_transit ?? auto.deposit_in_transit ?? 0;
+    const outstandingChecks = rec.outstanding_checks ?? auto.outstanding_checks ?? 0;
+    const returnedChecks = rec.returned_checks ?? auto.returned_checks ?? 0;
+    const bankCharges = rec.bank_charges ?? auto.bank_charges ?? 0;
+    const unbookedTransfers = rec.unbooked_transfers ?? auto.unbooked_transfers ?? 0;
+    
+    // Bank Side: Per Bank + Deposit in Transit - Outstanding Checks - Returned Checks - Bank Charges
+    const bankReconciled = parseFloat(perBank) + parseFloat(depositInTransit) - parseFloat(outstandingChecks) - parseFloat(returnedChecks) - parseFloat(bankCharges);
+    
+    return bankReconciled;
+  };
+
   const handleSave = async (bankId) => {
     setSaving(true);
     try {
+      const bank = data.banks.find(b => b.id === bankId);
+      const auto = bank.auto_computed || {};
+      const rec = bank.reconciliation || {};
+      
       await api.post("/summary/bank-analysis/", {
         bank_id: bankId,
         date: selectedDate,
         per_bank: perBankValues[bankId] || 0,
-        outstanding_checks: 0,
-        deposit_in_transit: 0,
-        returned_checks: 0,
-        bank_charges: 0,
-        unbooked_transfers: 0,
+        outstanding_checks: rec.outstanding_checks ?? auto.outstanding_checks ?? 0,
+        deposit_in_transit: rec.deposit_in_transit ?? auto.deposit_in_transit ?? 0,
+        returned_checks: rec.returned_checks ?? auto.returned_checks ?? 0,
+        bank_charges: rec.bank_charges ?? auto.bank_charges ?? 0,
+        unbooked_transfers: rec.unbooked_transfers ?? auto.unbooked_transfers ?? 0,
         remarks: remarksValues[bankId] || "",
       });
       setSnackbar({ open: true, message: "Saved!", severity: "success" });
@@ -120,15 +143,18 @@ export default function Analysis() {
     setSaving(true);
     try {
       for (const bank of data.banks) {
+        const auto = bank.auto_computed || {};
+        const rec = bank.reconciliation || {};
+        
         await api.post("/summary/bank-analysis/", {
           bank_id: bank.id,
           date: selectedDate,
           per_bank: perBankValues[bank.id] || 0,
-          outstanding_checks: 0,
-          deposit_in_transit: 0,
-          returned_checks: 0,
-          bank_charges: 0,
-          unbooked_transfers: 0,
+          outstanding_checks: rec.outstanding_checks ?? auto.outstanding_checks ?? 0,
+          deposit_in_transit: rec.deposit_in_transit ?? auto.deposit_in_transit ?? 0,
+          returned_checks: rec.returned_checks ?? auto.returned_checks ?? 0,
+          bank_charges: rec.bank_charges ?? auto.bank_charges ?? 0,
+          unbooked_transfers: rec.unbooked_transfers ?? auto.unbooked_transfers ?? 0,
           remarks: remarksValues[bank.id] || "",
         });
       }
@@ -173,6 +199,25 @@ export default function Analysis() {
     valencia_parts: "Valencia Parts",
   };
 
+  // Calculate grand totals
+  const calculateGrandTotals = () => {
+    if (!data?.banks) return { totalPerDcpr: 0, totalPerBank: 0, totalReconciled: 0 };
+    
+    let totalPerDcpr = 0;
+    let totalPerBank = 0;
+    let totalReconciled = 0;
+    
+    data.banks.forEach(bank => {
+      totalPerDcpr += parseFloat(bank.per_dcpr) || 0;
+      totalPerBank += parseFloat(perBankValues[bank.id]) || 0;
+      totalReconciled += calculateReconciledBalance(bank);
+    });
+    
+    return { totalPerDcpr, totalPerBank, totalReconciled };
+  };
+
+  const grandTotals = calculateGrandTotals();
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#F9FAFB", p: { xs: 2, md: 4 } }}>
       {/* Header */}
@@ -209,7 +254,7 @@ export default function Analysis() {
                 Bank Reconciliation Analysis
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Daily bank reconciliation
+                Daily bank reconciliation statement
               </Typography>
             </Box>
           </Box>
@@ -262,12 +307,23 @@ export default function Analysis() {
 
               {banks.map((bank) => {
                 const isChecking = bank.account_number?.toLowerCase().includes("ca");
+                const auto = bank.auto_computed || {};
+                const rec = bank.reconciliation || {};
+                
+                // Use saved values if available, otherwise use auto-computed
+                const depositInTransit = rec.deposit_in_transit ?? auto.deposit_in_transit ?? 0;
+                const outstandingChecks = rec.outstanding_checks ?? auto.outstanding_checks ?? 0;
+                const returnedChecks = rec.returned_checks ?? auto.returned_checks ?? 0;
+                const bankCharges = rec.bank_charges ?? auto.bank_charges ?? 0;
+                const unbookedTransfers = rec.unbooked_transfers ?? auto.unbooked_transfers ?? 0;
+                
+                const bankReconciled = calculateReconciledBalance(bank);
                 
                 return (
                   <Box
                     key={bank.id}
                     sx={{
-                      mb: 3,
+                      mb: 4,
                       p: 2,
                       border: "1px solid",
                       borderColor: "#E5E7EB",
@@ -276,7 +332,7 @@ export default function Analysis() {
                   >
                     {/* Bank Header */}
                     <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-                      {getAccountType(bank.account_number)} - {bank.account_number}
+                      {bank.name} - {getAccountType(bank.account_number)} ({bank.account_number})
                     </Typography>
 
                     {/* Table */}
@@ -305,12 +361,13 @@ export default function Analysis() {
                                 onChange={(e) => handlePerBankChange(bank.id, e.target.value)}
                                 inputProps={{ style: { textAlign: "right" } }}
                                 sx={{ width: 150 }}
+                                placeholder="Enter bank balance"
                               />
                             </TableCell>
-                            <TableCell sx={{ textAlign: "center" }}>-</TableCell>
+                            <TableCell sx={{ textAlign: "center", color: "#999" }}>-</TableCell>
                           </TableRow>
 
-                          {/* Reconciling Items Labels */}
+                          {/* Reconciling Items Label */}
                           <TableRow>
                             <TableCell colSpan={4} sx={{ py: 1, bgcolor: "#F8FAFC" }}>
                               <Typography variant="body2" sx={{ fontWeight: 600, color: "#666" }}>
@@ -326,7 +383,9 @@ export default function Analysis() {
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   a. Outstanding Checks
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: outstandingChecks > 0 ? "#ef4444" : "#666" }}>
+                                  {formatCurrency(outstandingChecks)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
                                   deduct to Bank
@@ -336,7 +395,9 @@ export default function Analysis() {
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   b. Unbooked Fund Transfers
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: unbookedTransfers > 0 ? "#22c55e" : "#666" }}>
+                                  {formatCurrency(unbookedTransfers)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
                                   add to DCPR
@@ -346,7 +407,9 @@ export default function Analysis() {
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   c. Bank Charges
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: bankCharges > 0 ? "#ef4444" : "#666" }}>
+                                  {formatCurrency(bankCharges)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
                                   add/deduct to DCPR
@@ -360,7 +423,9 @@ export default function Analysis() {
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   a. Deposit in Transit
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: depositInTransit > 0 ? "#22c55e" : "#666" }}>
+                                  {formatCurrency(depositInTransit)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
                                   add to Bank
@@ -370,17 +435,21 @@ export default function Analysis() {
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   b. Remittance to Checking Account
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: unbookedTransfers > 0 ? "#ef4444" : "#666" }}>
+                                  {formatCurrency(unbookedTransfers)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
-                                  Deduct to DCPR
+                                  deduct to DCPR
                                 </TableCell>
                               </TableRow>
                               <TableRow>
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   c. Returned Check
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: returnedChecks > 0 ? "#ef4444" : "#666" }}>
+                                  {formatCurrency(returnedChecks)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666" }}>-</TableCell>
                               </TableRow>
@@ -388,7 +457,9 @@ export default function Analysis() {
                                 <TableCell sx={{ pl: 3, fontSize: "0.85rem", color: "#555" }}>
                                   d. Bank Charges
                                 </TableCell>
-                                <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
+                                <TableCell sx={{ textAlign: "right", color: bankCharges > 0 ? "#ef4444" : "#666" }}>
+                                  {formatCurrency(bankCharges)}
+                                </TableCell>
                                 <TableCell sx={{ textAlign: "right", color: "#666" }}>-</TableCell>
                                 <TableCell sx={{ textAlign: "center", color: "#666", fontSize: "0.8rem" }}>
                                   add/deduct to DCPR
@@ -397,14 +468,14 @@ export default function Analysis() {
                             </>
                           )}
 
-                          {/* Reconciled Balance - Same as Ending */}
+                          {/* Reconciled Balance */}
                           <TableRow sx={{ bgcolor: "#1E293B", color: "#FFFFFF" }}>
                             <TableCell sx={{ fontWeight: 700, color: "#FFFFFF" }}>Reconciled Balance</TableCell>
                             <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
-                              {formatCurrency(perBankValues[bank.id] || bank.per_dcpr)}
+                              {formatCurrency(bankReconciled)}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#FFFFFF" }}>
-                              {formatCurrency(perBankValues[bank.id] || bank.per_dcpr)}
+                              {formatCurrency(bankReconciled)}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, textAlign: "center", color: "#FFFFFF" }}>-</TableCell>
                           </TableRow>
@@ -437,6 +508,37 @@ export default function Analysis() {
               })}
             </Paper>
           ))}
+
+          {/* Grand Total Section */}
+          <Paper sx={{ p: 3, borderRadius: 1, border: "2px solid #1E293B", bgcolor: "#1E293B" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: "#FFFFFF" }}>
+              GRAND TOTAL - ALL ACCOUNTS
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableBody>
+                  <TableRow sx={{ bgcolor: "#1E293B" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#FFFFFF", fontSize: "1.1rem" }}>Total Per DCPR (Ending Balance)</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#F59E0B", fontSize: "1.1rem" }}>
+                      {formatCurrency(grandTotals.totalPerDcpr)}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow sx={{ bgcolor: "#1E293B" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#FFFFFF", fontSize: "1.1rem" }}>Total Per Bank (Manual Entry)</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#F59E0B", fontSize: "1.1rem" }}>
+                      {formatCurrency(grandTotals.totalPerBank)}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow sx={{ bgcolor: "#F59E0B" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#1E293B", fontSize: "1.2rem" }}>Total Reconciled Balance</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: "right", color: "#1E293B", fontSize: "1.2rem" }}>
+                      {formatCurrency(grandTotals.totalReconciled)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
 
           {/* Signatures */}
           <Paper sx={{ p: 3, borderRadius: 1, border: "1px solid #E5E7EB" }}>
