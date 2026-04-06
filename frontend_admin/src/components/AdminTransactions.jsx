@@ -134,7 +134,9 @@ export default function AdminTransactions() {
     } else {
       setIsEditing(false);
       setSelectedTransaction(null);
-      setFormData({ bank_account: "", date: new Date().toISOString().split("T")[0], type: "collections", amount: "", description: "" });
+      const today = new Date();
+      const localDate = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+      setFormData({ bank_account: "", date: localDate, type: "collections", amount: "", description: "" });
     }
     setDialogOpen(true);
   };

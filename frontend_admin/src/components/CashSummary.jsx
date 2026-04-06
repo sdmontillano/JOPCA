@@ -108,30 +108,29 @@ export default function CashSummary() {
           bgcolor: "#FFFFFF",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-          <IconButton onClick={() => navigate("/dashboard")} sx={{ mr: 1 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 1,
-              bgcolor: "#1E293B",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <AccountBalanceWalletIcon sx={{ color: "#FFFFFF", fontSize: 24 }} />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.dark" }}>
-              Cash Summary
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Cash position summary by area
-            </Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: 1,
+                bgcolor: "#1E293B",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <AccountBalanceWalletIcon sx={{ color: "#FFFFFF", fontSize: 24 }} />
+            </Box>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.dark" }}>
+                Cash Summary
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Cash position summary by area
+              </Typography>
+            </Box>
           </Box>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <TextField
@@ -141,6 +140,18 @@ export default function CashSummary() {
               onChange={(e) => setSelectedDate(e.target.value)}
               sx={{ width: 150 }}
             />
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate("/dashboard")}
+              sx={{
+                borderColor: "#E5E7EB",
+                color: "#475569",
+                "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+              }}
+            >
+              Back
+            </Button>
           </Box>
         </Box>
       </Paper>
@@ -186,11 +197,11 @@ export default function CashSummary() {
             <TableContainer>
               <Table size="small" sx={{ borderCollapse: "collapse" }}>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#F1F5F9" }}>
-                    <TableCell sx={{ fontWeight: 600, width: "30%" }}>AREA</TableCell>
-                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>MAIN OFFICE</TableCell>
-                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>PARTS</TableCell>
-                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>TOTAL</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", width: "30%" }}>AREA</TableCell>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">MAIN OFFICE</TableCell>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">PARTS</TableCell>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">TOTAL</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -243,10 +254,10 @@ export default function CashSummary() {
             <TableContainer>
               <Table size="small" sx={{ borderCollapse: "collapse" }}>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#F1F5F9" }}>
-                    <TableCell sx={{ fontWeight: 600 }}>DESCRIPTION</TableCell>
-                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>MAIN OFFICE</TableCell>
-                    <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>PARTS</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>DESCRIPTION</TableCell>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">MAIN OFFICE</TableCell>
+                    <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">PARTS</TableCell>
                     <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>TOTAL</TableCell>
                   </TableRow>
                 </TableHead>

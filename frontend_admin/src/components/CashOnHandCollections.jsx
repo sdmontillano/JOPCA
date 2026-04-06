@@ -200,13 +200,13 @@ function CollectionsHistory({ defaultExpanded = false }) {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Particulars</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Location</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Beginning</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Collections</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Local Deposits</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Ending</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Transactions</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Particulars</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Location</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Beginning</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Collections</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Ending</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Transactions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>

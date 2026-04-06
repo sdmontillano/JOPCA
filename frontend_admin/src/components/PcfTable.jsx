@@ -274,7 +274,7 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
                 <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Ending
                 </TableCell>
-                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#B45309" }}>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Unreplenished
                 </TableCell>
                 <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B", minWidth: 250 }}>

@@ -97,12 +97,8 @@ api.interceptors.response.use(
     // Don't clear on network errors (backend not ready) or other errors
     if (status === 401 && err?.response?.data?.detail) {
       clearTokens();
-      try {
-        window.history.pushState({}, "", "/login");
-        window.location.href = "/login";
-      } catch {
-        window.location.href = "/login";
-      }
+      // Use HashRouter compatible redirect
+      window.location.hash = "#/login";
     }
     return Promise.reject(err);
   }

@@ -236,9 +236,6 @@ export default function Analysis() {
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton onClick={() => navigate("/dashboard")}>
-              <ArrowBackIcon />
-            </IconButton>
             <Box
               sx={{
                 width: 48,
@@ -276,6 +273,18 @@ export default function Analysis() {
               disabled={saving || !data?.banks?.length}
             >
               Save All
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate("/dashboard")}
+              sx={{
+                borderColor: "#E5E7EB",
+                color: "#475569",
+                "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+              }}
+            >
+              Back
             </Button>
           </Box>
         </Box>
@@ -342,11 +351,11 @@ export default function Analysis() {
                     <TableContainer>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#F1F5F9" }}>
-                            <TableCell sx={{ fontWeight: 600, width: "45%" }}>Description</TableCell>
-                            <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>Per DCPR</TableCell>
-                            <TableCell sx={{ fontWeight: 600, textAlign: "right" }}>Per Bank</TableCell>
-                            <TableCell sx={{ fontWeight: 600, textAlign: "center" }}>Remarks</TableCell>
+                          <TableRow>
+                            <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", width: "45%" }}>Description</TableCell>
+                            <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">Per DCPR</TableCell>
+                            <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">Per Bank</TableCell>
+                            <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", textAlign: "center" }}>Remarks</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>

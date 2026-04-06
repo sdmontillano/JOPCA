@@ -288,7 +288,7 @@ export default function AdminPcf() {
         <DialogTitle sx={{ fontWeight: 600 }}>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete PCF "<strong>{selectedPcf?.pcf_name}</strong>"?
+            Are you sure you want to delete PCF "<strong>{selectedPcf?.name}</strong>"?
             This action cannot be undone.
           </Typography>
         </DialogContent>

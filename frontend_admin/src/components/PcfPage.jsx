@@ -57,22 +57,33 @@ export default function PcfPage() {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => window.history.back()} variant="text">
-            Back
-          </Button>
           <WalletIcon color="primary" sx={{ fontSize: 32 }} />
           <Typography variant="h4" fontWeight="bold">
             Petty Cash Fund (PCF)
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<EventNoteIcon />}
-          onClick={() => setShowAddModal(true)}
-        >
-          Add Transaction
-        </Button>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<EventNoteIcon />}
+            onClick={() => setShowAddModal(true)}
+          >
+            Add Transaction
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => window.history.back()}
+            sx={{
+              borderColor: "#E5E7EB",
+              color: "#475569",
+              "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+            }}
+          >
+            Back
+          </Button>
+        </Box>
       </Box>
 
       <Tabs

@@ -199,14 +199,14 @@ export default function PcfHistory({ defaultExpanded = false }) {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Particulars</TableCell>
-                      <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Location</TableCell>
-                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Beginning</TableCell>
-                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Disb</TableCell>
-                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Rep</TableCell>
-                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>End</TableCell>
-                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B" }}>Unrep</TableCell>
-                      <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: isToday ? "#1E293B" : "#64748B", minWidth: 150 }}>Transactions</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Particulars</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Location</TableCell>
+                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Beginning</TableCell>
+                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Disbursements</TableCell>
+                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Replenishments</TableCell>
+                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Ending</TableCell>
+                      <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Unreplenished</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", minWidth: 150 }}>Transactions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>

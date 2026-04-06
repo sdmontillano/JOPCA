@@ -592,12 +592,12 @@ export default function MonthlyReport() {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ bgcolor: "#475569", color: "white", fontWeight: 700, fontSize: "0.75rem", whiteSpace: "nowrap" }}>Date</TableCell>
-                      <TableCell sx={{ bgcolor: "#475569", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>PCF Name</TableCell>
-                      <TableCell sx={{ bgcolor: "#475569", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Location</TableCell>
-                      <TableCell sx={{ bgcolor: "#475569", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
-                      <TableCell sx={{ bgcolor: "#475569", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
-                      <TableCell align="right" sx={{ bgcolor: "#475569", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>PCF Name</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Location</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
+                      <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -631,11 +631,11 @@ export default function MonthlyReport() {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ bgcolor: "#B45309", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Check #</TableCell>
-                      <TableCell sx={{ bgcolor: "#B45309", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Bank</TableCell>
-                      <TableCell align="right" sx={{ bgcolor: "#B45309", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
-                      <TableCell sx={{ bgcolor: "#B45309", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Status</TableCell>
-                      <TableCell sx={{ bgcolor: "#B45309", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Maturity Date</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Check #</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Bank</TableCell>
+                      <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Status</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Maturity Date</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -696,10 +696,10 @@ export default function MonthlyReport() {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Account</TableCell>
-                        <TableCell sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Account #</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Count</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Total</TableCell>
+                        <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Account</TableCell>
+                        <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Account #</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Count</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Total</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -730,9 +730,9 @@ export default function MonthlyReport() {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Count</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: "#64748B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Total</TableCell>
+                        <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Count</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Total</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>

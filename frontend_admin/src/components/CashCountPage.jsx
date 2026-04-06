@@ -97,16 +97,27 @@ const CashCountPage = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/dashboard')} variant="text">
-            Back
-          </Button>
           <Typography variant="h4" fontWeight="bold">
             Cash Count Verification
           </Typography>
         </Box>
-        <Button startIcon={<RefreshIcon />} onClick={fetchSummary} variant="outlined">
-          Refresh
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Button startIcon={<RefreshIcon />} onClick={fetchSummary} variant="outlined">
+            Refresh
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/dashboard')}
+            sx={{
+              borderColor: "#E5E7EB",
+              color: "#475569",
+              "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+            }}
+          >
+            Back
+          </Button>
+        </Box>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

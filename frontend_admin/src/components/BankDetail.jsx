@@ -171,9 +171,6 @@ export default function BankDetail() {
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton onClick={() => navigate("/banks")}>
-              <ArrowBackIcon />
-            </IconButton>
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.dark" }}>
                 {bank ? `${bank.name} (${bank.account_number})` : "Bank Account"}
@@ -183,12 +180,26 @@ export default function BankDetail() {
               </Typography>
             </Box>
           </Box>
-          <Paper sx={{ p: 2, bgcolor: "#1E293B", borderRadius: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: "#fff" }}>Current Balance</Typography>
-            <Typography variant="h6" sx={{ fontWeight: "bold", color: "#fff" }}>
-              {`₱${Number(bank?.balance ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            </Typography>
-          </Paper>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <Paper sx={{ p: 2, bgcolor: "#1E293B", borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ color: "#fff" }}>Current Balance</Typography>
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "#fff" }}>
+                {`₱${Number(bank?.balance ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </Typography>
+            </Paper>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate("/banks")}
+              sx={{
+                borderColor: "#E5E7EB",
+                color: "#475569",
+                "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+              }}
+            >
+              Back
+            </Button>
+          </Box>
         </Box>
       </Paper>
 
@@ -251,13 +262,13 @@ export default function BankDetail() {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#F1F5F9" }}>
-                <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600 }} align="right">Amount</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Added By</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Created At</TableCell>
+              <TableRow>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Date</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }} align="right">Amount</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Added By</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Created At</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

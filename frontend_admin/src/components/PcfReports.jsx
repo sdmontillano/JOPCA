@@ -145,23 +145,34 @@ const PcfReports = () => {
     <Paper sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/dashboard')} variant="text" size="small">
-            Back
-          </Button>
           <AssessmentIcon color="primary" />
           <Typography variant="h5" fontWeight="bold">PCF Reports</Typography>
         </Box>
-        <ButtonGroup size="small">
-          <Button startIcon={<PrintIcon />} onClick={handlePrint} variant="outlined">
-            Print
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <ButtonGroup size="small">
+            <Button startIcon={<PrintIcon />} onClick={handlePrint} variant="outlined">
+              Print
+            </Button>
+            <Button startIcon={<DownloadIcon />} onClick={handleExportExcel} variant="outlined">
+              Excel
+            </Button>
+            <Button startIcon={<DownloadIcon />} onClick={handleExportPdf} variant="outlined">
+              PDF
+            </Button>
+          </ButtonGroup>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/dashboard')}
+            sx={{
+              borderColor: "#E5E7EB",
+              color: "#475569",
+              "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+            }}
+          >
+            Back
           </Button>
-          <Button startIcon={<DownloadIcon />} onClick={handleExportExcel} variant="outlined">
-            Excel
-          </Button>
-          <Button startIcon={<DownloadIcon />} onClick={handleExportPdf} variant="outlined">
-            PDF
-          </Button>
-        </ButtonGroup>
+        </Box>
       </Box>
 
       <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
