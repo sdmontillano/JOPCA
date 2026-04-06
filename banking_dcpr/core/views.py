@@ -2,6 +2,7 @@
 import logging
 from django.utils.timezone import now, timezone
 from django.db.models import Sum, Count, F
+from django.db import transaction
 from datetime import datetime
 from datetime import date as _date
 from datetime import timedelta
@@ -1925,4 +1926,59 @@ def create_user(request):
         'message': f'User "{username}" created successfully!',
         'username': username,
         'login_url': '/'
+    })
+
+
+# API endpoint to reset all data (admin only for security)
+@api_view(['GET'])
+@permission_classes([permissions.IsAdminUser])
+def reset_all_data(request):
+    """
+    Reset all transaction data but keep bank accounts and users.
+    Usage: /api/reset-data/ (requires admin authentication)
+    """
+    from .models import (
+        BankAccount, Transaction, DailyCashPosition,
+        PettyCashFund, PettyCashTransaction, Pdc,
+        MonthlyReport, BankReconciliation
+    )
+    from django.contrib.auth.models import User
+    
+    with transaction.atomic():
+        # Clear all transaction-related data
+        Transaction.objects.all().delete()
+        PettyCashTransaction.objects.all().delete()
+        Pdc.objects.all().delete()
+        DailyCashPosition.objects.all().delete()
+        MonthlyReport.objects.all().delete()
+        BankReconciliation.objects.all().delete()
+        
+        # Reset bank account balances
+        BankAccount.objects.update(
+            balance=Decimal('0'),
+            opening_balance=Decimal('0')
+        )
+        
+        # Reset PCF balances
+        PettyCashFund.objects.update(
+            current_balance=Decimal('0'),
+            opening_balance=Decimal('0')
+        )
+    
+    return Response({
+        'status': 'success',
+        'message': 'All transaction data has been reset. Bank accounts and users are preserved.',
+        'reset_items': [
+            'Transactions',
+            'Petty Cash Transactions',
+            'PDC Records',
+            'Daily Cash Positions',
+            'Monthly Reports',
+            'Bank Reconciliations',
+        ],
+        'preserved': [
+            'Bank Accounts',
+            'Users',
+            'PCF Funds'
+        ]
     })

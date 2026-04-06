@@ -39,6 +39,7 @@ from core.views import (
     obtain_auth_token_with_role,
     create_default_admin,
     create_user,
+    reset_all_data,
 )
 
 router = DefaultRouter()
@@ -78,6 +79,7 @@ urlpatterns = [
     path('api/change-password/', change_password, name='change_password'),
     path('api/user/profile/', user_profile, name='user_profile'),
     path('api/audit-log/', audit_log, name='audit_log'),
+    path('api/reset-data/', reset_all_data, name='reset_all_data'),
 
     # PCF report endpoints
     path('api/reports/pcf-daily/', pcf_daily_report, name='pcf_daily_report'),
