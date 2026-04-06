@@ -801,6 +801,27 @@ function DashboardInner() {
               {dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE"} — {dailyReport?.date || ""}
             </Typography>
           </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {(localStorage.getItem("isStaff") === "true" || localStorage.getItem("isSuperuser") === "true") && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  localStorage.setItem("userRole", "admin");
+                  window.location.hash = "#/admin";
+                  window.location.reload();
+                }}
+                sx={{ 
+                  borderColor: "#1E293B", 
+                  color: "#1E293B",
+                  textTransform: "none",
+                  "&:hover": { bgcolor: "#1E293B", color: "#FFFFFF" }
+                }}
+              >
+                Go to Admin
+              </Button>
+            )}
+          </Box>
 
         </Stack>
 

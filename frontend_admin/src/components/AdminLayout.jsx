@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, AppBar, Toolbar, IconButton, Breadcrumbs, Link, Divider } from "@mui/material";
+import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, AppBar, Toolbar, IconButton, Breadcrumbs, Link, Divider, Button } from "@mui/material";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -183,9 +183,29 @@ export default function AdminLayout({ children, title, breadcrumbs }) {
             )}
           </Box>
 
-          <Typography variant="body2" sx={{ color: "#64748b", fontSize: 13 }}>
-            Welcome, <strong>{localStorage.getItem("username") || "Admin"}</strong>
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                localStorage.setItem("userRole", "user");
+                window.location.hash = "#/dashboard";
+                window.location.reload();
+              }}
+              startIcon={<ArrowBackIcon />}
+              sx={{ 
+                borderColor: "#1E293B", 
+                color: "#1E293B",
+                textTransform: "none",
+                "&:hover": { bgcolor: "#1E293B", color: "#FFFFFF" }
+              }}
+            >
+              Back to Dashboard
+            </Button>
+            <Typography variant="body2" sx={{ color: "#64748b", fontSize: 13 }}>
+              Welcome, <strong>{localStorage.getItem("username") || "Admin"}</strong>
+            </Typography>
+          </Box>
         </Toolbar>
       </AppBar>
 
