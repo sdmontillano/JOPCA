@@ -38,7 +38,11 @@ def compute_bank_daily_summary(target_date):
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
 
-        beginning = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_local_deposits) + _safe_decimal(prior_fund_transfers) - _safe_decimal(prior_outflows)
+        # Calculate beginning - ensure it doesn't go negative
+        # Beginning balance = Opening Balance + Prior Inflows - Prior Outflows
+        # But cannot be less than 0
+        beginning_raw = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_local_deposits) + _safe_decimal(prior_fund_transfers) - _safe_decimal(prior_outflows)
+        beginning = max(beginning_raw, Decimal("0"))
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
@@ -59,7 +63,9 @@ def compute_bank_daily_summary(target_date):
         # Note: Collections are NOT included - they are shown in Cash on Hand Collections table (not in Cash in Bank)
         # Local Deposits = money deposited INTO the bank (increases bank balance)
         # Returned checks = money returned (decreases bank balance)
-        ending = beginning + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
+        # Ensure ending balance doesn't go negative
+        ending_raw = beginning + _safe_decimal(local_deposits) + _safe_decimal(fund_transfers) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
+        ending = max(ending_raw, Decimal("0"))
 
         rows.append({
             "bank_id": bank.id,
