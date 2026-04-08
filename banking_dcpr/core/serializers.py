@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Sum
 from rest_framework import serializers
 
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
 from .constants import INFLOW_TYPES, OUTFLOW_TYPES
 
 INFLOW_TYPE_LIST = list(INFLOW_TYPES)
@@ -313,3 +313,16 @@ class PcfSummarySerializer(serializers.Serializer):
     replenishments = serializers.DecimalField(max_digits=12, decimal_places=2)
     unreplenished = serializers.DecimalField(max_digits=12, decimal_places=2)
     ending = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = AuditLog
+        fields = [
+            'id', 'timestamp', 'user', 'user_username', 'username', 
+            'action', 'entity', 'entity_id', 'description', 
+            'ip_address', 'details'
+        ]
+        read_only_fields = ['timestamp', 'user', 'username']

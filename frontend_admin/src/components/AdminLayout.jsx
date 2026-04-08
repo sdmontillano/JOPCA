@@ -10,6 +10,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PeopleIcon from "@mui/icons-material/People";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LogoutIcon from "@mui/icons-material/Logout";
+import HistoryIcon from "@mui/icons-material/History";
 
 const DRAWER_WIDTH = 280;
 
@@ -20,6 +21,7 @@ const adminSections = [
   { id: "pdc", title: "PDC", path: "/admin/pdc", icon: <EventNoteIcon /> },
   { id: "pcf", title: "PCF", path: "/admin/pcf", icon: <AccountBalanceWalletIcon /> },
   { id: "users", title: "Users", path: "/admin/users", icon: <PeopleIcon /> },
+  { id: "audit", title: "Audit Logs", path: "/admin/audit", icon: <HistoryIcon /> },
 ];
 
 export default function AdminLayout({ children, title, breadcrumbs }) {

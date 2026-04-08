@@ -653,3 +653,63 @@ class BankReconciliation(models.Model):
     @property
     def is_balanced(self):
         return abs(self.dcpr_reconciled - self.bank_reconciled) < Decimal('0.01')
+
+
+# ---------------------------------------------------------------------
+# Audit Log model - Track all user actions
+# ---------------------------------------------------------------------
+class AuditLog(models.Model):
+    ACTION_TYPES = [
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('export', 'Export'),
+        ('deposit', 'Deposit'),
+        ('withdraw', 'Withdraw'),
+        ('replenish', 'Replenish'),
+    ]
+
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs'
+    )
+    username = models.CharField(max_length=150, blank=True, help_text="Username at time of action")
+    action = models.CharField(max_length=20, choices=ACTION_TYPES, db_index=True)
+    entity = models.CharField(max_length=50, db_index=True, help_text="e.g., Transaction, BankAccount, PCF, PDC")
+    entity_id = models.PositiveIntegerField(null=True, blank=True, db_index=True)
+    description = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True, help_text="Additional details as JSON")
+
+    class Meta:
+        verbose_name = 'Audit Log'
+        verbose_name_plural = 'Audit Logs'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp']),
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['entity', 'entity_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.timestamp} - {self.user} - {self.action} {self.entity}"
+
+
+def log_audit(user, action, entity, entity_id=None, description='', ip_address=None, **details):
+    """Helper function to create audit log entries"""
+    AuditLog.objects.create(
+        user=user,
+        username=user.username if user else 'anonymous',
+        action=action,
+        entity=entity,
+        entity_id=entity_id,
+        description=description,
+        ip_address=ip_address,
+        details=details
+    )

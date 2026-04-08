@@ -960,6 +960,50 @@ class CashCountViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only viewset for Audit Logs.
+    Provides filtering and search capabilities.
+    """
+    queryset = AuditLog.objects.all().order_by('-timestamp')
+    serializer_class = AuditLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        
+        # Filter by user
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        
+        # Filter by action
+        action = self.request.query_params.get('action')
+        if action:
+            qs = qs.filter(action=action)
+        
+        # Filter by entity
+        entity = self.request.query_params.get('entity')
+        if entity:
+            qs = qs.filter(entity=entity)
+        
+        # Filter by date range
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(timestamp__date__gte=date_from)
+        
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(timestamp__date__lte=date_to)
+        
+        # Search in description
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(description__icontains=search)
+        
+        return qs
+
+
 # ---------------------------------------------------------------------
 # Summary Endpoints
 # ---------------------------------------------------------------------

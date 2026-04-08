@@ -13,6 +13,7 @@ import AdminTransactions from "./components/AdminTransactions.jsx";
 import AdminBanks from "./components/AdminBanks.jsx";
 import AdminPdc from "./components/AdminPdc.jsx";
 import AdminPcf from "./components/AdminPcf.jsx";
+import AdminAuditLogs from "./components/AdminAuditLogs.jsx";
 import AddBankAccount from "./components/AddBankAccount.jsx";
 import AddTransaction from "./components/AddTransaction.jsx";
 import Transactions from "./components/Transactions.jsx";
@@ -147,6 +148,10 @@ export default function App() {
         <Route
           path="/admin/pcf"
           element={isAuthenticated && isAdmin ? <AdminPcf /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/audit"
+          element={isAuthenticated && isAdmin ? <AdminAuditLogs /> : <Navigate to="/dashboard" replace />}
         />
         
         <Route

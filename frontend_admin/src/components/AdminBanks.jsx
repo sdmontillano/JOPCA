@@ -11,6 +11,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AdminLayout from "./AdminLayout";
 import api from "../services/tokenService";
 import { useToast } from "../ToastContext";
+import ExportButtons from "./ExportButtons";
 
 export default function AdminBanks() {
   const { showToast } = useToast();
@@ -121,20 +122,34 @@ export default function AdminBanks() {
     <AdminLayout title="Banks" breadcrumbs={breadcrumbs}>
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <Box sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0" }}>
-          <TextField
-            size="small"
-            placeholder="Search banks..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ width: 300 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "#64748b" }} />
-                </InputAdornment>
-              ),
-            }}
-          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <TextField
+              size="small"
+              placeholder="Search banks..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              sx={{ width: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: "#64748b" }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <ExportButtons 
+              data={filteredBanks} 
+              filename="banks" 
+              label="Export"
+              columns={[
+                { label: "ID", key: "id" },
+                { label: "Name", key: "name" },
+                { label: "Account Number", key: "account_number" },
+                { label: "Opening Balance", key: "opening_balance" },
+                { label: "Balance", key: "balance" },
+              ]}
+            />
+          </Box>
           <Button
             variant="contained"
             startIcon={<AddIcon />}

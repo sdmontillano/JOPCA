@@ -4,7 +4,7 @@ import { useState } from "react";
 import { downloadCsv } from "../utils/csvUtils";
 import { useToast } from "../ToastContext";
 
-export default function ExportButtons({ data, filename, label = "Export" }) {
+export default function ExportButtons({ data, filename, label = "Export", columns = null }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const { showToast } = useToast();
 
@@ -17,10 +17,28 @@ export default function ExportButtons({ data, filename, label = "Export" }) {
     }
 
     if (format === "csv") {
-      const headers = Object.keys(data[0]).filter(k => k !== "raw");
-      const rows = data.map(item => 
-        headers.map(h => item[h])
-      );
+      let headers, rows;
+      
+      if (columns) {
+        // Custom column mapping provided
+        headers = columns.map(col => col.label);
+        rows = data.map(item => 
+          columns.map(col => {
+            const value = col.key.split('.').reduce((obj, key) => obj?.[key], item);
+            return value !== undefined ? value : "";
+          })
+        );
+      } else {
+        // Auto-detect columns from first item, excluding 'raw' and nested objects
+        headers = Object.keys(data[0]).filter(k => k !== "raw" && typeof data[0][k] !== 'object');
+        rows = data.map(item => 
+          headers.map(h => {
+            const value = item[h];
+            return value !== undefined ? value : "";
+          })
+        );
+      }
+      
       downloadCsv([headers, ...rows], `${filename}.csv`);
       showToast("Report exported successfully!", "success");
     }

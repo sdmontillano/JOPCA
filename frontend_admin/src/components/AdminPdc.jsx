@@ -11,6 +11,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AdminLayout from "./AdminLayout";
 import api from "../services/tokenService";
 import { useToast } from "../ToastContext";
+import ExportButtons from "./ExportButtons";
 
 const PDC_STATUSES = [
   { value: "", label: "All Statuses" },
@@ -197,6 +198,20 @@ export default function AdminPdc() {
               </Select>
             </FormControl>
             <Box sx={{ flexGrow: 1 }} />
+            <ExportButtons 
+              data={filteredPdcs} 
+              filename="pdc" 
+              label="Export"
+              columns={[
+                { label: "ID", key: "id" },
+                { label: "Check #", key: "check_number" },
+                { label: "Customer", key: "client_name" },
+                { label: "Bank", key: "deposit_bank.name" },
+                { label: "Amount", key: "amount" },
+                { label: "Maturity Date", key: "maturity_date" },
+                { label: "Status", key: "status" },
+              ]}
+            />
             <Button
               variant="contained"
               startIcon={<AddIcon />}

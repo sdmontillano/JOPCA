@@ -17,6 +17,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import api from "../services/tokenService";
+import ExportButtons from "./ExportButtons";
 
 export default function Banks() {
   const [accounts, setAccounts] = useState([]);
@@ -98,6 +99,11 @@ export default function Banks() {
             </Box>
           </Box>
           <Stack direction="row" spacing={1} alignItems="center">
+            <ExportButtons 
+              data={accounts} 
+              filename="bank_accounts" 
+              label="Export" 
+            />
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}

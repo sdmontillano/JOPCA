@@ -11,6 +11,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AdminLayout from "./AdminLayout";
 import api from "../services/tokenService";
 import { useToast } from "../ToastContext";
+import ExportButtons from "./ExportButtons";
 
 const TRANSACTION_TYPES = [
   { value: "", label: "All Types" },
@@ -235,6 +236,19 @@ export default function AdminTransactions() {
               InputLabelProps={{ shrink: true }}
             />
             <Box sx={{ flexGrow: 1 }} />
+            <ExportButtons 
+              data={filteredTransactions} 
+              filename="transactions" 
+              label="Export"
+              columns={[
+                { label: "ID", key: "id" },
+                { label: "Date", key: "date" },
+                { label: "Bank", key: "bank_account.name" },
+                { label: "Type", key: "type" },
+                { label: "Amount", key: "amount" },
+                { label: "Description", key: "description" },
+              ]}
+            />
             <Button
               variant="contained"
               startIcon={<AddIcon />}
