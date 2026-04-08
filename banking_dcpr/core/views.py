@@ -201,6 +201,7 @@ from .serializers import (
     PettyCashFundMinimalSerializer,
     PettyCashTransactionSerializer,
     CashCountSerializer,
+    AuditLogSerializer,
 )
 from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
 from .utils.summary import compute_bank_daily_summary
