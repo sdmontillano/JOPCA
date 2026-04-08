@@ -87,8 +87,6 @@ export default function AdminHome() {
       deposits: "#3b82f6",
       disbursement: "#ef4444",
       disbursements: "#ef4444",
-      local_deposits: "#f59e0b",
-      local_deposit: "#f59e0b",
       fund_transfer: "#8b5cf6",
       fund_transfers: "#8b5cf6",
       interbank_transfer: "#8b5cf6",

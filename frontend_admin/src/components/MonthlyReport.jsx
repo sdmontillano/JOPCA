@@ -77,7 +77,7 @@ function SectionHeader({ title, icon, count, total, expanded, onToggle }) {
 }
 
 function TransactionRow({ transaction, type = "bank" }) {
-  const isPositive = ["collection", "deposit", "replenishment", "local_deposits"].includes(transaction.type?.toLowerCase());
+  const isPositive = ["collection", "deposit", "replenishment"].includes(transaction.type?.toLowerCase());
   const isNegative = ["disbursement", "withdrawal", "returned_check", "bank_charges"].includes(transaction.type?.toLowerCase());
 
   let amountColor = "#6B7280";
@@ -498,7 +498,7 @@ export default function MonthlyReport() {
                   sx={{ minWidth: 250 }}
                 />
                 <Stack direction="row" spacing={1}>
-                  {["all", "collections", "local_deposits", "disbursement", "returned_check", "bank_charges", "adjustments", "fund_transfer", "transfer", "interbank_transfer"].map((type) => (
+                  {["all", "collections", "deposit", "disbursement", "returned_check", "bank_charges", "adjustments", "fund_transfer", "transfer", "interbank_transfer"].map((type) => (
                     <Chip
                       key={type}
                       label={type === "all" ? "All" : type.replace(/_/g, " ")}

@@ -24,12 +24,11 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
 
-const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'local_deposits'];
+const INFLOW_TYPES = ['collection', 'deposit', 'collections'];
 const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer'];
 
 const typeColors = {
   collections: { bg: "#DCFCE7", color: "#166534" },
-  local_deposits: { bg: "#DCFCE7", color: "#166534" },
   deposit: { bg: "#DCFCE7", color: "#166534" },
   disbursement: { bg: "#FEE2E2", color: "#991B1B" },
   returned_check: { bg: "#FEF3C7", color: "#B45309" },
@@ -60,7 +59,6 @@ export default function BankDetail() {
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
     { value: "collections", label: "Collections" },
-    { value: "local_deposits", label: "Local Deposits" },
     { value: "disbursement", label: "Disbursement" },
     { value: "returned_check", label: "Returned Check" },
     { value: "bank_charges", label: "Bank Charges" },

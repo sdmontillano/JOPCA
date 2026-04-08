@@ -16,10 +16,8 @@ import ExportButtons from "./ExportButtons";
 const TRANSACTION_TYPES = [
   { value: "", label: "All Types" },
   { value: "collections", label: "Collections" },
-  { value: "disbursement", label: "Disbursement" },
   { value: "deposit", label: "Deposit" },
-  { value: "collections", label: "Collections" },
-  { value: "local_deposits", label: "Local Deposits" },
+  { value: "disbursement", label: "Disbursement" },
   { value: "fund_transfer", label: "Fund Transfer" },
   { value: "interbank_transfer", label: "Interbank Transfer" },
   { value: "adjustments", label: "Adjustments" },
@@ -92,7 +90,6 @@ export default function AdminTransactions() {
     const colors = {
       collections: "#dcfce7",
       deposit: "#dbeafe",
-      local_deposits: "#fef3c7",
       disbursement: "#fee2e2",
       fund_transfer: "#f3e8ff",
       interbank_transfer: "#f3e8ff",
@@ -107,7 +104,6 @@ export default function AdminTransactions() {
     const colors = {
       collections: "#166534",
       deposit: "#1e40af",
-      local_deposits: "#92400e",
       disbursement: "#991b1b",
       fund_transfer: "#6b21a8",
       interbank_transfer: "#6b21a8",

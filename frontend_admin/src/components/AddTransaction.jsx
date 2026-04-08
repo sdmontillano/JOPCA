@@ -58,7 +58,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
     { value: "collections", label: "Collections" },
-    { value: "local_deposits", label: "Local Deposits" },
     { value: "disbursement", label: "Disbursement" },
     { value: "returned_check", label: "Returned Check" },
     { value: "bank_charges", label: "Bank Charges" },
