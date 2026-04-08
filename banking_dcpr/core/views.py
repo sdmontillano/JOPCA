@@ -166,6 +166,31 @@ def verify_token(request):
         "is_staff": request.user.is_staff,
     })
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_user(request):
+    """Log user logout and delete token."""
+    from rest_framework.authtoken.models import Token
+    from .models import log_audit
+    
+    user = request.user
+    
+    # Log the logout action
+    log_audit(
+        user=user,
+        action='logout',
+        entity='User',
+        entity_id=user.id,
+        description=f"User logged out: {user.username}",
+        ip_address=request.META.get('REMOTE_ADDR'),
+    )
+    
+    # Delete the token
+    Token.objects.filter(user=user).delete()
+    
+    return Response({'status': 'logged_out', 'message': 'Successfully logged out'})
+
 from .serializers import (
     BankAccountSerializer,
     TransactionSerializer,

@@ -373,7 +373,12 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
   const openUserMenu = (e) => setUserMenuAnchor(e.currentTarget);
   const closeUserMenu = () => setUserMenuAnchor(null);
   const handleNavigate = (to) => { navigate(to); closeMenu(); };
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/auth/logout/");
+    } catch (e) {
+      // Ignore logout API errors
+    }
     localStorage.removeItem("token");
     navigate("/login");
   };

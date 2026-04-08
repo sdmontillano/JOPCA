@@ -38,6 +38,7 @@ from core.views import (
     bank_analysis,
     verify_token,
     obtain_auth_token_with_role,
+    logout_user,
     create_default_admin,
     create_user,
     reset_all_data,
@@ -59,6 +60,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-token-auth/', obtain_auth_token_with_role, name='api_token_auth'),
     path('api/auth/verify/', verify_token, name='verify_token'),
+    path('api/auth/logout/', logout_user, name='logout_user'),
     path('api/create-admin/', create_default_admin, name='create_admin'),
     path('api/create-user/', create_user, name='create_user'),
 
