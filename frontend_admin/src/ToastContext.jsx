@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import { Snackbar, Alert } from "@mui/material";
 
+console.log('ToastContext loading...');
+
 const ToastContext = createContext();
 
 export const useToast = () => useContext(ToastContext);

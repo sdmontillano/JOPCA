@@ -3,6 +3,8 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import createAppTheme, { COLOR_SCHEMES, DARK_COLOR_SCHEMES } from "./theme";
 
+console.log('ThemeContext loading...');
+
 const ThemeContext = createContext();
 
 export const useThemeColor = () => useContext(ThemeContext);

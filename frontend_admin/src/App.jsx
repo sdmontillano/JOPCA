@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { API_URL } from "./services/tokenService";
 
+console.log('App.jsx loading...');
+console.log('API_URL:', API_URL);
+
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";

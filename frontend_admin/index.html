@@ -5,9 +5,27 @@
     <link rel="icon" type="image/png" href="/jopca-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JOPCA</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #1E293B;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#1E293B;color:white;font-family:system-ui,sans-serif;">
+        <div style="text-align:center;">
+          <div style="font-size:32px;font-weight:bold;margin-bottom:8px;">JOPCA</div>
+          <div style="font-size:14px;opacity:0.8;margin-bottom:16px;">Daily Cash Position System</div>
+          <div style="font-size:12px;opacity:0.6;">Loading...</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
