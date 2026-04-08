@@ -513,60 +513,6 @@ class Pdc(models.Model):
 
 
 # ---------------------------------------------------------------------
-# Audit Log Model
-# ---------------------------------------------------------------------
-class AuditLog(models.Model):
-    ACTION_CHOICES = [
-        ('CREATE', 'Create'),
-        ('UPDATE', 'Update'),
-        ('DELETE', 'Delete'),
-        ('LOGIN', 'Login'),
-        ('LOGOUT', 'Logout'),
-        ('PASSWORD_CHANGE', 'Password Change'),
-        ('VIEW', 'View'),
-        ('EXPORT', 'Export'),
-    ]
-    
-    user = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='audit_logs',
-    )
-    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
-    model_name = models.CharField(max_length=100, blank=True, null=True)
-    object_id = models.PositiveIntegerField(blank=True, null=True)
-    details = models.TextField(blank=True, null=True)
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
-    user_agent = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Audit Log'
-        verbose_name_plural = 'Audit Logs'
-    
-    def __str__(self):
-        return f"{self.user} - {self.action} - {self.created_at}"
-
-
-def log_audit(user, action, model_name=None, object_id=None, details=None, request=None):
-    """Helper function to create audit log entries."""
-    kwargs = {
-        'user': user,
-        'action': action,
-        'model_name': model_name,
-        'object_id': object_id,
-        'details': details,
-    }
-    if request:
-        kwargs['ip_address'] = request.META.get('REMOTE_ADDR')
-        kwargs['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
-    AuditLog.objects.create(**kwargs)
-
-
-# ---------------------------------------------------------------------
 # Bank Reconciliation Model
 # ---------------------------------------------------------------------
 class BankReconciliation(models.Model):
