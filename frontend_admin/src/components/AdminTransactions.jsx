@@ -18,13 +18,13 @@ const TRANSACTION_TYPES = [
   { value: "collections", label: "Collections" },
   { value: "disbursement", label: "Disbursement" },
   { value: "deposit", label: "Deposit" },
+  { value: "collections", label: "Collections" },
   { value: "local_deposits", label: "Local Deposits" },
   { value: "fund_transfer", label: "Fund Transfer" },
   { value: "interbank_transfer", label: "Interbank Transfer" },
   { value: "adjustments", label: "Adjustments" },
   { value: "bank_charges", label: "Bank Charges" },
   { value: "returned_check", label: "Returned Check" },
-  { value: "post_dated_check", label: "Post-Dated Check" },
 ];
 
 export default function AdminTransactions() {
@@ -99,7 +99,6 @@ export default function AdminTransactions() {
       adjustments: "#fce7f3",
       bank_charges: "#f1f5f9",
       returned_check: "#fee2e2",
-      post_dated_check: "#fff7ed",
     };
     return colors[type] || "#f1f5f9";
   };
@@ -115,7 +114,6 @@ export default function AdminTransactions() {
       adjustments: "#9d174d",
       bank_charges: "#475569",
       returned_check: "#991b1b",
-      post_dated_check: "#9a3412",
     };
     return colors[type] || "#475569";
   };

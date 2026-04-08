@@ -66,7 +66,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     { value: "transfer", label: "Transfer" },
     { value: "fund_transfer", label: "Fund Transfer" },
     { value: "interbank_transfer", label: "Interbank Transfer" },
-    { value: "post_dated_check", label: "Post-Dated Check" },
   ];
 
   // fetch accounts (used both in modal and standalone)

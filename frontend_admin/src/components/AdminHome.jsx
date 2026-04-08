@@ -99,8 +99,6 @@ export default function AdminHome() {
       bank_charge: "#64748b",
       returned_check: "#ef4444",
       returned_checks: "#ef4444",
-      post_dated_check: "#f97316",
-      post_dated_checks: "#f97316",
       transfer: "#8b5cf6",
       transfers: "#8b5cf6",
     };

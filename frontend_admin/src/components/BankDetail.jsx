@@ -25,7 +25,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
 
 const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'local_deposits'];
-const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer', 'post_dated_check'];
+const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer'];
 
 const typeColors = {
   collections: { bg: "#DCFCE7", color: "#166534" },
@@ -38,7 +38,6 @@ const typeColors = {
   fund_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
   transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
   interbank_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
-  post_dated_check: { bg: "#F3F4F6", color: "#374151" },
 };
 
 export default function BankDetail() {
@@ -69,7 +68,6 @@ export default function BankDetail() {
     { value: "transfer", label: "Transfer" },
     { value: "fund_transfer", label: "Fund Transfer" },
     { value: "interbank_transfer", label: "Interbank Transfer" },
-    { value: "post_dated_check", label: "Post-Dated Check" },
   ];
 
   const formatDate = (dateStr) => {
