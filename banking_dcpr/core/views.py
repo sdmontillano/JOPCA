@@ -135,6 +135,17 @@ def obtain_auth_token_with_role(request):
     
     token, created = Token.objects.get_or_create(user=user)
     
+    # Log successful login
+    from .models import log_audit
+    log_audit(
+        user=user,
+        action='login',
+        entity='User',
+        entity_id=user.id,
+        description=f"User logged in: {username}",
+        ip_address=request.META.get('REMOTE_ADDR'),
+    )
+    
     return Response({
         'token': token.key,
         'user_id': user.pk,
@@ -166,7 +177,7 @@ from .serializers import (
     PettyCashTransactionSerializer,
     CashCountSerializer,
 )
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
 from .utils.summary import compute_bank_daily_summary
 from .export_views import pcf_export_excel, pcf_export_pdf
 
@@ -185,6 +196,30 @@ class BankAccountViewSet(viewsets.ModelViewSet):
     serializer_class = BankAccountSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def _log_audit(self, action, instance, description=''):
+        """Helper to create audit log entry"""
+        from .models import log_audit
+        log_audit(
+            user=self.request.user,
+            action=action,
+            entity='BankAccount',
+            entity_id=instance.id if instance else None,
+            description=description,
+            ip_address=self.request.META.get('REMOTE_ADDR'),
+        )
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self._log_audit('create', instance, f"Created bank account: {instance.name} ({instance.account_number})")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._log_audit('update', instance, f"Updated bank account: {instance.name}")
+
+    def perform_destroy(self, instance):
+        self._log_audit('delete', instance, f"Deleted bank account: {instance.name}")
+        instance.delete()
+
 
 class TransactionViewSet(viewsets.ModelViewSet):
     queryset = Transaction.objects.all().order_by('-date', '-id')  # newest first by date
@@ -197,6 +232,30 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if bank_id:
             qs = qs.filter(bank_account_id=bank_id)
         return qs
+
+    def _log_audit(self, action, instance, description=''):
+        """Helper to create audit log entry"""
+        from .models import log_audit
+        log_audit(
+            user=self.request.user,
+            action=action,
+            entity='Transaction',
+            entity_id=instance.id if instance else None,
+            description=description,
+            ip_address=self.request.META.get('REMOTE_ADDR'),
+        )
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self._log_audit('create', instance, f"Created transaction: {instance.type} - {instance.amount} for {instance.bank_account}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._log_audit('update', instance, f"Updated transaction: {instance.type} - {instance.amount}")
+
+    def perform_destroy(self, instance):
+        self._log_audit('delete', instance, f"Deleted transaction: {instance.type} - {instance.amount}")
+        instance.delete()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -743,6 +802,30 @@ class PdcViewSet(viewsets.ModelViewSet):
     serializer_class = PdcSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def _log_audit(self, action, instance, description=''):
+        """Helper to create audit log entry"""
+        from .models import log_audit
+        log_audit(
+            user=self.request.user,
+            action=action,
+            entity='Pdc',
+            entity_id=instance.id if instance else None,
+            description=description,
+            ip_address=self.request.META.get('REMOTE_ADDR'),
+        )
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self._log_audit('create', instance, f"Created PDC: {instance.check_number} - {instance.amount}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._log_audit('update', instance, f"Updated PDC: {instance.check_number} - {instance.status}")
+
+    def perform_destroy(self, instance):
+        self._log_audit('delete', instance, f"Deleted PDC: {instance.check_number}")
+        instance.delete()
+
     @action(detail=True, methods=["post"])
     @transaction.atomic
     def mark_matured(self, request, pk=None):
@@ -885,6 +968,30 @@ class PettyCashFundViewSet(viewsets.ModelViewSet):
     queryset = PettyCashFund.objects.all().order_by('name')
     serializer_class = PettyCashFundSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def _log_audit(self, action, instance, description=''):
+        """Helper to create audit log entry"""
+        from .models import log_audit
+        log_audit(
+            user=self.request.user,
+            action=action,
+            entity='PettyCashFund',
+            entity_id=instance.id if instance else None,
+            description=description,
+            ip_address=self.request.META.get('REMOTE_ADDR'),
+        )
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self._log_audit('create', instance, f"Created PCF: {instance.name} at {instance.get_location_display()}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._log_audit('update', instance, f"Updated PCF: {instance.name}")
+
+    def perform_destroy(self, instance):
+        self._log_audit('delete', instance, f"Deleted PCF: {instance.name}")
+        instance.delete()
 
     def get_serializer_class(self):
         if self.action == 'list':
