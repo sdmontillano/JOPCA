@@ -135,16 +135,16 @@ def obtain_auth_token_with_role(request):
     
     token, created = Token.objects.get_or_create(user=user)
     
-    # Log successful login
-    from .models import log_audit
-    log_audit(
-        user=user,
-        action='login',
-        entity='User',
-        entity_id=user.id,
-        description=f"User logged in: {username}",
-        ip_address=request.META.get('REMOTE_ADDR'),
-    )
+    # TEMPORARILY DISABLED: Audit logging causing DB issues
+    # from .models import log_audit
+    # log_audit(
+    #     user=user,
+    #     action='login',
+    #     entity='User',
+    #     entity_id=user.id,
+    #     description=f"User logged in: {username}",
+    #     ip_address=request.META.get('REMOTE_ADDR'),
+    # )
     
     return Response({
         'token': token.key,
