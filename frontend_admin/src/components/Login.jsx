@@ -101,9 +101,8 @@ export default function Login() {
 
         try {
           persistToken(token);
-          // Use ACTUAL user role from backend (is_staff), not dropdown selection
-          const actualRole = isStaff ? "admin" : "user";
-          localStorage.setItem("userRole", actualRole);
+          // Use DROPDOWN selection (loginAs) to determine user role
+          localStorage.setItem("userRole", loginAs);
           localStorage.setItem("isStaff", isStaff);
           localStorage.setItem("isSuperuser", isSuperuser);
           localStorage.setItem("username", res?.data?.username || username);
@@ -118,8 +117,8 @@ export default function Login() {
 
         // Small delay to ensure token is saved, then redirect
         setTimeout(() => {
-          // Route based on ACTUAL user role from backend (not dropdown selection)
-          const redirectPath = isStaff ? "#/admin" : "#/dashboard";
+          // Route based on DROPDOWN selection, not backend role
+          const redirectPath = loginAs === "admin" ? "#/admin" : "#/dashboard";
           window.location.hash = redirectPath;
           window.location.reload();
         }, 500);
