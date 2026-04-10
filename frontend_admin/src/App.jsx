@@ -1,10 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from "react";
-import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { API_URL } from "./services/tokenService";
-
-console.log('App.jsx loading...');
-console.log('API_URL:', API_URL);
 
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
@@ -36,10 +33,10 @@ import DashboardSettings from "./components/DashboardSettings.jsx";
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   
-  // Simple token check - just verify token exists, no validation on load
-  // This prevents showing "Invalid token" errors on initial load
-  const token = localStorage.getItem("token");
-  const isAuthenticated = !!token;
+  // Simple token check - NO validation on app load
+  // Just check if token exists in localStorage
+  // This prevents double login issue - no validation happens until user makes an API call
+  const isAuthenticated = localStorage.getItem("token") !== null;
   const isAdmin = localStorage.getItem("userRole") === "admin";
 
   // Sync across tabs - reload when token changes in another tab

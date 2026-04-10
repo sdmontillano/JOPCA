@@ -115,13 +115,13 @@ export default function Login() {
 
         showToast("Login successful! Redirecting...", "success");
 
-        // Small delay to ensure token is saved, then redirect
-        setTimeout(() => {
-          // Route based on DROPDOWN selection, not backend role
-          const redirectPath = loginAs === "admin" ? "#/admin" : "#/dashboard";
-          window.location.hash = redirectPath;
-          window.location.reload();
-        }, 500);
+        // Use React Router navigate - no page reload needed
+        // This prevents double validation issue
+        if (loginAs === "admin") {
+          navigate("/admin/home");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);
