@@ -85,7 +85,7 @@ api.interceptors.request.use(
 
 /**
  * Global response interceptor:
- * - On 401 with explicit auth error: clear tokens and redirect to /login
+ * - On 401 with explicit auth error: clear tokens and redirect to login ONLY for non-validate endpoints
  * - On network errors: don't clear token (backend might not be ready yet)
  * - Re-throw other errors for local handling
  */
@@ -93,11 +93,14 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     const status = err?.response?.status;
-    // Only clear token if it's a real authentication error (401 with explicit message)
-    // Don't clear on network errors (backend not ready) or other errors
-    if (status === 401 && err?.response?.data?.detail) {
+    const url = err?.config?.url || "";
+    
+    // Only clear token on explicit auth errors, and NOT during token validation
+    // Skip clearing for validation/verify endpoints
+    const isValidationEndpoint = url.includes("verify") || url.includes("validate") || url.includes("auth/verify");
+    
+    if (status === 401 && err?.response?.data?.detail && !isValidationEndpoint) {
       clearTokens();
-      // Use HashRouter compatible redirect
       window.location.hash = "#/login";
     }
     return Promise.reject(err);

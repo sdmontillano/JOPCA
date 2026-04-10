@@ -36,8 +36,10 @@ import DashboardSettings from "./components/DashboardSettings.jsx";
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   
-  // Auth check runs on every render - always check localStorage directly
-  const isAuthenticated = !!localStorage.getItem("token");
+  // Simple token check - just verify token exists, no validation on load
+  // This prevents showing "Invalid token" errors on initial load
+  const token = localStorage.getItem("token");
+  const isAuthenticated = !!token;
   const isAdmin = localStorage.getItem("userRole") === "admin";
 
   // Sync across tabs - reload when token changes in another tab
