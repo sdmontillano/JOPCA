@@ -85,19 +85,33 @@ api.interceptors.request.use(
 
 /**
  * Global response interceptor:
- * - On 401 with explicit auth error: clear tokens and redirect to login ONLY for non-validate endpoints
+ * - On 401 with explicit auth error: clear tokens and redirect to login
+ * - EXCEPT on first API call after login (give token time to work)
  * - On network errors: don't clear token (backend might not be ready yet)
  * - Re-throw other errors for local handling
  */
+let isFirstApiCallAfterLogin = true;
+
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // After first successful response, allow normal 401 handling
+    if (isFirstApiCallAfterLogin) {
+      isFirstApiCallAfterLogin = false;
+    }
+    return res;
+  },
   (err) => {
     const status = err?.response?.status;
     const url = err?.config?.url || "";
     
-    // Only clear token on explicit auth errors, and NOT during token validation
+    // Only clear token on explicit auth errors
     // Skip clearing for validation/verify endpoints
     const isValidationEndpoint = url.includes("verify") || url.includes("validate") || url.includes("auth/verify");
+    
+    // Don't clear token on first API call - gives time for token to be recognized
+    if (isFirstApiCallAfterLogin && isValidationEndpoint) {
+      return Promise.reject(err);
+    }
     
     if (status === 401 && err?.response?.data?.detail && !isValidationEndpoint) {
       clearTokens();
@@ -106,5 +120,10 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+
+// Reset flag when user logs in
+export const resetFirstApiCall = () => {
+  isFirstApiCallAfterLogin = true;
+};
 
 export default api;

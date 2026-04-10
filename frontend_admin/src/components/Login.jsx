@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import api, { setAccessToken as saveTokenToService } from "../services/tokenService";
+import api, { setAccessToken as saveTokenToService, resetFirstApiCall } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../ToastContext";
 import logo from "../assets/jopca-logo.png";
@@ -101,6 +101,10 @@ export default function Login() {
 
         try {
           persistToken(token);
+          // CRITICAL: Set axios header IMMEDIATELY after token persist
+          // This prevents "Invalid token" error on first API call after login
+          api.defaults.headers.common["Authorization"] = `Token ${token}`;
+          
           // Use DROPDOWN selection (loginAs) to determine user role
           localStorage.setItem("userRole", loginAs);
           localStorage.setItem("isStaff", isStaff);
@@ -114,6 +118,9 @@ export default function Login() {
         }
 
         showToast("Login successful! Redirecting...", "success");
+
+        // Reset first API call flag before navigating - allows token to work properly
+        resetFirstApiCall();
 
         // Use React Router navigate - no page reload needed
         // This prevents double validation issue
