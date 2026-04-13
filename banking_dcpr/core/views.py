@@ -846,14 +846,14 @@ class PdcViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         instance = serializer.save()
-        self._log_audit('create', instance, f"Created PDC: {instance.check_number} - {instance.amount}")
+        self._log_audit('create', instance, f"Created PDC: {instance.check_no} - {instance.amount}")
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        self._log_audit('update', instance, f"Updated PDC: {instance.check_number} - {instance.status}")
+        self._log_audit('update', instance, f"Updated PDC: {instance.check_no} - {instance.status}")
 
     def perform_destroy(self, instance):
-        self._log_audit('delete', instance, f"Deleted PDC: {instance.check_number}")
+        self._log_audit('delete', instance, f"Deleted PDC: {instance.check_no}")
         instance.delete()
 
     @action(detail=True, methods=["post"])
