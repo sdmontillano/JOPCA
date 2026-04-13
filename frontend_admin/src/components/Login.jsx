@@ -168,13 +168,15 @@ if (res.status === 200 && token) {
 
         showToast("Login successful! Redirecting...", "success");
 
-        // Always redirect - even if verify failed, use loginAs dropdown to determine destination
-        console.debug("[Login] About to navigate, loginAs:", loginAs);
-        if (loginAs === "admin") {
-          navigate("/admin/home", { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
+        // Small delay then redirect
+        setTimeout(() => {
+          const redirectPath = loginAs === "admin" ? "/admin/home" : "/dashboard";
+          console.log("[Login] Redirecting to:", redirectPath);
+          // Use navigate first, fallback to hash
+          navigate(redirectPath, { replace: true });
+          // Also set hash directly for reliability
+          window.location.hash = redirectPath;
+        }, 50);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);
