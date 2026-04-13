@@ -4,36 +4,45 @@ Centralized transaction type definitions for JOPCA-DCPR.
 Import from this module instead of redefining sets in multiple files.
 """
 
+# INFLOW_TYPES - Types that ADD to bank balance (affect ending balance)
 INFLOW_TYPES = frozenset([
-    "deposit", "deposits", "collections", "collection",
+    "collections", "collection",
     "fund_transfer", "fund_transfers",
     "interbank_transfer", "interbank_transfers",
     "transfer",
 ])
 
+# OUTFLOW_TYPES - Types that SUBTRACT from bank balance (affect ending balance)
 OUTFLOW_TYPES = frozenset([
     "disbursement", "disbursements",
     "bank_charges", "bank_charge",
     "returned_check", "returned_checks",
 ])
 
+# LOCAL_DEPOSIT_TYPES - Tracking only (do NOT affect ending balance)
+# These show in Local Deposits column but don't calculate in ending balance
+LOCAL_DEPOSIT_TYPES = frozenset([
+    "local_deposits", "local_deposit",
+    "deposit", "deposits",  # deposit is now tracking only!
+])
+
+# TRANSFER_TYPES
 TRANSFER_TYPES = frozenset([
     "transfer", "fund_transfer", "fund_transfers",
     "interbank_transfer", "interbank_transfers",
 ])
 
+# RETURNED_TYPES
 RETURNED_TYPES = frozenset([
     "returned_check", "returned_checks",
 ])
 
+# ADJUSTMENT_TYPES
 ADJUSTMENT_TYPES = frozenset([
     "adjustments", "adjustment",
 ])
 
-LOCAL_DEPOSIT_TYPES = frozenset([
-    "local_deposits", "local_deposit",
-])
-
+# PDC_TYPES
 PDC_TYPES = frozenset([
     "post_dated_check", "post_dated_checks",
 ])
