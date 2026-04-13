@@ -4,15 +4,25 @@ Centralized transaction type definitions for JOPCA-DCPR.
 Import from this module instead of redefining sets in multiple files.
 """
 
-# INFLOW_TYPES - Types that ADD to bank balance (affect ending balance)
-INFLOW_TYPES = frozenset([
-    "collections", "collection",
-    "fund_transfer", "fund_transfers",
-    "interbank_transfer", "interbank_transfers",
-    "transfer",
+# DEPOSIT_TYPES - The ONLY types that ADD to bank balance directly
+DEPOSIT_TYPES = frozenset([
+    "deposit", "deposits",
 ])
 
-# OUTFLOW_TYPES - Types that SUBTRACT from bank balance (affect ending balance)
+# FUND_TRANSFER_IN - Money transferred INTO this bank account
+FUND_TRANSFER_IN = frozenset([
+    "fund_transfer_in",
+])
+
+# FUND_TRANSFER_OUT - Money transferred OUT of this bank account
+FUND_TRANSFER_OUT = frozenset([
+    "fund_transfer_out",
+])
+
+# INFLOW_TYPES = DEPOSIT_TYPES (only deposit adds to bank balance)
+INFLOW_TYPES = DEPOSIT_TYPES
+
+# OUTFLOW_TYPES - Types that SUBTRACT from bank balance
 OUTFLOW_TYPES = frozenset([
     "disbursement", "disbursements",
     "bank_charges", "bank_charge",
@@ -23,13 +33,13 @@ OUTFLOW_TYPES = frozenset([
 # These show in Local Deposits column but don't calculate in ending balance
 LOCAL_DEPOSIT_TYPES = frozenset([
     "local_deposits", "local_deposit",
-    "deposit", "deposits",  # deposit is now tracking only!
 ])
 
-# TRANSFER_TYPES
+# TRANSFER_TYPES - For reporting (neutral in balance)
 TRANSFER_TYPES = frozenset([
     "transfer", "fund_transfer", "fund_transfers",
     "interbank_transfer", "interbank_transfers",
+    "fund_transfer_in", "fund_transfer_out",
 ])
 
 # RETURNED_TYPES

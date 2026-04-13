@@ -3,8 +3,9 @@ from decimal import Decimal
 from django.db.models import Sum
 from ..models import BankAccount, Transaction
 from ..constants import (
-    INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, 
+    DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, 
     ADJUSTMENT_TYPES, PDC_TYPES, LOCAL_DEPOSIT_TYPES,
+    FUND_TRANSFER_IN, FUND_TRANSFER_OUT,
     COLLECTION_TYPE_CASH, COLLECTION_TYPE_BANK_TRANSFER, COLLECTION_TYPE_CHECK,
     PDC_STATUS_CLEARED, PDC_STATUS_BOUNCED,
 )
@@ -71,64 +72,83 @@ def compute_bank_daily_summary(target_date):
     Returns list of dicts for each BankAccount with beginning, breakdown for target_date, and ending.
     Numeric fields are returned as floats.
     
-    Formula (SIMPLE - uses type field only):
-    Ending_Bank = Beginning_Bank + Collections + Local_Deposits - Disbursements
+    Formula (CORRECT DCPR):
+    Ending_Bank = Beginning_Bank + Deposits - Disbursements + Fund_Transfers_In - Fund_Transfers_Out
     
-    Collections: type in INFLOW_TYPES (includes deposits, collections, fund transfers)
-    Local Deposits: type in LOCAL_DEPOSIT_TYPES (tracking only, now includes deposit!)
-    Disbursements: type in OUTFLOW_TYPES
-    
-    Note: deposit type now adds directly to bank balance (money coming IN)
+    - deposit = ONLY type that adds to bank balance
+    - disbursement = ONLY type that subtracts from bank balance  
+    - fund_transfer_in/out = neutral (moves between accounts)
+    - collection = tracking only, NOT in balance formula
     """
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
-        # Beginning balance: ALL prior transactions from opening to day before target date
-        prior_inflows = (
+        # Beginning balance: prior deposits only (NOT collections)
+        prior_deposits = (
             Transaction.objects.filter(
                 bank_account=bank, 
                 date__lt=target_date, 
-                type__in=ALL_INFLOW_TYPES
+                type__in=DEPOSIT_TYPES
             )
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        prior_outflows = (
+        prior_disbursements = (
             Transaction.objects.filter(
                 bank_account=bank, 
                 date__lt=target_date, 
-                type__in=ALL_OUTFLOW_TYPES.union(ADJUSTMENT_TYPES)
+                type__in=OUTFLOW_TYPES
+            )
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_transfers_in = (
+            Transaction.objects.filter(
+                bank_account=bank,
+                date__lt=target_date,
+                type__in=FUND_TRANSFER_IN
+            )
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_transfers_out = (
+            Transaction.objects.filter(
+                bank_account=bank,
+                date__lt=target_date,
+                type__in=FUND_TRANSFER_OUT
             )
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
 
-        beginning_raw = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_inflows) - _safe_decimal(prior_outflows)
-        beginning = max(beginning_raw, Decimal("0"))
+        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out, Decimal("0"))
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
-        # Simple formula using type field only
-        collections = today_qs.filter(type__in=ALL_INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # CORRECT DCPR FORMULA: Deposit only, Disbursement only
+        deposits = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_qs.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        fund_transfers_in = today_qs.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        fund_transfers_out = today_qs.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # For reporting only (not in balance formula)
+        collections = today_qs.filter(type="collection").aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_qs.filter(type__in=ALL_OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        fund_transfers = today_qs.filter(type__in={"fund_transfer", "fund_transfers", "interbank_transfer", "interbank_transfers"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        transfers = today_qs.filter(type__in=TRANSFER_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        returned_checks = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        returned_checks = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        ending = beginning + _safe_decimal(collections) + _safe_decimal(local_deposits) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
+        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
+        ending = beginning + _safe_decimal(deposits) - _safe_decimal(disbursements) + _safe_decimal(fund_transfers_in) - _safe_decimal(fund_transfers_out)
 
         rows.append({
             "bank_id": bank.id,
             "particulars": bank.name or "",
             "account_number": bank.account_number,
             "beginning": _to_float(beginning),
-            "collections": _to_float(_safe_decimal(collections)),
-            "local_deposits": _to_float(_safe_decimal(local_deposits)),
+            "deposits": _to_float(_safe_decimal(deposits)),
             "disbursements": _to_float(_safe_decimal(disbursements)),
-            "fund_transfers": _to_float(_safe_decimal(fund_transfers)),
-            "transfers": _to_float(_safe_decimal(transfers)),
+            "fund_transfers_in": _to_float(_safe_decimal(fund_transfers_in)),
+            "fund_transfers_out": _to_float(_safe_decimal(fund_transfers_out)),
+            "collections": _to_float(_safe_decimal(collections)),  # reporting only
+            "local_deposits": _to_float(_safe_decimal(local_deposits)),  # reporting only
             "returned_checks": _to_float(_safe_decimal(returned_checks)),
             "adjustments": _to_float(_safe_decimal(adjustments)),
             "pdc": _to_float(_safe_decimal(pdc)),

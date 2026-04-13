@@ -574,38 +574,53 @@ def compute_collections_summary(target_date):
     """
     Compute collections summary grouped by bank, similar to PCF.
     Returns list of dicts with: bank_name, location, beginning, collections, local_deposits, ending, transactions.
+    
+    CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements
+    (collection is tracking only, NOT in balance formula)
     """
     from django.db.models import Sum
-    from .constants import LOCAL_DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, ADJUSTMENT_TYPES
+    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, OUTFLOW_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
     
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
-        # Beginning: opening + ALL prior inflows - ALL prior outflows
-        prior_inflows = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=INFLOW_TYPES)
+        # Beginning: opening + prior deposits only (NOT collections)
+        prior_deposits = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=DEPOSIT_TYPES)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        prior_outflows = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES.union(ADJUSTMENT_TYPES))
+        prior_disbursements = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        beginning = max(bank.opening_balance + prior_inflows - prior_outflows, Decimal("0"))
+        prior_transfers_in = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=FUND_TRANSFER_IN)
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_transfers_out = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=FUND_TRANSFER_OUT)
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out, Decimal("0"))
 
         # Today's transactions
         today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
         
-        collections = today_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # For report columns (tracking)
+        collections = today_txns.filter(type="collection").aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # For balance formula
+        deposits = today_txns.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         disbursements = today_txns.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        adjustments = today_txns.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        transfers_in = today_txns.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        transfers_out = today_txns.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # Ending = Beginning + Collections + Local Deposits - Disbursements
-        # Note: deposit is in LOCAL_DEPOSIT_TYPES, so it adds directly
-        ending = beginning + collections + local_deposits - disbursements + adjustments
+        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
+        ending = beginning + deposits - disbursements + transfers_in - transfers_out
 
-        # Get today's transactions with descriptions (both collections and local_deposits)
+        # Get today's transactions with descriptions (collections and deposits for reporting)
         transactions = [
             {
                 "id": t.id,
@@ -614,9 +629,21 @@ def compute_collections_summary(target_date):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in today_txns.filter(type__in=INFLOW_TYPES).order_by("-date", "-id")
+            for t in today_txns.filter(type="collection").order_by("-date", "-id")
         ]
-        # Also add local deposits transactions
+        # Also add deposit transactions
+        deposit_txns = [
+            {
+                "id": t.id,
+                "type": t.type,
+                "amount": float(t.amount),
+                "description": t.description or "",
+                "date": str(t.date)
+            }
+            for t in today_txns.filter(type__in=DEPOSIT_TYPES).order_by("-date", "-id")
+        ]
+        transactions.extend(deposit_txns)
+        # Local deposits
         local_deposit_txns = [
             {
                 "id": t.id,
@@ -635,8 +662,8 @@ def compute_collections_summary(target_date):
             "account_number": bank.account_number,
             "location": "BANK",
             "beginning": float(beginning),
-            "collections": float(collections),
-            "local_deposits": float(local_deposits),
+            "collections": float(collections),  # tracking only
+            "local_deposits": float(local_deposits),  # tracking only
             "ending": float(ending),
             "transactions": transactions,
         })
