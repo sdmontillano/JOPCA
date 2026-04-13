@@ -578,8 +578,8 @@ def compute_collections_summary(target_date):
     from django.db.models import Sum
     from .constants import LOCAL_DEPOSIT_TYPES
     
-    # Use sets that include both singular and plural forms
-    COLLECTION_TYPES = {"collections", "collection"}
+    # Use sets that include both collections AND deposits
+    COLLECTION_TYPES = {"collections", "collection", "deposit", "deposits"}
     
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")

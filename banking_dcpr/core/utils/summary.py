@@ -23,7 +23,7 @@ def compute_bank_daily_summary(target_date):
         # Beginning balance: ALL prior transactions from opening to day before target date
         # Prior Inflows = Collections + Fund Transfers + All Deposits
         # Prior Outflows = Disbursements + Bank Charges + Returned Checks + Adjustments
-        COLLECTION_TYPES = frozenset(["collections", "collection"])
+        COLLECTION_TYPES = frozenset(["collections", "collection", "deposit", "deposits"])
         
         prior_inflows = (
             Transaction.objects.filter(
@@ -49,7 +49,8 @@ def compute_bank_daily_summary(target_date):
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
         # Use frozensets that include both singular and plural forms
-        COLLECTION_TYPES = frozenset(["collections", "collection"])
+        # Include BOTH collections AND deposits in the Collections column
+        COLLECTION_TYPES = frozenset(["collections", "collection", "deposit", "deposits"])
         DISBURSEMENT_TYPES = frozenset(["disbursement", "disbursements"])
         
         collections = today_qs.filter(type__in=COLLECTION_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
