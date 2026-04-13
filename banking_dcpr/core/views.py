@@ -2112,10 +2112,6 @@ def create_user(request):
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser
     })
-        'message': f'User "{username}" created successfully!',
-        'username': username,
-        'login_url': '/'
-    })
 
 
 # API endpoint to reset all data (admin only for security)
