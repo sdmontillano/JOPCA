@@ -960,12 +960,12 @@ class PdcViewSet(viewsets.ModelViewSet):
             created_by=request.user if request.user.is_authenticated else None
         )
 
-        # Transaction 2: Local Deposits (for tracking/display only - does NOT affect ending balance)
-        # Store as POSITIVE - this is a tracking column for audit/reconciliation
+        # Transaction 2: Deposit (THIS adds to bank balance!)
+        # deposit is the ONLY type that affects ending balance
         Transaction.objects.create(
             bank_account=bank,
             date=deposit_date_parsed or now().date(),
-            type="local_deposits",
+            type="deposit",
             amount=pdc.amount,
             description=f"PDC deposit ref:{reference} pdc_id:{pdc.id}",
             created_by=request.user if request.user.is_authenticated else None
