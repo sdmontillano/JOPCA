@@ -53,7 +53,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import PaidIcon from "@mui/icons-material/Paid";
 
-import api, { unwrapResponse, getResponseCount } from "../services/tokenService";
+import api, { unwrapResponse, getResponseCount, clearTokens } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
 
@@ -379,7 +379,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
     } catch (e) {
       // Ignore logout API errors
     }
-    localStorage.removeItem("token");
+    clearTokens();
     navigate("/login");
   };
 

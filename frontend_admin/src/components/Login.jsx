@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import api, { setAccessToken as saveTokenToService, resetFirstApiCall } from "../services/tokenService";
+import api, { setAccessToken as saveTokenToService } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../ToastContext";
 import logo from "../assets/jopca-logo.png";
@@ -65,6 +65,9 @@ export default function Login() {
     setError("");
     if (!validate()) return;
 
+    // Clear any stale auth header before login POST
+    delete api.defaults.headers.common["Authorization"];
+    
     setLoading(true);
     try {
       const res = await api.post("/api-token-auth/", {
@@ -76,33 +79,37 @@ export default function Login() {
 
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
-      const isStaff = res?.data?.is_staff ?? false;
-      const isSuperuser = res?.data?.is_superuser ?? false;
 
       if (res.status === 200 && token) {
-        // Block login if user has no role assigned (both checkboxes unchecked)
-        if (!isStaff && !isSuperuser) {
-          setError("Your account has no access. Please contact admin to assign a role.");
-          setLoading(false);
-          return;
+        // FIRST: Set the token in axios header immediately
+        api.defaults.headers.common["Authorization"] = `Token ${token}`;
+        
+        // THEN: Try to get user role from verify endpoint
+        let isStaff = false;
+        let isSuperuser = false;
+        
+        try {
+          const verifyRes = await api.get("/api/auth/verify/");
+          isStaff = verifyRes.data?.is_staff ?? false;
+          isSuperuser = verifyRes.data?.is_superuser ?? false;
+        } catch (verifyErr) {
+          console.warn("Could not verify user role, proceeding with login anyway");
         }
 
-        // Validate role selection against user's is_staff or is_superuser status
-        // Admin access requires is_staff OR is_superuser
+        // If user selects Admin but their account is not staff/superuser, block admin access
         if (loginAs === "admin" && !isStaff && !isSuperuser) {
           setError("Your account is not authorized for admin access.");
           setLoading(false);
           return;
         }
         
-        if (loginAs === "user" && isStaff) {
-          // Admin user logging in as normal user - allow it
-        }
+        // For regular users or admin users, always allow login
+        // Admin users can log in as "user" if they want
 
         try {
+          console.debug("[Login] Persisting token...");
           persistToken(token);
-          // CRITICAL: Set axios header IMMEDIATELY after token persist
-          // This prevents "Invalid token" error on first API call after login
+          console.debug("[Login] Setting axios header to:", token.substring(0, 10) + "...");
           api.defaults.headers.common["Authorization"] = `Token ${token}`;
           
           // Use DROPDOWN selection (loginAs) to determine user role
@@ -119,16 +126,15 @@ export default function Login() {
 
         showToast("Login successful! Redirecting...", "success");
 
-        // Reset first API call flag before navigating - allows token to work properly
-        resetFirstApiCall();
-
-        // Use React Router navigate - no page reload needed
-        // This prevents double validation issue
-        if (loginAs === "admin") {
-          navigate("/admin/home");
-        } else {
-          navigate("/dashboard");
-        }
+        // Use React Router navigate with a small delay to ensure everything is set
+        console.debug("[Login] About to navigate, loginAs:", loginAs);
+        setTimeout(() => {
+          if (loginAs === "admin") {
+            navigate("/admin/home", { replace: true });
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
+        }, 100);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);

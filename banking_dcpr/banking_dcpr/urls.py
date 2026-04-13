@@ -58,7 +58,7 @@ router.register(r'audit-logs', AuditLogViewSet, basename='auditlog')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api-token-auth/', obtain_auth_token_with_role, name='api_token_auth'),
+    path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('api/auth/verify/', verify_token, name='verify_token'),
     path('api/auth/logout/', logout_user, name='logout_user'),
     path('api/create-admin/', create_default_admin, name='create_admin'),

@@ -11,7 +11,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HistoryIcon from "@mui/icons-material/History";
-import api from "../services/tokenService";
+import api, { clearTokens } from "../services/tokenService";
 
 const DRAWER_WIDTH = 280;
 
@@ -40,7 +40,7 @@ export default function AdminLayout({ children, title, breadcrumbs }) {
     } catch (e) {
       // Ignore logout API errors
     }
-    localStorage.clear();
+    clearTokens();
     window.location.hash = "/login";
     window.location.reload();
   };
