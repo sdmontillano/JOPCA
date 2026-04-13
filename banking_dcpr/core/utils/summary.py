@@ -63,8 +63,8 @@ def compute_bank_daily_summary(target_date):
 
         # Bank Account Formula: Beginning + Collections - Local Deposits - Disbursements + Adjustments - Returned Checks
         # Local Deposits reduces the ending balance (like cash taken out for bank deposit)
-        ending_raw = beginning + _safe_decimal(collections) - _safe_decimal(local_deposits) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
-        ending = max(ending_raw, Decimal("0"))
+        # Negative balance is allowed (overdraft/pending deposits)
+        ending = beginning + _safe_decimal(collections) - _safe_decimal(local_deposits) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
 
         rows.append({
             "bank_id": bank.id,
