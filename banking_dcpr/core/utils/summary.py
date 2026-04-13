@@ -61,10 +61,9 @@ def compute_bank_daily_summary(target_date):
         adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # Bank Account Formula: Beginning + Collections - Disbursements + Adjustments - Returned Checks
-        # All inflow types (deposit, collection, fund_transfer) are counted in collections
-        # All outflow types are counted in disbursements
-        ending_raw = beginning + _safe_decimal(collections) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
+        # Bank Account Formula: Beginning + Collections - Local Deposits - Disbursements + Adjustments - Returned Checks
+        # Local Deposits reduces the ending balance (like cash taken out for bank deposit)
+        ending_raw = beginning + _safe_decimal(collections) - _safe_decimal(local_deposits) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
         ending = max(ending_raw, Decimal("0"))
 
         rows.append({
