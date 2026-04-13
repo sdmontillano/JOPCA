@@ -2070,40 +2070,48 @@ def create_default_admin(request):
 
 
 # API endpoint to create regular user
-@api_view(['GET'])
+@csrf_exempt
+@api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def create_user(request):
     """
-    Create a regular (non-admin) user.
-    Usage: /api/create-user/?username=USERNAME&password=PASSWORD
+    Create a user via POST.
+    Usage: POST /api/create-user/ with username, password, is_staff (optional), email (optional)
     """
     from django.contrib.auth.models import User
     
-    username = request.GET.get('username', '').strip()
-    password = request.GET.get('password', '')
-    email = request.GET.get('email', '')
+    username = request.data.get('username', '').strip()
+    password = request.data.get('password', '')
+    email = request.data.get('email', '')
+    is_staff = request.data.get('is_staff', False)
+    is_superuser = request.data.get('is_superuser', False)
     
     if not username or not password:
         return Response({
-            'status': 'error',
-            'message': 'Username and password are required',
-            'usage': '/api/create-user/?username=USERNAME&password=PASSWORD'
-        })
+            'error': 'Username and password are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(username=username).exists():
         return Response({
-            'status': 'already_exists',
-            'message': f'User "{username}" already exists.'
-        })
+            'error': f'User "{username}" already exists'
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     user = User.objects.create_user(
         username=username,
         password=password,
-        email=email if email else f'{username}@jopca.local'
+        email=email if email else f'{username}@jopca.local',
+        is_staff=is_staff,
+        is_superuser=is_superuser
     )
     
     return Response({
         'status': 'success',
+        'message': f'User "{username}" created successfully',
+        'user_id': user.pk,
+        'username': user.username,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser
+    })
         'message': f'User "{username}" created successfully!',
         'username': username,
         'login_url': '/'
