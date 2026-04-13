@@ -20,28 +20,30 @@ def compute_bank_daily_summary(target_date):
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
-        # Beginning balance should include:
-        # - Opening balance
-        # - Prior local deposits (money deposited TO bank)
-        # - Prior fund transfers (money transferred in)
-        # - NOT prior collections (that's cash on hand, not in bank)
-        prior_local_deposits = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=LOCAL_DEPOSIT_TYPES)
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_fund_transfers = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in={"fund_transfer", "interbank_transfer"})
+        # Beginning balance: ALL prior transactions from opening to day before target date
+        # Prior Inflows = Collections + Fund Transfers + All Deposits
+        # Prior Outflows = Disbursements + Bank Charges + Returned Checks + Adjustments
+        COLLECTION_TYPES = frozenset(["collections", "collection"])
+        
+        prior_inflows = (
+            Transaction.objects.filter(
+                bank_account=bank, 
+                date__lt=target_date, 
+                type__in=INFLOW_TYPES.union(COLLECTION_TYPES)
+            )
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_outflows = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES.union(ADJUSTMENT_TYPES))
+            Transaction.objects.filter(
+                bank_account=bank, 
+                date__lt=target_date, 
+                type__in=OUTFLOW_TYPES.union(ADJUSTMENT_TYPES)
+            )
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
 
-        # Calculate beginning - ensure it doesn't go negative
-        # Beginning balance = Opening Balance + Prior Inflows - Prior Outflows
-        # But cannot be less than 0
-        beginning_raw = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_local_deposits) + _safe_decimal(prior_fund_transfers) - _safe_decimal(prior_outflows)
+        # Beginning = Opening Balance + All Prior Inflows - All Prior Outflows
+        beginning_raw = _safe_decimal(bank.opening_balance) + _safe_decimal(prior_inflows) - _safe_decimal(prior_outflows)
         beginning = max(beginning_raw, Decimal("0"))
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
