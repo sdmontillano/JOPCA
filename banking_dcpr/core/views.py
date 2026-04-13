@@ -927,7 +927,7 @@ class PdcViewSet(viewsets.ModelViewSet):
         Transaction.objects.create(
             bank_account=bank,
             date=deposit_date_parsed or now().date(),
-            type="collections",
+            type="collection",
             amount=pdc.amount,
             description=f"PDC deposit ref:{reference} pdc_id:{pdc.id}",
             created_by=request.user if request.user.is_authenticated else None
@@ -1877,7 +1877,7 @@ def bank_analysis(request):
             deposit_in_transit = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
-                type__in=['collections', 'deposit', 'local_deposits']
+                type__in=['collection', 'deposit', 'local_deposits']
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Returned Checks: returned_check transactions

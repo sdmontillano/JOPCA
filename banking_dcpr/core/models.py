@@ -239,9 +239,9 @@ class DailyCashPosition(models.Model):
         transactions = Transaction.objects.filter(date=self.date)
 
         # Collections = Cash Received + Cleared PDCs + Bank Deposits + Other Receipts (POSITIVE)
-        # Note: PDC deposits now create "collections" type transactions
+        # Note: PDC deposits now create "collection" type transactions
         self.collections = transactions.filter(
-            type="collections"
+            type="collection"
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         # Local Deposits = Cash moved to bank (tracking only)
