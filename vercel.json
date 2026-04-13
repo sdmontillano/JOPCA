@@ -1,4 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "buildCommand": "cd frontend_admin && npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "cd frontend_admin && npm install",
+  "postDeployCommand": "cd banking_dcpr && python manage.py migrate"
 }
