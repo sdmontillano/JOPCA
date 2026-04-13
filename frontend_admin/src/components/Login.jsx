@@ -124,59 +124,24 @@ export default function Login() {
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
 
 if (res.status === 200 && token) {
-        // FIRST: Set the token in axios header immediately
-        api.defaults.headers.common["Authorization"] = `Token ${token}`;
-        
-        // THEN: Try to get user role from verify endpoint (optional - don't block login if it fails)
-        let isStaff = false;
-        let isSuperuser = false;
-        
+        // Save token immediately
         try {
-          const verifyRes = await api.get("/api/auth/verify/");
-          isStaff = verifyRes.data?.is_staff ?? false;
-          isSuperuser = verifyRes.data?.is_superuser ?? false;
-        } catch (verifyErr) {
-          console.warn("Could not verify user role, proceeding with login anyway");
-          // Default to regular user if verify fails
-        }
-
-        // If user selects Admin but their account is not staff/superuser, block admin access
-        if (loginAs === "admin" && !isStaff && !isSuperuser) {
-          setError("Your account is not authorized for admin access.");
-          setLoading(false);
-          return;
-        }
-        
-        // Save token first
-        try {
-          console.debug("[Login] Persisting token...");
           persistToken(token);
-          console.debug("[Login] Setting axios header:", token.substring(0, 10) + "...");
-          api.defaults.headers.common["Authorization"] = `Token ${token}`;
-          
-          // Save role info
           localStorage.setItem("userRole", loginAs);
-          localStorage.setItem("isStaff", isStaff);
-          localStorage.setItem("isSuperuser", isSuperuser);
-          localStorage.setItem("username", res?.data?.username || username);
+          localStorage.setItem("username", username);
         } catch (err) {
-          console.error("Failed to persist token", err);
-          setError("Login succeeded but saving token failed.");
+          setError("Failed to save login data.");
           setLoading(false);
           return;
         }
 
-        showToast("Login successful! Redirecting...", "success");
+        showToast("Login successful!", "success");
 
-        // Small delay then redirect
+        // Redirect immediately without verify call
         setTimeout(() => {
-          const redirectPath = loginAs === "admin" ? "/admin/home" : "/dashboard";
-          console.log("[Login] Redirecting to:", redirectPath);
-          // Use navigate first, fallback to hash
-          navigate(redirectPath, { replace: true });
-          // Also set hash directly for reliability
-          window.location.hash = redirectPath;
-        }, 50);
+          const target = loginAs === "admin" ? "#/admin/home" : "#/dashboard";
+          window.location.href = target;
+        }, 300);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);
