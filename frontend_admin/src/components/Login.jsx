@@ -1,5 +1,5 @@
 // src/components/Login.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -13,9 +13,13 @@ import {
   Select,
   FormControl,
   InputLabel,
+  FormControlLabel,
+  Switch,
+  Divider,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import api, { setAccessToken as saveTokenToService } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../ToastContext";
@@ -38,6 +42,14 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginAs, setLoginAs] = useState("user");
+  
+  // Registration form state
+  const [showRegister, setShowRegister] = useState(false);
+  const [regUsername, setRegUsername] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regIsAdmin, setRegIsAdmin] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
 
   const BRAND = { primary: "#0b74de", primaryDark: "#095fb0", accent: "#06b6d4" };
 
@@ -58,6 +70,37 @@ export default function Login() {
       localStorage.setItem("token", token);
     }
     api.defaults.headers.common["Authorization"] = `Token ${token}`;
+  }
+  
+  // Handle registration
+  async function handleRegister(e) {
+    e.preventDefault();
+    if (!regUsername.trim() || !regPassword) {
+      showToast("Username and password are required", "error");
+      return;
+    }
+    
+    setRegLoading(true);
+    try {
+      await api.post("/api/create-user/", {
+        username: regUsername.trim(),
+        password: regPassword,
+        email: regEmail.trim() || undefined,
+        is_staff: regIsAdmin,
+        is_superuser: regIsAdmin,
+      });
+      showToast("Account created! Please login.", "success");
+      setShowRegister(false);
+      setRegUsername("");
+      setRegPassword("");
+      setRegEmail("");
+      setRegIsAdmin(false);
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Failed to create account";
+      showToast(msg, "error");
+    } finally {
+      setRegLoading(false);
+    }
   }
 
   async function handleLogin(e) {
@@ -80,11 +123,11 @@ export default function Login() {
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
 
-      if (res.status === 200 && token) {
+if (res.status === 200 && token) {
         // FIRST: Set the token in axios header immediately
         api.defaults.headers.common["Authorization"] = `Token ${token}`;
         
-        // THEN: Try to get user role from verify endpoint
+        // THEN: Try to get user role from verify endpoint (optional - don't block login if it fails)
         let isStaff = false;
         let isSuperuser = false;
         
@@ -94,6 +137,7 @@ export default function Login() {
           isSuperuser = verifyRes.data?.is_superuser ?? false;
         } catch (verifyErr) {
           console.warn("Could not verify user role, proceeding with login anyway");
+          // Default to regular user if verify fails
         }
 
         // If user selects Admin but their account is not staff/superuser, block admin access
@@ -103,16 +147,14 @@ export default function Login() {
           return;
         }
         
-        // For regular users or admin users, always allow login
-        // Admin users can log in as "user" if they want
-
+        // Save token first
         try {
           console.debug("[Login] Persisting token...");
           persistToken(token);
-          console.debug("[Login] Setting axios header to:", token.substring(0, 10) + "...");
+          console.debug("[Login] Setting axios header:", token.substring(0, 10) + "...");
           api.defaults.headers.common["Authorization"] = `Token ${token}`;
           
-          // Use DROPDOWN selection (loginAs) to determine user role
+          // Save role info
           localStorage.setItem("userRole", loginAs);
           localStorage.setItem("isStaff", isStaff);
           localStorage.setItem("isSuperuser", isSuperuser);
@@ -126,15 +168,13 @@ export default function Login() {
 
         showToast("Login successful! Redirecting...", "success");
 
-        // Use React Router navigate with a small delay to ensure everything is set
+        // Always redirect - even if verify failed, use loginAs dropdown to determine destination
         console.debug("[Login] About to navigate, loginAs:", loginAs);
-        setTimeout(() => {
-          if (loginAs === "admin") {
-            navigate("/admin/home", { replace: true });
-          } else {
-            navigate("/dashboard", { replace: true });
-          }
-        }, 100);
+        if (loginAs === "admin") {
+          navigate("/admin/home", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);
@@ -292,6 +332,92 @@ export default function Login() {
             >
               {loading ? <CircularProgress size={20} color="inherit" /> : "Sign in"}
             </Button>
+            
+            {!showRegister && (
+              <Button
+                fullWidth
+                variant="text"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setShowRegister(true)}
+                sx={{ mt: 1.5, color: "#64748b", textTransform: "none" }}
+              >
+                Create Account
+              </Button>
+            )}
+            
+            {showRegister && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: "#f8fafc", borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: "#0b74de" }}>
+                  Create New Account
+                </Typography>
+                
+                <TextField
+                  label="Username"
+                  fullWidth
+                  size="small"
+                  sx={{ mb: 1 }}
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value)}
+                  disabled={regLoading}
+                />
+                
+                <TextField
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  fullWidth
+                  size="small"
+                  sx={{ mb: 1 }}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  disabled={regLoading}
+                />
+                
+                <TextField
+                  label="Email (optional)"
+                  type="email"
+                  fullWidth
+                  size="small"
+                  sx={{ mb: 1 }}
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  disabled={regLoading}
+                />
+                
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={regIsAdmin}
+                      onChange={(e) => setRegIsAdmin(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label={<Typography variant="caption">Make as Admin</Typography>}
+                  sx={{ mb: 1 }}
+                />
+                
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setShowRegister(false)}
+                    disabled={regLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="small"
+                    onClick={handleRegister}
+                    disabled={regLoading || !regUsername.trim() || !regPassword}
+                    sx={{ bgcolor: "#0b74de" }}
+                  >
+                    {regLoading ? <CircularProgress size={16} /> : "Register"}
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </Box>
         </Box>
       </Paper>
