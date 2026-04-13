@@ -95,7 +95,7 @@ class BankAccount(models.Model):
 class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ('deposit', 'Deposit'),
-        ('collections', 'Collections'),
+        ('collection', 'Collection'),
         ('local_deposits', 'Local Deposits'),
         ('disbursement', 'Disbursement'),
         ('returned_check', 'Returned Check'),
@@ -107,11 +107,39 @@ class Transaction(models.Model):
         ('post_dated_check', 'Post-Dated Check'),
     ]
 
+    COLLECTION_TYPE_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('check', 'Check/PDC'),
+    ]
+
+    PDC_STATUS_CHOICES = [
+        ('outstanding', 'Outstanding'),
+        ('cleared', 'Cleared'),
+        ('bounced', 'Bounced'),
+    ]
+
     bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE)
     date = models.DateField()
     type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    
+    collection_type = models.CharField(
+        max_length=20, 
+        choices=COLLECTION_TYPE_CHOICES, 
+        blank=True, 
+        null=True
+    )
+    check_no = models.CharField(max_length=128, blank=True, null=True)
+    reference = models.CharField(max_length=255, blank=True, null=True)
+    pdc_status = models.CharField(
+        max_length=20, 
+        choices=PDC_STATUS_CHOICES, 
+        blank=True, 
+        null=True
+    )
+    
     is_reconciled = models.BooleanField(default=False)
     reconciled_at = models.DateTimeField(blank=True, null=True)
     reconciled_by = models.ForeignKey(

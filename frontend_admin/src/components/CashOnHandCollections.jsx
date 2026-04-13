@@ -206,7 +206,7 @@ function CollectionsHistory({ defaultExpanded = false }) {
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Collections</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Ending</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Transactions</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Destination</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -230,8 +230,22 @@ function CollectionsHistory({ defaultExpanded = false }) {
                             <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
                             <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
                             <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
-                            <TableCell sx={{ fontSize: "0.8rem", color: "#6B7280" }}>
-                              {r.transactions && r.transactions.length > 0 ? `${r.transactions.length} txns` : "No txns"}
+                            <TableCell sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                              {(r.transactions || []).map((t, i) => (
+                                <Chip 
+                                  key={i}
+                                  label={t.collection_type === "cash" ? "Cash" : t.collection_type === "bank_transfer" ? "Bank Transfer" : t.collection_type === "check" ? "Check/PDC" : "-"}
+                                  size="small"
+                                  sx={{ 
+                                    mr: 0.25, 
+                                    mb: 0.25,
+                                    height: 18, 
+                                    fontSize: "0.6rem",
+                                    bgcolor: t.collection_type === "cash" ? "#DCFCE7" : t.collection_type === "bank_transfer" ? "#DBEAFE" : t.collection_type === "check" ? "#FEF3C7" : "#F3F4F6",
+                                    color: t.collection_type === "cash" ? "#166534" : t.collection_type === "bank_transfer" ? "#1D4ED8" : t.collection_type === "check" ? "#92400E" : "#6B7280",
+                                  }}
+                                />
+                              ))}
                             </TableCell>
                           </TableRow>
                         ))
@@ -261,6 +275,8 @@ function CollectionsHistory({ defaultExpanded = false }) {
 function CollectionTransactionRow({ transaction }) {
   const isCollection = transaction.type === "collections";
   const isLocalDeposit = transaction.type === "local_deposits";
+  const hasUnfundedWarning = transaction.unfunded_warning != null;
+  const collectionType = transaction.collection_type;
 
   let color = "#6B7280";
   let label = transaction.type;
@@ -272,6 +288,13 @@ function CollectionTransactionRow({ transaction }) {
     color = "#991B1B";
     label = "Local Deposit";
   }
+
+  if (hasUnfundedWarning) {
+    color = "#D97706";
+  }
+
+  const destLabel = collectionType === "cash" ? "Cash" : collectionType === "bank_transfer" ? "Bank" : collectionType === "check" ? "Check/PDC" : "-";
+  const destColor = collectionType === "cash" ? "#166534" : collectionType === "bank_transfer" ? "#1D4ED8" : collectionType === "check" ? "#92400E" : "#6B7280";
 
   return (
     <TableRow
@@ -299,6 +322,17 @@ function CollectionTransactionRow({ transaction }) {
       <TableCell colSpan={3} />
       <TableCell sx={{ fontSize: "0.75rem", color: "#374151" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Chip
+            label={destLabel}
+            size="small"
+            sx={{
+              height: 18,
+              fontSize: "0.65rem",
+              fontWeight: 600,
+              bgcolor: collectionType === "cash" ? "#DCFCE7" : collectionType === "bank_transfer" ? "#DBEAFE" : collectionType === "check" ? "#FEF3C7" : "#F3F4F6",
+              color: destColor,
+            }}
+          />
           <Typography
             variant="caption"
             sx={{
@@ -318,6 +352,24 @@ function CollectionTransactionRow({ transaction }) {
               }}
             >
               — {transaction.description}
+            </Typography>
+          )}
+          {hasUnfundedWarning && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: "#D97706",
+                fontWeight: 700,
+                bgcolor: "#FEF3C7",
+                px: 0.5,
+                py: 0.25,
+                borderRadius: 0.5,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.25,
+              }}
+            >
+              ⚠️ UNFUNDED
             </Typography>
           )}
         </Box>
@@ -408,7 +460,7 @@ export default function CashOnHandCollections({
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <ReceiptLongIcon sx={{ color: "#92400E", fontSize: 20 }} />
           <Typography variant="body2" sx={{ fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-            Cash on Hand - Collections
+            Bank Collections
           </Typography>
           {collections.length > 0 && (
             <Chip 

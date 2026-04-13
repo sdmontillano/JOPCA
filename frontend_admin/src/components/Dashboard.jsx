@@ -1020,7 +1020,7 @@ function DashboardInner() {
           <PcfTable pcfs={cashOnHand} showExport={true} defaultExpanded={true} />
         </Box>
 
-        {/* Cash on Hand Collections Section */}
+        {/* Bank Collections Section */}
         <Box sx={{ mb: 3 }}>
           <CashOnHandCollections showExport={true} defaultExpanded={true} />
         </Box>

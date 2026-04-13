@@ -5,10 +5,11 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
-from .constants import INFLOW_TYPES, OUTFLOW_TYPES
+from .constants import INFLOW_TYPES, OUTFLOW_TYPES, LOCAL_DEPOSIT_TYPES, COLLECTION_TYPE_CHECK
 
 INFLOW_TYPE_LIST = list(INFLOW_TYPES)
 OUTFLOW_TYPE_LIST = list(OUTFLOW_TYPES)
+LOCAL_DEPOSIT_TYPE_LIST = list(LOCAL_DEPOSIT_TYPES)
 
 
 class BankAccountSerializer(serializers.ModelSerializer):
@@ -18,15 +19,12 @@ class BankAccountSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    # nested read-only representation
     bank_account = BankAccountSerializer(read_only=True)
-
-    # write-only PK field that maps to the bank_account relation
     bank_account_id = serializers.PrimaryKeyRelatedField(
         queryset=BankAccount.objects.all(), source="bank_account", write_only=True
     )
-
     created_by_username = serializers.ReadOnlyField(source="created_by.username")
+    unfunded_warning = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
@@ -38,12 +36,26 @@ class TransactionSerializer(serializers.ModelSerializer):
             "type",
             "amount",
             "description",
+            "collection_type",
+            "check_no",
+            "reference",
+            "pdc_status",
             "created_by",
             "created_by_username",
             "created_at",
             "updated_at",
+            "unfunded_warning",
         ]
-        read_only_fields = ["created_by", "created_by_username", "created_at", "updated_at"]
+        read_only_fields = ["created_by", "created_by_username", "created_at", "updated_at", "unfunded_warning"]
+
+    def get_unfunded_warning(self, obj):
+        collection_type = (obj.collection_type or "").strip().lower()
+        if collection_type == COLLECTION_TYPE_CHECK:
+            check_no = (obj.check_no or "").strip()
+            reference = (obj.reference or "").strip()
+            if not check_no and not reference:
+                return "UNFUNDED: Check/PDC without reference"
+        return None
 
     def validate(self, data):
         """

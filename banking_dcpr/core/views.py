@@ -576,34 +576,34 @@ def compute_collections_summary(target_date):
     Returns list of dicts with: bank_name, location, beginning, collections, local_deposits, ending, transactions.
     """
     from django.db.models import Sum
-    from .constants import LOCAL_DEPOSIT_TYPES, INFLOW_TYPES
-    
-    # Use centralized INFLOW_TYPES - includes deposit, collection, fund_transfer automatically
-    ALL_INFLOWS = INFLOW_TYPES
+    from .constants import LOCAL_DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, ADJUSTMENT_TYPES
     
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
-        # Calculate beginning balance (prior day's ending)
+        # Beginning: opening + ALL prior inflows - ALL prior outflows
         prior_inflows = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=ALL_INFLOWS)
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=INFLOW_TYPES)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        prior_local_deposits = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=LOCAL_DEPOSIT_TYPES)
+        prior_outflows = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES.union(ADJUSTMENT_TYPES))
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        beginning = prior_inflows - prior_local_deposits
+        beginning = max(bank.opening_balance + prior_inflows - prior_outflows, Decimal("0"))
 
         # Today's transactions
         today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
         
-        collections = today_txns.filter(type__in=ALL_INFLOWS).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        collections = today_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_txns.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        adjustments = today_txns.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # Ending = Beginning + Collections - Local Deposits
-        ending = beginning + collections - local_deposits
+        # Ending = Beginning + Collections + Local Deposits - Disbursements
+        # Note: deposit is in LOCAL_DEPOSIT_TYPES, so it adds directly
+        ending = beginning + collections + local_deposits - disbursements + adjustments
 
         # Get today's transactions with descriptions (both collections and local_deposits)
         transactions = [
@@ -614,7 +614,7 @@ def compute_collections_summary(target_date):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in today_txns.filter(type__in=ALL_INFLOWS).order_by("-date", "-id")
+            for t in today_txns.filter(type__in=INFLOW_TYPES).order_by("-date", "-id")
         ]
         # Also add local deposits transactions
         local_deposit_txns = [

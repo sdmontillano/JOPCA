@@ -47,6 +47,22 @@ PDC_TYPES = frozenset([
     "post_dated_check", "post_dated_checks",
 ])
 
+# COLLECTION TYPE CONSTANTS - New system using collection_type field
+COLLECTION_TYPE_CASH = "cash"
+COLLECTION_TYPE_BANK_TRANSFER = "bank_transfer"
+COLLECTION_TYPE_CHECK = "check"
+
+COLLECTION_TYPES = frozenset([
+    COLLECTION_TYPE_CASH,
+    COLLECTION_TYPE_BANK_TRANSFER,
+    COLLECTION_TYPE_CHECK,
+])
+
+# PDC STATUS CONSTANTS
+PDC_STATUS_OUTSTANDING = "outstanding"
+PDC_STATUS_CLEARED = "cleared"
+PDC_STATUS_BOUNCED = "bounced"
+
 
 def is_inflow(tx_type):
     """Check if transaction type is an inflow."""
@@ -81,6 +97,31 @@ def is_pdc(tx_type):
 def is_adjustment(tx_type):
     """Check if transaction type is an adjustment."""
     return (tx_type or "").strip().lower() in ADJUSTMENT_TYPES
+
+
+def is_collection_type_cash(collection_type):
+    """Check if collection type is Cash (goes to cash on hand)."""
+    return (collection_type or "").strip().lower() == COLLECTION_TYPE_CASH
+
+
+def is_collection_type_bank_transfer(collection_type):
+    """Check if collection type is Bank Transfer (goes directly to bank)."""
+    return (collection_type or "").strip().lower() == COLLECTION_TYPE_BANK_TRANSFER
+
+
+def is_collection_type_check(collection_type):
+    """Check if collection type is Check/PDC."""
+    return (collection_type or "").strip().lower() == COLLECTION_TYPE_CHECK
+
+
+def is_pdc_cleared(pdc_status):
+    """Check if PDC status is cleared (affects bank balance)."""
+    return (pdc_status or "").strip().lower() == PDC_STATUS_CLEARED
+
+
+def is_pdc_bounced(pdc_status):
+    """Check if PDC status is bounced (reversed, excluded from totals)."""
+    return (pdc_status or "").strip().lower() == PDC_STATUS_BOUNCED
 
 
 def get_all_transaction_types():
