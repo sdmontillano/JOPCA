@@ -614,7 +614,7 @@ def compute_collections_summary(target_date):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in today_txns.filter(type__in=COLLECTION_TYPES).order_by("-date", "-id")
+            for t in today_txns.filter(type__in=ALL_INFLOWS).order_by("-date", "-id")
         ]
         # Also add local deposits transactions
         local_deposit_txns = [
