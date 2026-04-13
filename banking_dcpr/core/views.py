@@ -576,30 +576,30 @@ def compute_collections_summary(target_date):
     Returns list of dicts with: bank_name, location, beginning, collections, local_deposits, ending, transactions.
     """
     from django.db.models import Sum
-    from .constants import LOCAL_DEPOSIT_TYPES
+    from .constants import LOCAL_DEPOSIT_TYPES, INFLOW_TYPES
     
-    # Use sets that include both collections AND deposits
-    COLLECTION_TYPES = {"collections", "collection", "deposit", "deposits"}
+    # Use centralized INFLOW_TYPES - includes deposit, collection, fund_transfer automatically
+    ALL_INFLOWS = INFLOW_TYPES
     
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
         # Calculate beginning balance (prior day's ending)
-        prior_collections = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=COLLECTION_TYPES)
+        prior_inflows = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=ALL_INFLOWS)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_local_deposits = (
             Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=LOCAL_DEPOSIT_TYPES)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        beginning = prior_collections - prior_local_deposits
+        beginning = prior_inflows - prior_local_deposits
 
         # Today's transactions
         today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
         
-        collections = today_txns.filter(type__in=COLLECTION_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        collections = today_txns.filter(type__in=ALL_INFLOWS).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # Ending = Beginning + Collections - Local Deposits

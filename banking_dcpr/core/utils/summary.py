@@ -4,6 +4,12 @@ from django.db.models import Sum
 from ..models import BankAccount, Transaction
 from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, ADJUSTMENT_TYPES, PDC_TYPES, LOCAL_DEPOSIT_TYPES
 
+# All inflow transaction types (collections, deposits, fund transfers) - for Collections column
+ALL_INFLOW_TYPES = INFLOW_TYPES
+
+# All outflow transaction types (disbursements, bank charges, returned checks) - for Disbursements column  
+ALL_OUTFLOW_TYPES = OUTFLOW_TYPES
+
 def _safe_decimal(value):
     return Decimal(value or 0)
 
@@ -21,15 +27,12 @@ def compute_bank_daily_summary(target_date):
 
     for bank in banks:
         # Beginning balance: ALL prior transactions from opening to day before target date
-        # Prior Inflows = Collections + Fund Transfers + All Deposits
-        # Prior Outflows = Disbursements + Bank Charges + Returned Checks + Adjustments
-        COLLECTION_TYPES = frozenset(["collections", "collection", "deposit", "deposits"])
-        
+        # Uses centralized constants - ALL_INFLOW_TYPES includes deposits, collections, fund transfers
         prior_inflows = (
             Transaction.objects.filter(
                 bank_account=bank, 
                 date__lt=target_date, 
-                type__in=INFLOW_TYPES.union(COLLECTION_TYPES)
+                type__in=ALL_INFLOW_TYPES
             )
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
@@ -37,7 +40,7 @@ def compute_bank_daily_summary(target_date):
             Transaction.objects.filter(
                 bank_account=bank, 
                 date__lt=target_date, 
-                type__in=OUTFLOW_TYPES.union(ADJUSTMENT_TYPES)
+                type__in=ALL_OUTFLOW_TYPES.union(ADJUSTMENT_TYPES)
             )
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
@@ -48,14 +51,10 @@ def compute_bank_daily_summary(target_date):
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
-        # Use frozensets that include both singular and plural forms
-        # Include BOTH collections AND deposits in the Collections column
-        COLLECTION_TYPES = frozenset(["collections", "collection", "deposit", "deposits"])
-        DISBURSEMENT_TYPES = frozenset(["disbursement", "disbursements"])
-        
-        collections = today_qs.filter(type__in=COLLECTION_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # Uses centralized ALL_INFLOW_TYPES - includes deposits, collections, fund transfers automatically
+        collections = today_qs.filter(type__in=ALL_INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         local_deposits = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_qs.filter(type__in=DISBURSEMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_qs.filter(type__in=ALL_OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers = today_qs.filter(type__in={"fund_transfer", "fund_transfers", "interbank_transfer", "interbank_transfers"}).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers = today_qs.filter(type__in=TRANSFER_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         returned_checks = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -63,11 +62,8 @@ def compute_bank_daily_summary(target_date):
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # Bank Account Formula: Beginning + Collections - Disbursements + Adjustments - Returned Checks
-        # Note: Local Deposits are NOT included in ending balance formula - they are tracking only
-        # Collections = Cash received and deposited to bank (affects ending balance)
-        # Local Deposits = tracking column only (for audit/reconciliation)
-        # Returned checks = money returned (decreases bank balance)
-        # Ensure ending balance doesn't go negative
+        # All inflow types (deposit, collection, fund_transfer) are counted in collections
+        # All outflow types are counted in disbursements
         ending_raw = beginning + _safe_decimal(collections) - _safe_decimal(disbursements) + _safe_decimal(adjustments) - _safe_decimal(returned_checks)
         ending = max(ending_raw, Decimal("0"))
 
