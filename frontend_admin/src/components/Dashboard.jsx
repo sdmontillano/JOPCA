@@ -638,11 +638,11 @@ function DashboardInner() {
       else if (type.includes("return")) row.returned_checks += total;
       else if (type.includes("adjust") || type.includes("bank_charge")) row.adjustments += total;
       row.raw_rows.push(t.raw || t);
-      // Cash in Bank Formula: Beginning + Collections - Disbursements + Adjustments - Returned Checks
-      // Note: Collections IS included (bank-confirmed items affect ending balance)
+      // Cash in Bank Formula: Beginning - Disbursements + Adjustments - Returned Checks
+      // Note: Collections are NOT included (they go to Cash on Hand, not bank balance)
       // Local Deposits is tracking only (does NOT affect ending balance)
       // Fund Transfers moved to collections for the ending formula
-      row.ending = (row.beginning || 0) + (row.collections || 0) - (row.disbursements || 0) + (row.adjustments || 0) - (row.returned_checks || 0);
+      row.ending = (row.beginning || 0) - (row.disbursements || 0) + (row.adjustments || 0) - (row.returned_checks || 0);
       if (!row.account_number && t.account_number) row.account_number = t.account_number;
       return acc;
     }, []);
