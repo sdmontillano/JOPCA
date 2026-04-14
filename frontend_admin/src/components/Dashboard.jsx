@@ -173,12 +173,33 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
   const totalsFor = (dateIso) => {
     const dayData = dataMap[dateIso] || { cash_in_bank: [] };
     const rows = Array.isArray(dayData.cash_in_bank) ? dayData.cash_in_bank : [];
+    const pcfData = dayData.accounts || [];
+
+    const totalPcfBalance = pcfData.reduce((s, p) => s + Number(p.current_balance || p.ending || 0), 0);
+    const totalPcfDisbursements = pcfData.reduce((s, p) => s + Number(p.disbursements || 0), 0);
+    const totalPcfUnreplenished = pcfData.reduce((s, p) => s + Number(p.unreplenished || p.unreplenished_amount || 0), 0);
+
+    const totalDisbursementsFromPcf = pcfData.reduce((s, p) => {
+      let total = 0;
+      if (p.transactions && Array.isArray(p.transactions)) {
+        total = p.transactions.reduce((sum, t) => {
+          if (t.type && t.type.toString().toLowerCase().includes('disburse')) {
+            return sum + Number(t.amount || t.total || 0);
+          }
+          return sum;
+        }, 0);
+      }
+      return s + total;
+    }, 0);
+
+    const displayTotalDisbursements = totalPcfDisbursements > 0 ? totalPcfDisbursements : totalDisbursementsFromPcf;
+
     return rows.reduce(
       (acc, r) => {
         acc.beginning += Number(r.beginning ?? r.beginning_balance ?? 0);
         acc.collections += Number(r.collections ?? 0);
         acc.local_deposits += Number(r.local_deposits ?? 0);
-        acc.disbursements += Number(r.disbursements ?? 0);
+        acc.disbursements += displayTotalDisbursements;
         acc.fund_transfers += Number(r.fund_transfers ?? r.transfers ?? 0);
         acc.adjustments += Number(r.adjustments ?? 0);
         acc.ending += Number(r.ending ?? 0);
@@ -692,41 +713,20 @@ function DashboardInner() {
         raw: a,
       }));
     }
-    return (cashInBank || []).map((b) => ({
-      name: b.particulars || "Unknown",
-      account_number: b.account_number || b.raw_rows?.[0]?.bank_account__account_number || null,
-      balance: b.ending ?? 0,
-      raw: b.raw_account || b,
-    }));
+    return [];
   })();
 
-  const totalEndingAllBanks = (cashInBank || []).reduce((s, r) => s + Number(r.ending ?? 0), 0);
-
-  // PCF totals
-  const totalPcfBalance = pcfData.reduce((s, p) => s + Number(p.current_balance || p.ending || 0), 0);
-  const totalPcfDisbursements = pcfData.reduce((s, p) => s + Number(p.disbursements || 0), 0);
-  const totalPcfUnreplenished = pcfData.reduce((s, p) => s + Number(p.unreplenished || p.unreplenished_amount || 0), 0);
-
-  // Collections totals (from cash_collections API)
-  const totalCollections = collectionsData.reduce((s, c) => s + Number(c.collections || 0), 0);
+  // Calculate totals for KPI cards
+  const totalCollections = cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
+  const totalEndingAllBanks = cashInBank.reduce((sum, bank) => sum + Number(bank.ending || 0), 0);
+  const totalPcfBalance = pcfData.reduce((sum, pcf) => sum + Number(pcf.current_balance || pcf.ending || 0), 0);
+  const totalPcfUnreplenished = pcfData.reduce((sum, pcf) => sum + Number(pcf.unreplenished || pcf.unreplenished_amount || 0), 0);
 
   const handleOpenAddTransaction = () => {
-    if (!banksList || banksList.length === 0) {
-      setBankModalOpen(true);
-      setActionAlert({ severity: "warning", text: "Please add a deposit bank first — transactions require a deposit bank." });
-      setTimeout(() => setActionAlert(null), 4500);
-      return;
-    }
     setTransactionModalOpen(true);
   };
 
   const handleOpenAddPdc = () => {
-    if (!banksList || banksList.length === 0) {
-      setBankModalOpen(true);
-      setActionAlert({ severity: "warning", text: "Please add a deposit bank first — PDC requires a deposit bank." });
-      setTimeout(() => setActionAlert(null), 4500);
-      return;
-    }
     setPdcModalOpen(true);
   };
 

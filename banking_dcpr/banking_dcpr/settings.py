@@ -8,11 +8,19 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change-in-production')
+# Generate secure secret key for production
+# In development, you can set DJANGO_SECRET_KEY environment variable
+# For production, ALWAYS set DJANGO_SECRET_KEY environment variable
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    import secrets
+    # Generate a secure key if not set (development only)
+    SECRET_KEY = secrets.token_urlsafe(50)
+    import warnings
+    warnings.warn('DJANGO_SECRET_KEY not set in environment. Using generated key. Set DJANGO_SECRET_KEY in production!')
 
-# For development: DEBUG defaults to True if not set
-# For production: Set DEBUG=False or use environment variable
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+# DEBUG mode: False by default for security, set to True only in development
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # ALLOWED_HOSTS - use environment variable for production
 # Local: localhost, 127.0.0.1
@@ -46,24 +54,55 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # ✅ allow frontend requests
+    'corsheaders.middleware.CorsMiddleware',  # allow frontend requests
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',  # TEMPORARILY DISABLED FOR DEV
+    # CSRF disabled for development - re-enable in production
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# CORS settings - allow all origins in development, specific origins in production
-# Set CORS_ALLOWED_ORIGINS environment variable for production (comma-separated)
+# CSRF settings - exempt API endpoints for token authentication
+# Token-based APIs don't need CSRF protection
+CSRF_EXEMPT_VIEWS = [
+    'core.views.obtain_auth_token_with_role',
+    'core.views.verify_token', 
+    'core.views.logout_user',
+    'core.views.create_default_admin',
+    'core.views.create_user',
+    'core.views.change_password',
+    'core.views.user_profile',
+    'core.views.audit_log',
+    # All API ViewSets are automatically exempt
+]
+
+# CORS settings - secure by default, allow specific origins only
+# Set CORS_ALLOWED_ORIGINS environment variable (comma-separated)
+# Example: CORS_ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
 _cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
 if _cors_origins:
-    # Production: use specific origins from environment
+    # Use specific origins from environment
     CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
     CORS_ALLOW_CREDENTIALS = True
+elif DEBUG:
+    # Development only: allow localhost origins
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ]
+    CORS_ALLOW_CREDENTIALS = True
 else:
-    # Development: allow all
-    CORS_ALLOW_ALL_ORIGINS = True
+    # Allow Vite dev server by default for development convenience
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
+    CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

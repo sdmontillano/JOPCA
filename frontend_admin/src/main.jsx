@@ -5,16 +5,16 @@ import { AppThemeProvider } from "./ThemeContext.jsx";
 import { ToastProvider } from "./ToastContext.jsx";
 import ErrorBoundary from "./ErrorBoundary.jsx";
 
-// Global error handler for uncaught errors
+// Global error handler for uncaught errors (production safe)
 window.addEventListener('error', (event) => {
-  console.error('Global error:', event.error);
+  // In production, you might want to send this to an error reporting service
+  // console.error('Global error:', event.error);
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
+  // In production, you might want to send this to an error reporting service
+  // console.error('Unhandled promise rejection:', event.reason);
 });
-
-console.log('Starting JOPCA app...');
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

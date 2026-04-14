@@ -123,13 +123,15 @@ export default function Login() {
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
 
-if (res.status === 200 && token) {
-        // Save token immediately
+      if (res.status === 200 && token) {
+        // Save token and user role immediately
         try {
           persistToken(token);
           localStorage.setItem("userRole", loginAs);
           localStorage.setItem("username", username);
+          console.log("Login data saved:", { token: !!token, userRole: loginAs, username });
         } catch (err) {
+          console.error("Failed to save login data:", err);
           setError("Failed to save login data.");
           setLoading(false);
           return;
@@ -137,11 +139,21 @@ if (res.status === 200 && token) {
 
         showToast("Login successful!", "success");
 
-        // Redirect immediately without verify call
+        // Force redirect with window.location as fallback
         setTimeout(() => {
-          const target = loginAs === "admin" ? "#/admin/home" : "#/dashboard";
-          window.location.href = target;
-        }, 300);
+          const target = loginAs === "admin" ? "/admin/home" : "/dashboard";
+          console.log("Redirecting to:", target);
+          try {
+            navigate(target);
+            // Fallback if navigate doesn't work
+            setTimeout(() => {
+              window.location.hash = target;
+            }, 100);
+          } catch (err) {
+            console.error("Navigation failed:", err);
+            window.location.hash = target;
+          }
+        }, 500);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);

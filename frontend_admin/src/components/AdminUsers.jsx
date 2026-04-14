@@ -23,6 +23,7 @@ export default function AdminUsers() {
   const [formData, setFormData] = useState({ username: "", email: "", password: "", is_staff: false, is_superuser: false });
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const breadcrumbs = [
     { label: "Home", href: "/admin/home" },
@@ -109,6 +110,7 @@ export default function AdminUsers() {
   };
 
   const handleDelete = async () => {
+    setDeleting(true);
     try {
       await api.delete(`/api/users/${selectedUser.id}/`);
       showToast("User deleted successfully", "success");
@@ -116,11 +118,18 @@ export default function AdminUsers() {
       fetchUsers();
     } catch (err) {
       console.error("Failed to delete user", err);
-      showToast("Failed to delete user", "error");
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || "Failed to delete user";
+      showToast(errorMessage, "error");
+    } finally {
+      setDeleting(false);
     }
   };
 
   const openDeleteDialog = (user) => {
+    if (user.is_superuser) {
+      showToast("Cannot delete superuser account", "error");
+      return;
+    }
     setSelectedUser(user);
     setDeleteDialogOpen(true);
   };
@@ -208,10 +217,20 @@ export default function AdminUsers() {
                         {user.date_joined ? new Date(user.date_joined).toLocaleDateString() : "-"}
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton size="small" onClick={() => handleOpenDialog(user)} sx={{ color: "#64748b" }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleOpenDialog(user)} 
+                          sx={{ color: "#64748b" }}
+                        >
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" onClick={() => openDeleteDialog(user)} sx={{ color: "#ef4444" }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openDeleteDialog(user)} 
+                          sx={{ color: user.is_superuser ? "#9ca3af" : "#ef4444" }}
+                          disabled={user.is_superuser}
+                          title={user.is_superuser ? "Cannot delete superuser" : "Delete user"}
+                        >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
@@ -294,13 +313,26 @@ export default function AdminUsers() {
         <DialogContent>
           <Typography>
             Are you sure you want to delete user "<strong>{selectedUser?.username}</strong>"?
+            {selectedUser?.is_staff && !selectedUser?.is_superuser && (
+              <>
+                <br /><br />
+                <span style={{ color: "#f59e0b" }}>⚠️ This user has admin privileges.</span>
+              </>
+            )}
+            <br /><br />
             This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setDeleteDialogOpen(false)} sx={{ color: "#64748b" }}>Cancel</Button>
-          <Button onClick={handleDelete} variant="contained" color="error">
-            Delete
+          <Button 
+            onClick={handleDelete} 
+            variant="contained" 
+            color="error"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : null}
+          >
+            {deleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

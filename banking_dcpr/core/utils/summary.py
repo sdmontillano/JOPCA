@@ -129,8 +129,13 @@ def compute_bank_daily_summary(target_date):
         fund_transfers_out = today_qs.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # For reporting only (not in balance formula)
-        collections = today_qs.filter(type="collection").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        collections = today_qs.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Calculate local deposits (both deposit and local_deposit types)
+        deposit_total = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposit_total = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposits = deposit_total + local_deposit_total
+        
         adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         returned_checks = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")

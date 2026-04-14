@@ -9,7 +9,6 @@ import EventNoteIcon from "@mui/icons-material/EventNote";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PeopleIcon from "@mui/icons-material/People";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import LogoutIcon from "@mui/icons-material/Logout";
 import HistoryIcon from "@mui/icons-material/History";
 import api, { clearTokens } from "../services/tokenService";
 
@@ -32,17 +31,6 @@ export default function AdminLayout({ children, title, breadcrumbs }) {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await api.post("/api/auth/logout/");
-    } catch (e) {
-      // Ignore logout API errors
-    }
-    clearTokens();
-    window.location.hash = "/login";
-    window.location.reload();
   };
 
   const getCurrentSection = () => {
@@ -117,19 +105,6 @@ export default function AdminLayout({ children, title, breadcrumbs }) {
             </ListItemIcon>
             <Typography variant="body2" sx={{ color: "#e2e8f0", fontSize: 14 }}>
               Back to Dashboard
-            </Typography>
-          </ListItemButton>
-        </ListItem>
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={handleLogout}
-            sx={{ borderRadius: 1, "&:hover": { bgcolor: "#334155" }, py: 1 }}
-          >
-            <ListItemIcon sx={{ color: "#94a3b8", minWidth: 36 }}>
-              <LogoutIcon />
-            </ListItemIcon>
-            <Typography variant="body2" sx={{ color: "#e2e8f0", fontSize: 14 }}>
-              Log out
             </Typography>
           </ListItemButton>
         </ListItem>

@@ -48,7 +48,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     type: "deposit",
     bank_account: "",
     date: todayIsoDate,
-    collection_type: "",
     check_no: "",
     reference: "",
     pdc_status: "",
@@ -69,13 +68,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     { value: "transfer", label: "Transfer" },
     { value: "fund_transfer", label: "Fund Transfer" },
     { value: "interbank_transfer", label: "Interbank Transfer" },
-  ];
-
-  const collectionTypes = [
-    { value: "", label: "-- Select Destination --" },
-    { value: "cash", label: "Cash (Cash on Hand)" },
-    { value: "bank_transfer", label: "Bank Transfer (Direct to Bank)" },
-    { value: "check", label: "Check/PDC" },
   ];
 
   const pdcStatuses = [
@@ -114,7 +106,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
       type: "deposit",
       bank_account: "",
       date: todayIsoDate,
-      collection_type: "",
       check_no: "",
       reference: "",
       pdc_status: "",
@@ -156,7 +147,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
         date: form.date,
         bank_account_id: form.bank_account === "" ? null : parseInt(form.bank_account, 10),
         description: form.description?.trim() || null,
-        collection_type: form.collection_type || null,
         check_no: form.check_no?.trim() || null,
         reference: form.reference?.trim() || null,
         pdc_status: form.pdc_status || null,
@@ -269,28 +259,6 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
                 </MenuItem>
               ))}
             </TextField>
-
-            <TextField select label="Collection Destination" name="collection_type" value={form.collection_type} onChange={handleChange} fullWidth>
-              {collectionTypes.map((t) => (
-                <MenuItem key={t.value} value={t.value}>
-                  {t.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {form.collection_type === "check" && (
-              <>
-                <TextField label="Check Number" name="check_no" value={form.check_no} onChange={handleChange} fullWidth />
-                <TextField label="Reference" name="reference" value={form.reference} onChange={handleChange} fullWidth />
-                <TextField select label="PDC Status" name="pdc_status" value={form.pdc_status} onChange={handleChange} fullWidth>
-                  {pdcStatuses.map((s) => (
-                    <MenuItem key={s.value} value={s.value}>
-                      {s.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </>
-            )}
 
             <TextField select label="Bank Account" name="bank_account" value={form.bank_account} onChange={handleChange} required fullWidth>
               {accounts.map((acc) => (

@@ -29,6 +29,8 @@ yarn-error.log*
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+jopca_db.sqlite3
+jopca_db.sqlite3-journal
 media/
 staticfiles/
 

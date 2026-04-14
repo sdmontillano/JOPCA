@@ -35,13 +35,14 @@ function groupLineItemsByBank(lineItems = []) {
     row.raw_rows.push({ ...li, total });
 
     const t = (li.type || li.txn_type || "").toString().toLowerCase();
-    if (t.includes("deposit")) row.local_deposits += total;
+    if (t.includes("deposit") || t.includes("local_deposit")) row.local_deposits += total;
     else if (t.includes("collect")) row.collections += total;
     else if (t.includes("disburse")) row.disbursements += total;
     else if (t.includes("fund")) row.fund_transfers += total;
     else if (t.includes("returned")) row.returned_checks += total;
     else if (t.includes("bank_charge") || t.includes("bank charge")) row.bank_charges += total;
-    else row.collections += total;
+    else if (t.includes("adjust")) row.adjustments += total;
+    // No fallback - only categorize known transaction types
 
     row.ending =
       (row.beginning || 0) +

@@ -114,6 +114,7 @@ class UserViewSet(viewsets.ModelViewSet):
 # -----------------------------
 # Auth Endpoints
 # -----------------------------
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([])
 def obtain_auth_token_with_role(request):
@@ -290,17 +291,51 @@ class TransactionViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        try:
-            self.perform_create(serializer)
-        except DjangoValidationError as e:
-            messages = e.messages if hasattr(e, 'messages') else [str(e)]
-            return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
-            logger.exception("Unexpected error creating transaction")
-            return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Check if this is a deposit transaction - create both collection and deposit
+        if serializer.validated_data.get('type') == 'deposit':
+            try:
+                # Create collection transaction first
+                collection_data = serializer.validated_data.copy()
+                collection_data['type'] = 'collection'
+                # Handle bank_account field mapping
+                if 'bank_account' in collection_data:
+                    collection_data['bank_account_id'] = collection_data['bank_account'].id
+                collection_serializer = self.get_serializer(data=collection_data)
+                collection_serializer.is_valid(raise_exception=True)
+                collection_instance = collection_serializer.save()
+                self._log_audit('create', collection_instance, f"Created collection transaction: {collection_instance.type} - {collection_instance.amount}")
+                
+                # Create deposit transaction
+                deposit_instance = serializer.save()
+                self._log_audit('create', deposit_instance, f"Created deposit transaction: {deposit_instance.type} - {deposit_instance.amount}")
+                
+                # Return both transactions
+                headers = self.get_success_headers(serializer.data)
+                return Response({
+                    'collection_transaction': self.get_serializer(collection_instance).data,
+                    'deposit_transaction': self.get_serializer(deposit_instance).data
+                }, status=status.HTTP_201_CREATED, headers=headers)
+                
+            except DjangoValidationError as e:
+                messages = e.messages if hasattr(e, 'messages') else [str(e)]
+                return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception:
+                logger.exception("Unexpected error creating deposit transaction")
+                return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # Non-deposit transactions - create normally
+            try:
+                self.perform_create(serializer)
+            except DjangoValidationError as e:
+                messages = e.messages if hasattr(e, 'messages') else [str(e)]
+                return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception:
+                logger.exception("Unexpected error creating transaction")
+                return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class DailyCashPositionViewSet(viewsets.ModelViewSet):
@@ -548,16 +583,59 @@ def monthly_full_report(request):
     
     pdc_total = pdc_this_month.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
+    # 7. COLLECTIONS VS DEPOSITS BREAKDOWN (like daily reports)
+    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES
+    
+    # Calculate collections and deposits separately for monthly report
+    monthly_collections = bank_transactions.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    monthly_deposits = bank_transactions.filter(type__in=DEPOSIT_TYPES.union(LOCAL_DEPOSIT_TYPES)).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    
+    # 8. BANK BALANCE SUMMARY BY BANK (like daily reports)
+    bank_balance_summary = []
+    banks = BankAccount.objects.all().order_by("name", "account_number")
+    
+    for bank in banks:
+        # Monthly transactions for this bank
+        bank_monthly_txns = bank_transactions.filter(bank_account=bank)
+        
+        # Collections and deposits for this bank
+        bank_collections = bank_monthly_txns.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        bank_deposits = bank_monthly_txns.filter(type__in=DEPOSIT_TYPES.union(LOCAL_DEPOSIT_TYPES)).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Monthly inflows and outflows for this bank
+        bank_monthly_inflows = bank_monthly_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        bank_monthly_outflows = bank_monthly_txns.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Monthly net change
+        bank_monthly_net = bank_monthly_inflows - bank_monthly_outflows
+        
+        bank_balance_summary.append({
+            "bank_name": bank.name,
+            "account_number": bank.account_number,
+            "location": bank.area or "",
+            "beginning_balance": float(bank.balance - bank_monthly_net),
+            "collections": float(bank_collections),
+            "local_deposits": float(bank_deposits),
+            "inflows": float(bank_monthly_inflows),
+            "outflows": float(bank_monthly_outflows),
+            "net_change": float(bank_monthly_net),
+            "ending_balance": float(bank.balance),
+            "transaction_count": bank_monthly_txns.count()
+        })
+    
     return Response({
         "month": month_date.strftime("%Y-%m"),
         "bank_transactions": bank_txn_list,
         "pcf_transactions": pcf_txn_list,
         "pdc_this_month": list(pdc_this_month),
+        "bank_balance_summary": bank_balance_summary,
         "summary": {
             "bank_txn_count": bank_transactions.count(),
             "bank_inflows": float(inflows),
             "bank_outflows": float(outflows),
             "bank_net": float(bank_net),
+            "monthly_collections": float(monthly_collections),
+            "monthly_deposits": float(monthly_deposits),
             "pcf_txn_count": pcf_transactions.count(),
             "pcf_total_disbursements": float(pcf_total_disb),
             "pcf_total_replenishments": float(pcf_total_rep),
@@ -609,7 +687,7 @@ def compute_collections_summary(target_date):
         
         # For report columns (tracking)
         collections = today_txns.filter(type="collection").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposits = today_txns.filter(type__in=DEPOSIT_TYPES.union(LOCAL_DEPOSIT_TYPES)).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # For balance formula
         deposits = today_txns.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -2064,9 +2142,9 @@ def create_default_admin(request):
     except Exception as e:
         pass  # Ignore if migrations fail - might already be done
     
-    username = 'siegfred'
-    password = 'siegfred321'
-    email = 'admin@jopca.local'
+    username = os.environ.get('ADMIN_USERNAME', 'admin')
+    password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    email = os.environ.get('ADMIN_EMAIL', 'admin@jopca.local')
     
     try:
         if User.objects.filter(username=username).exists():

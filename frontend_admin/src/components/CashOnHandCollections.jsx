@@ -48,8 +48,12 @@ function CollectionsHistory({ defaultExpanded = false }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   const computeRange = (centerIso) => {
-    const prev = isoDateOffset(centerIso, -1);
-    return { dates: [prev, centerIso] };
+    const dates = [];
+    // Show 7 days: 3 days before, current day, 3 days after
+    for (let i = -3; i <= 3; i++) {
+      dates.push(isoDateOffset(centerIso, i));
+    }
+    return { dates };
   };
 
   const fetchRange = useCallback(async (centerIso) => {
@@ -125,25 +129,28 @@ function CollectionsHistory({ defaultExpanded = false }) {
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B" }}>
-            Collections History — Yesterday & Previous Day
+            Collections History - 7 Day Range
           </Typography>
           <Typography variant="caption" sx={{ color: "#6B7280" }}>
-            Center (yesterday): <strong>{centerDate}</strong>
+            Center date: <strong>{centerDate}</strong>
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 1 }}>
-            <Chip label={dates[0]} size="small" variant="outlined" sx={{ borderColor: "#E5E7EB", color: "#6B7280" }} />
-            <Chip 
-              label={dates[1]} 
-              size="small" 
-              sx={{ 
-                borderColor: "#1E293B", 
-                color: "#1E293B", 
-                bgcolor: "#F1F5F9",
-                fontWeight: 600
-              }} 
-            />
+            {dates.map((date, index) => (
+              <Chip 
+                key={date}
+                label={date} 
+                size="small" 
+                variant={date === centerDate ? "filled" : "outlined"}
+                sx={{ 
+                  borderColor: date === centerDate ? "#1E293B" : "#E5E7EB", 
+                  color: date === centerDate ? "#1E293B" : "#6B7280",
+                  bgcolor: date === centerDate ? "#F1F5F9" : "transparent",
+                  fontWeight: date === centerDate ? 600 : 400
+                }} 
+              />
+            ))}
           </Stack>
           <IconButton size="small" onClick={goPrev} aria-label="previous day" sx={{ color: "#475569" }}>
             <ArrowBackIosNewIcon fontSize="small" />
@@ -153,14 +160,6 @@ function CollectionsHistory({ defaultExpanded = false }) {
           </IconButton>
           <Button size="small" onClick={refresh} disabled={loading} variant="contained" sx={{ bgcolor: "#1E293B" }}>
             Refresh
-          </Button>
-          <Button 
-            variant="outlined" 
-            size="small" 
-            onClick={() => setExpanded(false)} 
-            sx={{ textTransform: "none", px: 2, borderColor: "#D1D5DB", color: "#475569" }}
-          >
-            Close
           </Button>
         </Stack>
       </Stack>
@@ -460,7 +459,7 @@ export default function CashOnHandCollections({
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <ReceiptLongIcon sx={{ color: "#92400E", fontSize: 20 }} />
           <Typography variant="body2" sx={{ fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-            Bank Collections
+            Collections
           </Typography>
           {collections.length > 0 && (
             <Chip 

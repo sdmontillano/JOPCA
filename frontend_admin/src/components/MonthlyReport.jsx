@@ -349,6 +349,54 @@ export default function MonthlyReport() {
         <>
           {/* Summary Cards */}
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2, mb: 3 }}>
+            {/* Collections */}
+            <Paper
+              sx={{
+                p: 2.5,
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "#E5E7EB",
+                bgcolor: "#FFFFFF",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                <ReceiptLongIcon sx={{ fontSize: 16, color: "#92400E" }} />
+                <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", fontSize: "0.65rem" }}>
+                  Collections
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "#92400E" }}>
+                {formatCurrency(report.summary?.monthly_collections || 0)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#6B7280" }}>
+                Cash received
+              </Typography>
+            </Paper>
+
+            {/* Local Deposits */}
+            <Paper
+              sx={{
+                p: 2.5,
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "#E5E7EB",
+                bgcolor: "#FFFFFF",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                <AccountBalanceIcon sx={{ fontSize: 16, color: "#166534" }} />
+                <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500, textTransform: "uppercase", fontSize: "0.65rem" }}>
+                  Local Deposits
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "#166534" }}>
+                {formatCurrency(report.summary?.monthly_deposits || 0)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#6B7280" }}>
+                Bank deposits
+              </Typography>
+            </Paper>
+
             {/* Bank Inflows */}
             <Paper
               sx={{
@@ -469,6 +517,70 @@ export default function MonthlyReport() {
               </Typography>
             </Paper>
           </Box>
+
+          {/* Bank Balance Summary (like daily reports) */}
+          <Paper sx={{ mb: 2, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF", overflow: "hidden" }}>
+            <Box sx={{ p: 2, bgcolor: "#F8FAFB", borderBottom: "1px solid #E5E7EB" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AccountBalanceIcon sx={{ color: "#1E293B", fontSize: 20 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B" }}>
+                  Bank Balance Summary
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#6B7280", ml: 1 }}>
+                  Monthly Overview
+                </Typography>
+              </Box>
+            </Box>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "#F9FAFB" }}>
+                  <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Bank</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Location</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Beginning</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Collections</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Local Deposits</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Inflows</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Outflows</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Net Change</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Ending</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Txns</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {report.bank_balance_summary?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                      No bank balance data for this month
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  report.bank_balance_summary?.map((bank, idx) => (
+                    <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#F3F4F6" } }}>
+                      <TableCell sx={{ fontWeight: 500, color: "#374151" }}>
+                        {bank.bank_name}
+                        <Typography variant="caption" display="block" sx={{ color: "#9CA3AF", fontSize: "0.7rem" }}>
+                          {bank.account_number}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500, color: "#374151" }}>{bank.location}</TableCell>
+                      <TableCell align="right" sx={{ color: "#6B7280" }}>{formatCurrency(bank.beginning_balance)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#92400E" }}>{formatCurrency(bank.collections)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#166534" }}>{formatCurrency(bank.local_deposits)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#166534" }}>{formatCurrency(bank.inflows)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#991B1B" }}>{formatCurrency(bank.outflows)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#1E293B", fontWeight: 600 }}>
+                        {formatCurrency(bank.net_change)}
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "#1E293B", fontWeight: 700 }}>
+                        {formatCurrency(bank.ending_balance)}
+                      </TableCell>
+                      <TableCell sx={{ color: "#6B7280" }}>{bank.transaction_count}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
 
           {/* A. BANK TRANSACTIONS SECTION */}
           <Paper sx={{ mb: 2, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF", overflow: "hidden" }}>
