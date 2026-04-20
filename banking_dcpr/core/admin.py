@@ -10,6 +10,7 @@ class TransactionInline(admin.TabularInline):
     readonly_fields = ('date', 'type', 'amount', 'description')
     can_delete = False
     max_num = 0
+    fk_name = 'bank_account'
 
 
 @admin.register(Transaction)

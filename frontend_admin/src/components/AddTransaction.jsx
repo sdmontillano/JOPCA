@@ -51,6 +51,8 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     check_no: "",
     reference: "",
     pdc_status: "",
+    from_bank: "",
+    to_bank: "",
   });
   const [accounts, setAccounts] = useState([]);
   const [message, setMessage] = useState(null);
@@ -109,6 +111,8 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
       check_no: "",
       reference: "",
       pdc_status: "",
+      from_bank: "",
+      to_bank: "",
     });
 
   const handleChange = (e) => {
@@ -151,6 +155,10 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
         reference: form.reference?.trim() || null,
         pdc_status: form.pdc_status || null,
       };
+      if (form.type === "fund_transfer") {
+        if (form.from_bank) payload.from_bank_id = parseInt(form.from_bank, 10);
+        if (form.to_bank) payload.to_bank_id = parseInt(form.to_bank, 10);
+      }
 
       const res = await api.post("/api/transactions-crud/", payload);
       const created = res.data ?? res;
@@ -268,6 +276,27 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
               ))}
             </TextField>
 
+            {form.type === "fund_transfer" && (
+              <>
+                <TextField select label="From Bank" name="from_bank" value={form.from_bank} onChange={handleChange} fullWidth>
+                  <MenuItem value="">-- Select Source Bank --</MenuItem>
+                  {accounts.filter((acc) => acc.id !== parseInt(form.bank_account || "0", 10)).map((acc) => (
+                    <MenuItem key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.account_number})
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField select label="To Bank" name="to_bank" value={form.to_bank} onChange={handleChange} fullWidth>
+                  <MenuItem value="">-- Select Destination Bank --</MenuItem>
+                  {accounts.filter((acc) => acc.id !== parseInt(form.from_bank || "0", 10)).map((acc) => (
+                    <MenuItem key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.account_number})
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </>
+            )}
+
             <TextField label="Date" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} required fullWidth />
 
             {message && (
@@ -331,6 +360,27 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
             </MenuItem>
           ))}
         </TextField>
+
+        {form.type === "fund_transfer" && (
+          <>
+            <TextField select label="From Bank" name="from_bank" value={form.from_bank} onChange={handleChange} fullWidth>
+              <MenuItem value="">-- Select Source Bank --</MenuItem>
+              {accounts.filter((acc) => acc.id !== parseInt(form.bank_account || "0", 10)).map((acc) => (
+                <MenuItem key={acc.id} value={acc.id}>
+                  {acc.name} ({acc.account_number})
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField select label="To Bank" name="to_bank" value={form.to_bank} onChange={handleChange} fullWidth>
+              <MenuItem value="">-- Select Destination Bank --</MenuItem>
+              {accounts.filter((acc) => acc.id !== parseInt(form.from_bank || "0", 10)).map((acc) => (
+                <MenuItem key={acc.id} value={acc.id}>
+                  {acc.name} ({acc.account_number})
+                </MenuItem>
+              ))}
+            </TextField>
+          </>
+        )}
 
         <TextField label="Date" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} required />
 

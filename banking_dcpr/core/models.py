@@ -119,11 +119,28 @@ class Transaction(models.Model):
         ('bounced', 'Bounced'),
     ]
 
-    bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE)
+    bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='transactions')
     date = models.DateField()
     type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    
+    from_bank = models.ForeignKey(
+        BankAccount, 
+        on_delete=models.CASCADE, 
+        related_name='transfers_out',
+        null=True, 
+        blank=True,
+        help_text="Source bank for fund transfers"
+    )
+    to_bank = models.ForeignKey(
+        BankAccount, 
+        on_delete=models.CASCADE, 
+        related_name='transfers_in',
+        null=True, 
+        blank=True,
+        help_text="Destination bank for fund transfers"
+    )
     
     collection_type = models.CharField(
         max_length=20, 
@@ -655,7 +672,7 @@ class AuditLog(models.Model):
     )
     username = models.CharField(max_length=150, blank=True, help_text="Username at time of action")
     action = models.CharField(max_length=20, choices=ACTION_TYPES, db_index=True)
-    entity = models.CharField(max_length=50, db_index=True, help_text="e.g., Transaction, BankAccount, PCF, PDC")
+    entity = models.CharField(max_length=50, db_index=True, help_text="e.g., Transaction, BankAccount, PCF, PDC", default="unknown")
     entity_id = models.PositiveIntegerField(null=True, blank=True, db_index=True)
     description = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)

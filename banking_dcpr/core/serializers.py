@@ -23,6 +23,14 @@ class TransactionSerializer(serializers.ModelSerializer):
     bank_account_id = serializers.PrimaryKeyRelatedField(
         queryset=BankAccount.objects.all(), source="bank_account", write_only=True
     )
+    from_bank = BankAccountSerializer(read_only=True)
+    from_bank_id = serializers.PrimaryKeyRelatedField(
+        queryset=BankAccount.objects.all(), source="from_bank", write_only=True, required=False, allow_null=True
+    )
+    to_bank = BankAccountSerializer(read_only=True)
+    to_bank_id = serializers.PrimaryKeyRelatedField(
+        queryset=BankAccount.objects.all(), source="to_bank", write_only=True, required=False, allow_null=True
+    )
     created_by_username = serializers.ReadOnlyField(source="created_by.username")
     unfunded_warning = serializers.SerializerMethodField()
 
@@ -40,6 +48,10 @@ class TransactionSerializer(serializers.ModelSerializer):
             "check_no",
             "reference",
             "pdc_status",
+            "from_bank",
+            "from_bank_id",
+            "to_bank",
+            "to_bank_id",
             "created_by",
             "created_by_username",
             "created_at",
