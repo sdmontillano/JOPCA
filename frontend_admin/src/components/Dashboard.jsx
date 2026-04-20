@@ -200,12 +200,13 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
         acc.collections += Number(r.collections ?? 0);
         acc.local_deposits += Number(r.local_deposits ?? 0);
         acc.disbursements += displayTotalDisbursements;
-        acc.fund_transfers += Number(r.fund_transfers ?? r.transfers ?? 0);
+        acc.fund_transfers_out += Number(r.fund_transfers_out ?? r.fund_transfers ?? r.transfers ?? 0);
+        acc.fund_transfers_in += Number(r.fund_transfers_in ?? 0);
         acc.adjustments += Number(r.adjustments ?? 0);
         acc.ending += Number(r.ending ?? 0);
         return acc;
       },
-      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers: 0, adjustments: 0, ending: 0 }
+      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers_out: 0, fund_transfers_in: 0, adjustments: 0, ending: 0 }
     );
   };
 
@@ -338,7 +339,8 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers_out)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers_in)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency(totals.adjustments)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.9rem" }}>{formatCurrency(totals.ending)}</TableCell>
                           </TableRow>
