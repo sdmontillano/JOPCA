@@ -687,5 +687,30 @@ def log_audit(user, action, entity, entity_id=None, description='', ip_address=N
     #     description=description,
     #     ip_address=ip_address,
     #     details=details
-    # )
+#     )
     pass
+
+
+# ---------------------------------------------------------------------
+# Collection model - unified collections as single source of truth
+# ---------------------------------------------------------------------
+class Collection(models.Model):
+    STATUS_UNDEPOSITED = 'UNDEPOSITED'
+    STATUS_DEPOSITED = 'DEPOSITED'
+    STATUS_CHOICES = [
+        (STATUS_UNDEPOSITED, 'Undeposited'),
+        (STATUS_DEPOSITED, 'Deposited'),
+    ]
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNDEPOSITED)
+    date = models.DateField(null=True, blank=True, help_text="Date when cash was collected")
+    created_at = models.DateTimeField(auto_now_add=True)
+    transaction = models.ForeignKey('Transaction', on_delete=models.CASCADE, null=True, blank=True, related_name='collections')
+    description = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Collection #{self.id} - ₱{self.amount} - {self.status}"

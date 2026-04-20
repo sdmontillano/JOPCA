@@ -382,6 +382,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
     { key: "dashboard", label: "Dashboard", icon: <HomeIcon />, to: "/dashboard" },
     { key: "banks", label: "Banks", icon: <AccountBalanceIcon />, to: "/banks" },
     { key: "cash-summary", label: "Cash Summary", icon: <AccountBalanceWalletIcon />, to: "/cash-summary" },
+    { key: "collect-cash", label: "Collect Cash", icon: <AccountBalanceWalletIcon />, to: "/collect-cash" },
     { key: "analysis", label: "Analysis", icon: <AssessmentIcon />, to: "/analysis" },
     { key: "transactions", label: "Transactions", icon: <ReceiptLongIcon />, to: "/transactions" },
     { key: "monthly", label: "Monthly", icon: <BarChartIcon />, to: "/monthly-report" },

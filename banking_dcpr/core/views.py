@@ -207,8 +207,9 @@ from .serializers import (
     PettyCashTransactionSerializer,
     CashCountSerializer,
     AuditLogSerializer,
+    CollectionSerializer,
 )
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog, Collection
 from .utils.summary import compute_bank_daily_summary
 from .export_views import pcf_export_excel, pcf_export_pdf
 
@@ -342,6 +343,24 @@ class DailyCashPositionViewSet(viewsets.ModelViewSet):
     queryset = DailyCashPosition.objects.all().order_by('-date')
     serializer_class = DailyCashPositionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class CollectionViewSet(viewsets.ModelViewSet):
+    queryset = Collection.objects.all().order_by('-created_at')
+    serializer_class = CollectionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        from decimal import Decimal
+        total = Collection.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        undeposited = Collection.objects.filter(status=Collection.STATUS_UNDEPOSITED).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        deposited = Collection.objects.filter(status=Collection.STATUS_DEPOSITED).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        return Response({
+            'total': total,
+            'undeposited': undeposited,
+            'deposited': deposited,
+        })
 
 
 class TransactionListCreate(generics.ListCreateAPIView):
