@@ -11,6 +11,7 @@ from core.views import (
     detailed_monthly_report,
     monthly_full_report,
     BankAccountViewSet,
+    FundTransferViewSet,
     TransactionViewSet,
     DailyCashPositionViewSet,
     MonthlyReportViewSet,
@@ -20,6 +21,7 @@ from core.views import (
     CashCountViewSet,
     UserViewSet,
     AuditLogViewSet,
+    CollectionViewSet,
     bank_reconciliation_summary,
     cash_counts_summary,
     pcf_alerts,
@@ -47,6 +49,8 @@ from core.views import (
 router = DefaultRouter()
 router.register(r'bankaccounts', BankAccountViewSet, basename='bankaccount')
 router.register(r'transactions-crud', TransactionViewSet, basename='transaction')
+router.register(r'fund-transfers', FundTransferViewSet, basename='fundtransfer')
+router.register(r'collections', CollectionViewSet, basename='collection')
 router.register(r'pdc', PdcViewSet, basename='pdc')
 router.register(r'dailycashpositions', DailyCashPositionViewSet, basename='dailycashposition')
 router.register(r'monthlyreports', MonthlyReportViewSet, basename='monthlyreport')

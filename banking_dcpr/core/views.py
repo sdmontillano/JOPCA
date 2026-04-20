@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
+from .serializers import FundTransferInputSerializer
 
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -207,8 +208,9 @@ from .serializers import (
     PettyCashTransactionSerializer,
     CashCountSerializer,
     AuditLogSerializer,
+    CollectionSerializer,
 )
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog, Collection
 from .utils.summary import compute_bank_daily_summary
 from .export_views import pcf_export_excel, pcf_export_pdf
 
@@ -295,7 +297,15 @@ class TransactionViewSet(viewsets.ModelViewSet):
         # Check if this is a deposit transaction - create both collection and deposit
         if serializer.validated_data.get('type') == 'deposit':
             try:
-                # Create collection transaction first
+                # Create collection record in Collection table (single source of truth)
+                amount = serializer.validated_data.get('amount')
+                Collection.objects.create(
+                    amount=amount,
+                    status=Collection.STATUS_DEPOSITED,
+                    description=f"Auto-created from deposit transaction"
+                )
+                
+                # Create collection transaction first (for tracking)
                 collection_data = serializer.validated_data.copy()
                 collection_data['type'] = 'collection'
                 # Handle bank_account field mapping
@@ -342,6 +352,61 @@ class DailyCashPositionViewSet(viewsets.ModelViewSet):
     queryset = DailyCashPosition.objects.all().order_by('-date')
     serializer_class = DailyCashPositionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class FundTransferViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+def create(self, request):
+        serializer = FundTransferInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        from_bank = data['from_bank']
+        to_bank = data['to_bank']
+        date = data.get('date')
+        amount = data['amount']
+        description = data.get('description', '')
+
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            # Outgoing transfer
+            out_tx = Transaction.objects.create(
+                bank_account=from_bank,
+                date=date or now().date(),
+                type='fund_transfer_out',
+                amount=amount,
+                description=f"Fund transfer to {to_bank.name or to_bank.account_number}: {description}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
+            # Incoming transfer
+            in_tx = Transaction.objects.create(
+                bank_account=to_bank,
+                date=date or now().date(),
+                type='fund_transfer_in',
+                amount=amount,
+                description=f"Fund transfer from {from_bank.name or from_bank.account_number}: {description}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
+        return Response({"outgoing_transaction": out_tx.id, "incoming_transaction": in_tx.id}, status=201)
+
+
+class CollectionViewSet(viewsets.ModelViewSet):
+    queryset = Collection.objects.all().order_by('-created_at')
+    serializer_class = CollectionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        total = Collection.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        undeposited = Collection.objects.filter(status=Collection.STATUS_UNDEPOSITED).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        deposited = Collection.objects.filter(status=Collection.STATUS_DEPOSITED).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        return Response({
+            'total': total,
+            'undeposited': undeposited,
+            'deposited': deposited,
+        })
 
 
 class TransactionListCreate(generics.ListCreateAPIView):

@@ -200,12 +200,13 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
         acc.collections += Number(r.collections ?? 0);
         acc.local_deposits += Number(r.local_deposits ?? 0);
         acc.disbursements += displayTotalDisbursements;
-        acc.fund_transfers += Number(r.fund_transfers ?? r.transfers ?? 0);
+        acc.fund_transfers_out += Number(r.fund_transfers_out ?? 0);
+        acc.fund_transfers_in += Number(r.fund_transfers_in ?? 0);
         acc.adjustments += Number(r.adjustments ?? 0);
         acc.ending += Number(r.ending ?? 0);
         return acc;
       },
-      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers: 0, adjustments: 0, ending: 0 }
+      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers_out: 0, fund_transfers_in: 0, adjustments: 0, ending: 0 }
     );
   };
 
@@ -299,7 +300,8 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Collections</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Disbursements</TableCell>
-                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Fund Transfers</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Fund Transfer</TableCell>
+                            <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Fund Receipt</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Adjustments</TableCell>
                             <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Ending</TableCell>
                           </TableRow>
@@ -307,7 +309,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                         <TableBody>
                           {rows.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                              <TableCell colSpan={9} align="center" sx={{ py: 3, color: "text.secondary" }}>
                                 No data available
                               </TableCell>
                             </TableRow>
@@ -324,7 +326,8 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.disbursements ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.fund_transfers ?? r.transfers ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.fund_transfers_out ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.fund_transfers_in ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#B45309" }}>{formatCurrency(r.adjustments ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
                               </TableRow>
@@ -336,7 +339,8 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers_out)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers_in)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency(totals.adjustments)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.9rem" }}>{formatCurrency(totals.ending)}</TableCell>
                           </TableRow>
@@ -382,6 +386,7 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
     { key: "dashboard", label: "Dashboard", icon: <HomeIcon />, to: "/dashboard" },
     { key: "banks", label: "Banks", icon: <AccountBalanceIcon />, to: "/banks" },
     { key: "cash-summary", label: "Cash Summary", icon: <AccountBalanceWalletIcon />, to: "/cash-summary" },
+    { key: "collections", label: "Collections", icon: <AccountBalanceWalletIcon />, to: "/collections" },
     { key: "analysis", label: "Analysis", icon: <AssessmentIcon />, to: "/analysis" },
     { key: "transactions", label: "Transactions", icon: <ReceiptLongIcon />, to: "/transactions" },
     { key: "monthly", label: "Monthly", icon: <BarChartIcon />, to: "/monthly-report" },
@@ -503,6 +508,8 @@ function DashboardInner() {
   const [pcfData, setPcfData] = useState([]);
   const [collectionsData, setCollectionsData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
+  const [collectionsTotal, setCollectionsTotal] = useState(0);
+  const [undepositedTotal, setUndepositedTotal] = useState(0);
   
   // FAB Menu State
   const [fabOpen, setFabOpen] = useState(false);
@@ -567,6 +574,20 @@ function DashboardInner() {
       // Extract Collections data from rawDaily.cash_collections
       const rawCollections = rawDaily?.cash_collections || [];
       setCollectionsData(rawCollections);
+
+      // Fetch collections totals from the new collections API
+      try {
+        const collectionsRes = await api.get("/api/collections/summary/");
+        const summary = collectionsRes.data || collectionsRes;
+        setCollectionsTotal(Number(summary.total || 0));
+        setUndepositedTotal(Number(summary.undeposited || 0));
+      } catch (collectionsErr) {
+        console.error("Failed to fetch collections summary", collectionsErr);
+        // Fallback: use rawCollections data if API fails
+        const fallbackTotal = rawCollections.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+        setCollectionsTotal(fallbackTotal);
+        setUndepositedTotal(0);
+      }
     } catch (err) {
       console.error("Error fetching dashboard data", err);
       const msg = err?.response?.data?.detail || err?.response?.data || err?.message || "Failed to load dashboard data";
@@ -716,8 +737,8 @@ function DashboardInner() {
     return [];
   })();
 
-  // Calculate totals for KPI cards
-  const totalCollections = cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
+  // Calculate totals for KPI cards - use collectionsTotal from collections API as single source of truth
+  const totalCollections = collectionsTotal > 0 ? collectionsTotal : cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
   const totalEndingAllBanks = cashInBank.reduce((sum, bank) => sum + Number(bank.ending || 0), 0);
   const totalPcfBalance = pcfData.reduce((sum, pcf) => sum + Number(pcf.current_balance || pcf.ending || 0), 0);
   const totalPcfUnreplenished = pcfData.reduce((sum, pcf) => sum + Number(pcf.unreplenished || pcf.unreplenished_amount || 0), 0);

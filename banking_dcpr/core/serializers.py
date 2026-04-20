@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Sum
 from rest_framework import serializers
 
-from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog
+from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog, Collection
 from .constants import INFLOW_TYPES, OUTFLOW_TYPES, LOCAL_DEPOSIT_TYPES, COLLECTION_TYPE_CHECK
 
 INFLOW_TYPE_LIST = list(INFLOW_TYPES)
@@ -338,3 +338,18 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'ip_address', 'details'
         ]
         read_only_fields = ['timestamp', 'user', 'username']
+
+
+class FundTransferInputSerializer(serializers.Serializer):
+    from_bank = serializers.PrimaryKeyRelatedField(queryset=BankAccount.objects.all())
+    to_bank = serializers.PrimaryKeyRelatedField(queryset=BankAccount.objects.all())
+    date = serializers.DateField(required=False)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class CollectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collection
+        fields = ['id', 'amount', 'status', 'created_at', 'transaction', 'description']
+        read_only_fields = ['id', 'created_at']

@@ -52,6 +52,8 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     reference: "",
     pdc_status: "",
   });
+  const [fromBank, setFromBank] = useState('');
+  const [toBank, setToBank] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -99,7 +101,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
   }, []);
 
   // reset form helper
-  const resetForm = () =>
+  const resetForm = () => {
     setForm({
       amount: "",
       description: "",
@@ -110,6 +112,9 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
       reference: "",
       pdc_status: "",
     });
+    setFromBank('');
+    setToBank('');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -129,43 +134,76 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     if (e && typeof e.preventDefault === "function") e.preventDefault();
     setMessage(null);
 
-    // basic validation
-    if (!form.amount || Number(form.amount) <= 0) {
-      setMessage({ type: "error", text: "Amount must be greater than 0." });
-      return;
-    }
-    if (!form.bank_account) {
-      setMessage({ type: "error", text: "Please select a bank account." });
-      return;
+    // Check if fund transfer
+    const isFundTransfer = form.type === 'fund_transfer';
+    
+    if (isFundTransfer) {
+      // Fund transfer validation: need both banks
+      if (!fromBank || !toBank) {
+        setMessage({ type: "error", text: "Please select both From Bank and To Bank." });
+        return;
+      }
+      if (fromBank === toBank) {
+        setMessage({ type: "error", text: "From Bank and To Bank must be different." });
+        return;
+      }
+    } else {
+      // Regular transaction validation
+      if (!form.amount || Number(form.amount) <= 0) {
+        setMessage({ type: "error", text: "Amount must be greater than 0." });
+        return;
+      }
+      if (!form.bank_account) {
+        setMessage({ type: "error", text: "Please select a bank account." });
+        return;
+      }
     }
 
     setLoading(true);
     try {
-      const payload = {
-        amount: form.amount === "" ? null : parseFloat(form.amount),
-        type: form.type,
-        date: form.date,
-        bank_account_id: form.bank_account === "" ? null : parseInt(form.bank_account, 10),
-        description: form.description?.trim() || null,
-        check_no: form.check_no?.trim() || null,
-        reference: form.reference?.trim() || null,
-        pdc_status: form.pdc_status || null,
-      };
+      if (isFundTransfer) {
+        // Use fund transfer endpoint
+        const payload = {
+          from_bank: parseInt(fromBank, 10),
+          to_bank: parseInt(toBank, 10),
+          date: form.date,
+          amount: parseFloat(form.amount),
+          description: form.description?.trim() || '',
+        };
+        
+        await api.post("/api/fund-transfers/", payload);
+        
+        showToast("Fund transfer created successfully!", "success");
+        setMessage({ type: "success", text: "✅ Fund transfer added successfully!" });
+        resetForm();
+        setFromBank('');
+        setToBank('');
+      } else {
+        // Regular transaction
+        const payload = {
+          amount: form.amount === "" ? null : parseFloat(form.amount),
+          type: form.type,
+          date: form.date,
+          bank_account_id: form.bank_account === "" ? null : parseInt(form.bank_account, 10),
+          description: form.description?.trim() || null,
+          check_no: form.check_no?.trim() || null,
+          reference: form.reference?.trim() || null,
+          pdc_status: form.pdc_status || null,
+        };
 
-      const res = await api.post("/api/transactions-crud/", payload);
-      const created = res.data ?? res;
+        const res = await api.post("/api/transactions-crud/", payload);
+        const created = res.data ?? res;
 
-      showToast("Transaction created successfully!", "success");
-      setMessage({ type: "success", text: "✅ Transaction added successfully!" });
-      resetForm();
+        showToast("Transaction created successfully!", "success");
+        setMessage({ type: "success", text: "✅ Transaction added successfully!" });
+        resetForm();
+      }
 
       // notify parent if provided
       if (typeof onCreated === "function") {
         try {
           onCreated(created);
         } catch (err) {
-          // ignore parent errors
-          // eslint-disable-next-line no-console
           console.error("onCreated callback threw", err);
         }
       }
@@ -260,13 +298,32 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
               ))}
             </TextField>
 
-            <TextField select label="Bank Account" name="bank_account" value={form.bank_account} onChange={handleChange} required fullWidth>
-              {accounts.map((acc) => (
-                <MenuItem key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.account_number})
-                </MenuItem>
-              ))}
-            </TextField>
+            {form.type === 'fund_transfer' ? (
+              <>
+                <TextField select label="From Bank" value={fromBank} onChange={(e) => setFromBank(e.target.value)} required fullWidth>
+                  {accounts.map((acc) => (
+                    <MenuItem key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.account_number})
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField select label="To Bank" value={toBank} onChange={(e) => setToBank(e.target.value)} required fullWidth>
+                  {accounts.map((acc) => (
+                    <MenuItem key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.account_number})
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </>
+            ) : (
+              <TextField select label="Bank Account" name="bank_account" value={form.bank_account} onChange={handleChange} required fullWidth>
+                {accounts.map((acc) => (
+                  <MenuItem key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.account_number})
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
 
             <TextField label="Date" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} required fullWidth />
 
@@ -324,13 +381,32 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
           ))}
         </TextField>
 
-        <TextField select label="Bank Account" name="bank_account" value={form.bank_account} onChange={handleChange} required>
-          {accounts.map((acc) => (
-            <MenuItem key={acc.id} value={acc.id}>
-              {acc.name} ({acc.account_number})
-            </MenuItem>
-          ))}
-        </TextField>
+        {form.type === 'fund_transfer' ? (
+          <>
+            <TextField select label="From Bank" value={fromBank} onChange={(e) => setFromBank(e.target.value)} required>
+              {accounts.map((acc) => (
+                <MenuItem key={acc.id} value={acc.id}>
+                  {acc.name} ({acc.account_number})
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField select label="To Bank" value={toBank} onChange={(e) => setToBank(e.target.value)} required>
+              {accounts.map((acc) => (
+                <MenuItem key={acc.id} value={acc.id}>
+                  {acc.name} ({acc.account_number})
+                </MenuItem>
+              ))}
+            </TextField>
+          </>
+        ) : (
+          <TextField select label="Bank Account" name="bank_account" value={form.bank_account} onChange={handleChange} required>
+            {accounts.map((acc) => (
+              <MenuItem key={acc.id} value={acc.id}>
+                {acc.name} ({acc.account_number})
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
 
         <TextField label="Date" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} required />
 

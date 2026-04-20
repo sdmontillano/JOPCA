@@ -43,11 +43,11 @@ export default function CashInBankTable({
       collections: acc.collections + (bank.collections ?? 0),
       local_deposits: acc.local_deposits + (bank.local_deposits ?? 0),
       disbursements: acc.disbursements + (bank.disbursements ?? 0),
-      fund_transfers: acc.fund_transfers + (bank.fund_transfers ?? 0),
+      fund_transfers_out: acc.fund_transfers_out + (bank.fund_transfers_out ?? 0),
+      fund_transfers_in: acc.fund_transfers_in + (bank.fund_transfers_in ?? 0),
       adjustments: acc.adjustments + (bank.adjustments ?? 0),
       bank_charges: acc.bank_charges + (bank.bank_charges ?? 0),
       interbank_transfers: acc.interbank_transfers + (bank.interbank_transfers ?? 0),
-      adjustments: acc.adjustments + (bank.adjustments ?? 0),
       ending: acc.ending + (bank.ending ?? 0),
     }),
     {
@@ -55,18 +55,18 @@ export default function CashInBankTable({
       collections: 0,
       local_deposits: 0,
       disbursements: 0,
-      fund_transfers: 0,
+      fund_transfers_out: 0,
+      fund_transfers_in: 0,
       adjustments: 0,
       bank_charges: 0,
       interbank_transfers: 0,
-      adjustments: 0,
       ending: 0,
     }
   );
 
   const handleExport = () => {
     const rows = [
-      ["Particulars", "Account #", "Beginning", "Collections", "Local Deposits", "Disbursements", "Fund Transfers", "Returned Checks", "Bank Charges", "Interbank Transfers", "Adjustments", "Ending"],
+      ["Particulars", "Account #", "Beginning", "Collections", "Local Deposits", "Disbursements", "Fund Transfer", "Fund Receipt", "Returned Checks", "Bank Charges", "Interbank Transfers", "Adjustments", "Ending"],
       ...banks.map(b => [
         b.particulars || b.name,
         b.account_number || "",
@@ -74,14 +74,15 @@ export default function CashInBankTable({
         b.collections ?? 0,
         b.local_deposits ?? 0,
         b.disbursements ?? 0,
-        b.fund_transfers ?? 0,
+        b.fund_transfers_out ?? 0,
+        b.fund_transfers_in ?? 0,
         b.adjustments ?? 0,
         b.bank_charges ?? 0,
         b.interbank_transfers ?? 0,
         b.adjustments ?? 0,
         b.ending ?? 0,
       ]),
-      ["GRAND TOTAL", "", totals.beginning, totals.collections, totals.local_deposits, totals.disbursements, totals.fund_transfers, totals.adjustments, totals.bank_charges, totals.interbank_transfers, totals.adjustments, totals.ending],
+      ["GRAND TOTAL", "", totals.beginning, totals.collections, totals.local_deposits, totals.disbursements, totals.fund_transfers_out, totals.fund_transfers_in, totals.adjustments, totals.bank_charges, totals.interbank_transfers, totals.adjustments, totals.ending],
     ];
 
     const csvContent = toCsv(rows);
@@ -178,7 +179,10 @@ export default function CashInBankTable({
                   Disbursements
                 </TableCell>
                 <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
-                  Fund Trans
+                  Fund Transfer
+                </TableCell>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
+                  Fund Receipt
                 </TableCell>
                 <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>
                   Returned Chks
@@ -200,7 +204,7 @@ export default function CashInBankTable({
             <TableBody>
               {banks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                  <TableCell colSpan={13} align="center" sx={{ py: 4, color: "text.secondary" }}>
                     No bank accounts found
                   </TableCell>
                 </TableRow>
@@ -229,8 +233,11 @@ export default function CashInBankTable({
                     <TableCell align="right" sx={{ color: "#991B1B" }}>
                       {formatCurrency(bank.disbursements ?? 0)}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "#6B7280" }}>
-                      {formatCurrency(bank.fund_transfers ?? 0)}
+                    <TableCell align="right" sx={{ color: "#991B1B" }}>
+                      {formatCurrency(bank.fund_transfers_out ?? 0)}
+                    </TableCell>
+                    <TableCell align="right" sx={{ color: "#166534" }}>
+                      {formatCurrency(bank.fund_transfers_in ?? 0)}
                     </TableCell>
                     <TableCell align="right" sx={{ color: "#B45309" }}>
                       {formatCurrency(bank.adjustments ?? 0)}
@@ -271,7 +278,10 @@ export default function CashInBankTable({
                     {formatCurrency(totals.disbursements)}
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
-                    {formatCurrency(totals.fund_transfers)}
+                    {formatCurrency(totals.fund_transfers_out)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
+                    {formatCurrency(totals.fund_transfers_in)}
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>
                     {formatCurrency(totals.adjustments)}

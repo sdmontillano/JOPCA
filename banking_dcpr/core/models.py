@@ -103,6 +103,8 @@ class Transaction(models.Model):
         ('adjustments', 'Adjustments'),
         ('transfer', 'Transfer'),
         ('fund_transfer', 'Fund Transfer'),
+        ('fund_transfer_out', 'Fund Transfer Out'),
+        ('fund_transfer_in', 'Fund Transfer In'),
         ('interbank_transfer', 'Interbank Transfer'),
         ('post_dated_check', 'Post-Dated Check'),
     ]
@@ -689,3 +691,27 @@ def log_audit(user, action, entity, entity_id=None, description='', ip_address=N
     #     details=details
     # )
     pass
+
+
+# ---------------------------------------------------------------------
+# Collection model - unified collections as single source of truth
+# ---------------------------------------------------------------------
+class Collection(models.Model):
+    STATUS_UNDEPOSITED = 'UNDEPOSITED'
+    STATUS_DEPOSITED = 'DEPOSITED'
+    STATUS_CHOICES = [
+        (STATUS_UNDEPOSITED, 'Undeposited'),
+        (STATUS_DEPOSITED, 'Deposited'),
+    ]
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNDEPOSITED)
+    created_at = models.DateTimeField(auto_now_add=True)
+    transaction = models.ForeignKey('Transaction', on_delete=models.CASCADE, null=True, blank=True, related_name='collections')
+    description = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Collection #{self.id} - ₱{self.amount} - {self.status}"

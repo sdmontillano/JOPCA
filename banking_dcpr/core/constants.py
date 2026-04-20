@@ -20,13 +20,14 @@ FUND_TRANSFER_OUT = frozenset([
 ])
 
 # INFLOW_TYPES = DEPOSIT_TYPES (only deposit adds to bank balance)
-INFLOW_TYPES = DEPOSIT_TYPES
+INFLOW_TYPES = DEPOSIT_TYPES | FUND_TRANSFER_IN
 
 # OUTFLOW_TYPES - Types that SUBTRACT from bank balance
 OUTFLOW_TYPES = frozenset([
     "disbursement", "disbursements",
     "bank_charges", "bank_charge",
     "returned_check", "returned_checks",
+    "fund_transfer_out",
 ])
 
 # LOCAL_DEPOSIT_TYPES - Tracking only (do NOT affect ending balance)
