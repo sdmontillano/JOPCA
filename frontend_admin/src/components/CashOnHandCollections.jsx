@@ -400,12 +400,6 @@ export default function CashOnHandCollections({
     totalEnding: 0
   });
 
-  // Deposit dialog state
-  const [depositDialog, setDepositDialog] = useState({ open: false, collection: null });
-  const [banks, setBanks] = useState([]);
-  const [depositForm, setDepositForm] = useState({ bank: "", date: "" });
-  const [depositing, setDepositing] = useState(false);
-
   // New collections from API
   const [apiCollections, setApiCollections] = useState([]);
   const [apiLoading, setApiLoading] = useState(true);
@@ -440,47 +434,6 @@ export default function CashOnHandCollections({
       console.error("Failed to fetch banks", err);
     }
   }, []);
-
-  const openDepositDialog = (collection) => {
-    setDepositForm({ bank: "", date: today });
-    fetchBanks();
-    setDepositDialog({ open: true, collection });
-  };
-
-  const handleDeposit = async () => {
-    if (!depositForm.bank || !depositForm.date) return;
-    if (!depositDialog.collection) return;
-
-    setDepositing(true);
-    try {
-      const payload = {
-        amount: parseFloat(depositDialog.collection.amount),
-        status: "DEPOSITED",
-        date: depositForm.date,
-        description: `Deposited to bank: ${banks.find(b => b.id == depositForm.bank)?.name || depositForm.bank}`
-      };
-
-      await api.put(`/api/collections/${depositDialog.collection.id}/`, payload);
-      
-      // Also create a bank transaction if desired
-      const bankTxPayload = {
-        amount: parseFloat(depositDialog.collection.amount),
-        type: "deposit",
-        date: depositForm.date,
-        bank_account_id: parseInt(depositForm.bank, 10),
-        description: `Deposit from collections: ${depositDialog.collection.description || 'Cash deposit'}`
-      };
-      await api.post("/api/transactions-crud/", bankTxPayload);
-
-      setDepositDialog({ open: false, collection: null });
-      fetchData();
-    } catch (err) {
-      console.error("Failed to deposit", err);
-      alert("Failed to deposit. Please try again.");
-    } finally {
-      setDepositing(false);
-    }
-  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -663,114 +616,7 @@ export default function CashOnHandCollections({
         )}
       </Collapse>
 
-      {/* Deposit Dialog */}
-      <Dialog open={depositDialog.open} onClose={() => setDepositDialog({ open: false, collection: null })} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <LocalAtmIcon color="primary" />
-          Deposit to Bank
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 1 }}>
-            <Typography variant="body2" sx={{ color: "#475569" }}>
-              You are about to deposit <strong>{formatCurrency(depositDialog.collection?.amount || 0)}</strong> to a bank.
-            </Typography>
-            
-            <TextField
-              label="Select Bank"
-              select
-              value={depositForm.bank}
-              onChange={(e) => setDepositForm(prev => ({ ...prev, bank: e.target.value }))}
-              fullWidth
-              required
-            >
-              <MenuItem value="">Select a bank</MenuItem>
-              {banks.map((bank) => (
-                <MenuItem key={bank.id} value={bank.id}>
-                  {bank.name} ({bank.account_number})
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              label="Deposit Date"
-              type="date"
-              value={depositForm.date}
-              onChange={(e) => setDepositForm(prev => ({ ...prev, date: e.target.value }))}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setDepositDialog({ open: false, collection: null })}>
-            Cancel
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={handleDeposit}
-            disabled={!depositForm.bank || !depositForm.date || depositing}
-            sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" } }}
-          >
-            {depositing ? <CircularProgress size={18} /> : "Deposit"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Undeposited Collections Section */}
-      <Box sx={{ borderTop: "2px solid #E5E7EB", mt: 2, p: 2, bgcolor: "#FEF3C7" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#92400E", mb: 2 }}>
-          Undeposited Cash Collections
-        </Typography>
-        
-        {apiLoading ? (
-          <CircularProgress size={20} />
-        ) : apiCollections.length === 0 ? (
-          <Typography variant="body2" sx={{ color: "#92400E" }}>
-            No undeposited cash collections.
-          </Typography>
-        ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "#FDE68A" }}>
-                <TableCell sx={{ fontWeight: 600, color: "#92400E" }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#92400E" }}>Amount</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#92400E" }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#92400E" }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#92400E" }}>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {apiCollections
-                .filter(c => c.status === "UNDEPOSITED")
-                .map((col) => (
-                  <TableRow key={col.id} sx={{ "&:hover": { bgcolor: "#FEF3C7" } }}>
-                    <TableCell>{col.date || col.created_at?.slice(0, 10) || "-"}</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: "#991B1B" }}>{formatCurrency(col.amount)}</TableCell>
-                    <TableCell>{col.description || "-"}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label="UNDEPOSITED" 
-                        size="small" 
-                        sx={{ bgcolor: "#FEE2E2", color: "#991B1B", fontWeight: 600 }} 
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        size="small" 
-                        variant="contained"
-                        onClick={() => openDepositDialog(col)}
-                        sx={{ bgcolor: "#22c55e", "&:hover": { bgcolor: "#16a34a" }, fontSize: "0.7rem", py: 0.5 }}
-                      >
-                        Deposit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        )}
-      </Box>
-    </Paper>
+      
+          </Paper>
   );
 }

@@ -171,9 +171,9 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
   const { dates } = computeRange(centerDate);
 
   const totalsFor = (dateIso) => {
-    const dayData = dataMap[dateIso] || { cash_in_bank: [] };
+    const dayData = dataMap[dateIso] || { cash_in_bank: [], accounts: [] };
     const rows = Array.isArray(dayData.cash_in_bank) ? dayData.cash_in_bank : [];
-    const pcfData = dayData.accounts || [];
+    const pcfData = Array.isArray(dayData.accounts) ? dayData.accounts : [];
 
     const totalPcfBalance = pcfData.reduce((s, p) => s + Number(p.current_balance || p.ending || 0), 0);
     const totalPcfDisbursements = pcfData.reduce((s, p) => s + Number(p.disbursements || 0), 0);
@@ -200,7 +200,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
         acc.collections += Number(r.collections ?? 0);
         acc.local_deposits += Number(r.local_deposits ?? 0);
         acc.disbursements += displayTotalDisbursements;
-        acc.fund_transfers_out += Number(r.fund_transfers_out ?? r.fund_transfers ?? r.transfers ?? 0);
+        acc.fund_transfers_out += Number(r.fund_transfers_out ?? 0);
         acc.fund_transfers_in += Number(r.fund_transfers_in ?? 0);
         acc.adjustments += Number(r.adjustments ?? 0);
         acc.ending += Number(r.ending ?? 0);
@@ -524,19 +524,34 @@ function DashboardInner() {
     setError(null);
     setRefreshing(true);
     try {
-      const dailyRes = await api.get("/summary/detailed-daily/");
-      const today = new Date();
-      const monthStr = monthOverride || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-      const monthlyRes = await api.get(`/summary/detailed-monthly/?month=${monthStr}`);
+      // Fetch daily data with error handling
+      let dailyRes;
+      try {
+        dailyRes = await api.get("/summary/detailed-daily/");
+      } catch (dailyErr) {
+        console.error("Failed to fetch daily data:", dailyErr);
+        throw new Error(`Failed to load daily data: ${dailyErr.response?.data?.detail || dailyErr.message || 'Unknown error'}`);
+      }
+
+      // Fetch monthly data with error handling
+      let monthlyRes;
+      try {
+        const today = new Date();
+        const monthStr = monthOverride || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+        monthlyRes = await api.get(`/summary/detailed-monthly/?month=${monthStr}`);
+      } catch (monthlyErr) {
+        console.error("Failed to fetch monthly data:", monthlyErr);
+        throw new Error(`Failed to load monthly data: ${monthlyErr.response?.data?.detail || monthlyErr.message || 'Unknown error'}`);
+      }
 
       // Extract raw data from axios response
       const rawDaily = dailyRes.data || dailyRes;
       const rawMonthly = monthlyRes.data || monthlyRes;
 
-      // Map the data
+      // Map the data with null safety
       const mappedDaily = (() => {
         try {
-          return mapDailyResponse(rawDaily);
+          return mapDailyResponse(rawDaily) || {};
         } catch (e) {
           console.error("mapDailyResponse failed", e);
           return {};
@@ -545,7 +560,7 @@ function DashboardInner() {
 
       const mappedMonthly = (() => {
         try {
-          return mapMonthlyResponse(rawMonthly);
+          return mapMonthlyResponse(rawMonthly) || {};
         } catch (e) {
           console.error("mapMonthlyResponse failed", e);
           return {};
@@ -556,9 +571,9 @@ function DashboardInner() {
       setDailyReport(mappedDaily);
       setMonthlyReport(mappedMonthly);
       
-      // Extract PCF data - prioritize raw API data, then mapped data
-      const rawCashOnHand = rawDaily?.cash_on_hand;
-      const mappedCashOnHand = mappedDaily?.cash_on_hand;
+      // Extract PCF data - prioritize raw API data, then mapped data with null safety
+      const rawCashOnHand = rawDaily?.cash_on_hand || [];
+      const mappedCashOnHand = mappedDaily?.cash_on_hand || [];
       
       // Use PCF data if available and non-empty
       if (Array.isArray(rawCashOnHand) && rawCashOnHand.length > 0) {
@@ -569,9 +584,18 @@ function DashboardInner() {
         setPcfData([]);  // No PCF data available
       }
 
-      // Extract Collections data from rawDaily.cash_collections
+      // Extract Collections data from API response
       const rawCollections = rawDaily?.cash_collections || [];
-      setCollectionsData(rawCollections);
+      const individualCollections = rawDaily?.individual_collections || [];
+      
+      // Debug logging
+      console.log("DEBUG: Collections data received:", {
+        rawCollections: rawCollections,
+        individualCollections: individualCollections,
+        individualCollectionsCount: individualCollections.length
+      });
+      
+      setCollectionsData(Array.isArray(individualCollections) ? individualCollections : []);
     } catch (err) {
       console.error("Error fetching dashboard data", err);
       const msg = err?.response?.data?.detail || err?.response?.data || err?.message || "Failed to load dashboard data";
@@ -722,7 +746,9 @@ function DashboardInner() {
   })();
 
   // Calculate totals for KPI cards
-  const totalCollections = cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
+  const bankCollections = cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
+  const cashCollections = collectionsData.reduce((sum, collection) => sum + Number(collection.amount || 0), 0);
+  const totalCollections = bankCollections + cashCollections;
   const totalEndingAllBanks = cashInBank.reduce((sum, bank) => sum + Number(bank.ending || 0), 0);
   const totalPcfBalance = pcfData.reduce((sum, pcf) => sum + Number(pcf.current_balance || pcf.ending || 0), 0);
   const totalPcfUnreplenished = pcfData.reduce((sum, pcf) => sum + Number(pcf.unreplenished || pcf.unreplenished_amount || 0), 0);
@@ -1076,7 +1102,10 @@ function DashboardInner() {
                   <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Account #</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Beginning</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Collections</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Local Deposits</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Disbursements</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Fund Transfer</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Fund Receipt</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Adjustments</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Returned</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Ending</TableCell>
@@ -1088,11 +1117,16 @@ function DashboardInner() {
                     <TableRow key={i} sx={{ "&:hover": { bgcolor: "#F3F4F6" } }}>
                       <TableCell sx={{ fontWeight: 500, color: "#374151" }}>{r.particulars || `Bank ${i + 1}`}</TableCell>
                       <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#9CA3AF" }}>
-                        {r.account_number ?? r.raw_rows?.[0]?.bank_account__account_number ?? "-"}
+                        {r.account_number || 
+                         (r.raw_rows && r.raw_rows.length > 0 && r.raw_rows[0]?.bank_account__account_number) || 
+                         "-"}
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#6B7280" }}>{formatPeso(r.beginning ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.collections ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.local_deposits ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.fund_transfers_out ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.fund_transfers_in ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.adjustments ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.returned_checks ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>{formatPeso(r.ending ?? 0)}</TableCell>
@@ -1100,7 +1134,7 @@ function DashboardInner() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                    <TableCell colSpan={11} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
                       No bank transactions found
                     </TableCell>
                   </TableRow>
@@ -1109,6 +1143,8 @@ function DashboardInner() {
                   <TableCell colSpan={2} sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#FFFFFF" }}>
                     GRAND TOTAL
                   </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
@@ -1122,59 +1158,7 @@ function DashboardInner() {
           </Paper>
         </Box>
 
-        {/* Transactions Section */}
-        <Paper elevation={0} sx={{ mt: 3, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden", bgcolor: "#FFFFFF" }}>
-          <Box sx={{ 
-            px: 2,
-            py: 1.5, 
-            bgcolor: "#FFFFFF",
-            borderBottom: "1px solid #E5E7EB",
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center"
-          }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <ReceiptLongIcon sx={{ color: "#475569", fontSize: 18 }} />
-              <Typography variant="body2" sx={{ fontWeight: 600, color: "#374151", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                Transactions This Month
-              </Typography>
-            </Box>
-            <Button 
-              variant="text" 
-              size="small" 
-              onClick={() => navigate("/transactions")}
-              sx={{ 
-                color: "#475569",
-                "&:hover": { bgcolor: "#F3F4F6" }
-              }}
-            >
-              View All
-            </Button>
-          </Box>
-          <Table size="small">
-            <TableBody>
-              {(monthlyReport?.transactions || []).length > 0 ? (
-                (monthlyReport.transactions || []).slice(0, 10).map((t, i) => (
-                  <TableRow key={i} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
-                    <TableCell sx={{ fontWeight: 500 }}>
-                      {t.particulars || t.type || `Transaction ${i + 1}`}
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, color: "primary.dark" }}>
-                      {formatPeso(t.total ?? t.amount ?? 0)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={2} align="center" sx={{ py: 4, color: "text.secondary" }}>
-                    No transactions for this month
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Paper>
-      </Box>
+        </Box>
 
       {/* Floating Action Button - Quick Add Menu */}
       <Zoom in timeout={300}>

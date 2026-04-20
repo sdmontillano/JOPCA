@@ -9,6 +9,7 @@ from core.views import (
     detailed_daily_summary,
     detailed_daily_report,
     detailed_monthly_report,
+    detailed_monthly_summary,
     monthly_full_report,
     BankAccountViewSet,
     TransactionViewSet,
@@ -44,6 +45,7 @@ from core.views import (
     create_default_admin,
     create_user,
     reset_all_data,
+    recalc_bank_balance,
 )
 
 router = DefaultRouter()
@@ -58,6 +60,7 @@ router.register(r'pcf-transactions', PettyCashTransactionViewSet, basename='pcf-
 router.register(r'cash-counts', CashCountViewSet, basename='cash-count')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'audit-logs', AuditLogViewSet, basename='auditlog')
+router.register(r'fund-transfers', FundTransferViewSet, basename='fund-transfer')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -74,7 +77,7 @@ urlpatterns = [
     # summary endpoints
     path('summary/detailed-daily/', detailed_daily_summary, name='detailed_daily_summary'),
     path('summary/detailed-daily-report/', detailed_daily_report, name='detailed_daily_report'),
-    path('summary/detailed-monthly/', detailed_monthly_report, name='detailed_monthly_report'),
+    path('summary/detailed-monthly/', detailed_monthly_summary, name='detailed_monthly_summary'),
     path('summary/detailed-monthly-report/', detailed_monthly_report, name='detailed_monthly_report'),
     path('summary/monthly-full/', monthly_full_report, name='monthly_full_report'),
     path('summary/bank-reconciliation/', bank_reconciliation_summary, name='bank_reconciliation_summary'),
@@ -88,6 +91,7 @@ urlpatterns = [
     path('api/user/profile/', user_profile, name='user_profile'),
     path('api/audit-log/', audit_log, name='audit_log'),
     path('api/reset-data/', reset_all_data, name='reset_all_data'),
+    path('api/bankaccounts/<int:bank_id>/recalc_balance/', recalc_bank_balance, name='recalc_bank_balance'),
 
     # PCF report endpoints
     path('api/reports/pcf-daily/', pcf_daily_report, name='pcf_daily_report'),

@@ -7,6 +7,7 @@ from datetime import datetime
 from datetime import date as _date
 from datetime import timedelta
 from decimal import Decimal
+import calendar
 
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import api_view, action, permission_classes
@@ -244,6 +245,55 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         self._log_audit('create', instance, f"Created bank account: {instance.name} ({instance.account_number})")
 
+    @action(detail=True, methods=['post'])
+    def update_balance(self, request, pk=None):
+        """
+        POST /api/bankaccounts/{id}/update_balance/
+        Manually trigger balance recalculation for this bank account
+        """
+        try:
+            bank_account = self.get_object()
+            
+            # Debug: Get transaction details
+            from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, ADJUSTMENT_TYPES
+            all_transactions = bank_account.transaction_set.all()
+            inflow_transactions = bank_account.transaction_set.filter(type__in=INFLOW_TYPES)
+            outflow_transactions = bank_account.transaction_set.filter(type__in=OUTFLOW_TYPES)
+            
+            debug_info = {
+                'bank_account': bank_account.name,
+                'opening_balance': float(bank_account.opening_balance or 0),
+                'current_balance': float(bank_account.balance),
+                'total_transactions': all_transactions.count(),
+                'inflow_transactions': inflow_transactions.count(),
+                'outflow_transactions': outflow_transactions.count(),
+                'inflow_total': float(inflow_transactions.aggregate(Sum('amount'))['amount__sum'] or 0),
+                'outflow_total': float(outflow_transactions.aggregate(Sum('amount'))['amount__sum'] or 0),
+                'recent_deposits': [
+                    {
+                        'id': t.id,
+                        'amount': float(t.amount),
+                        'type': t.type,
+                        'date': str(t.date),
+                        'description': t.description
+                    } for t in all_transactions.filter(type='deposit').order_by('-created_at')[:5]
+                ]
+            }
+            
+            bank_account.recalc_balance()
+            
+            return Response({
+                'success': True,
+                'message': f'Balance updated for {bank_account.name}',
+                'new_balance': float(bank_account.balance),
+                'debug': debug_info
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
     def perform_update(self, serializer):
         instance = serializer.save()
         self._log_audit('update', instance, f"Updated bank account: {instance.name}")
@@ -349,36 +399,55 @@ class FundTransferViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request):
-        from .serializers import FundTransferInputSerializer
-        serializer = FundTransferInputSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+        try:
+            from .serializers import FundTransferInputSerializer
+            serializer = FundTransferInputSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
 
-        from_bank = data['from_bank']
-        to_bank = data['to_bank']
-        date = data.get('date') or now().date()
-        amount = data['amount']
-        description = data.get('description', '')
+            from_bank = data['from_bank']
+            to_bank = data['to_bank']
+            date = data.get('date') or now().date()
+            amount = data['amount']
+            description = data.get('description', '')
 
-        with transaction.atomic():
-            out_tx = Transaction.objects.create(
-                bank_account=from_bank,
-                date=date,
-                type='fund_transfer_out',
-                amount=amount,
-                description=f"Fund transfer to {to_bank.name or to_bank.account_number}: {description}",
-                created_by=request.user if request.user.is_authenticated else None
+            # Validate banks are different
+            if from_bank.id == to_bank.id:
+                return Response(
+                    {"detail": "Cannot transfer funds to the same bank account"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            with transaction.atomic():
+                out_tx = Transaction.objects.create(
+                    bank_account=from_bank,
+                    date=date,
+                    type='fund_transfer_out',
+                    amount=amount,
+                    description=f"Fund transfer to {to_bank.name if to_bank else 'Unknown Bank'}: {description}",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+                in_tx = Transaction.objects.create(
+                    bank_account=to_bank,
+                    date=date,
+                    type='fund_transfer_in',
+                    amount=amount,
+                    description=f"Fund transfer from {from_bank.name if from_bank else 'Unknown Bank'}: {description}",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+
+            return Response({"outgoing_transaction": out_tx.id, "incoming_transaction": in_tx.id}, status=201)
+            
+        except Exception as e:
+            import traceback
+            error_details = str(e)
+            error_trace = traceback.format_exc()
+            print(f"FundTransferViewSet Error: {error_details}")
+            print(f"Traceback: {error_trace}")
+            return Response(
+                {"detail": f"Fund transfer failed: {error_details}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            in_tx = Transaction.objects.create(
-                bank_account=to_bank,
-                date=date,
-                type='fund_transfer_in',
-                amount=amount,
-                description=f"Fund transfer from {from_bank.name or from_bank.account_number}: {description}",
-                created_by=request.user if request.user.is_authenticated else None
-            )
-
-        return Response({"outgoing_transaction": out_tx.id, "incoming_transaction": in_tx.id}, status=201)
 
 
 class CollectionViewSet(viewsets.ModelViewSet):
@@ -481,6 +550,7 @@ def detailed_daily_report(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def detailed_monthly_report(request):
     """Return detailed breakdown of transactions by account + type for a given month."""
     month_str = request.GET.get("month")
@@ -511,6 +581,135 @@ def detailed_monthly_report(request):
         "line_items": list(grouped),
         "accounts": list(accounts),
         "grand_total": float(grand_total)
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def detailed_monthly_summary(request):
+    """
+    GET /summary/detailed-monthly/?month=YYYY-MM
+    Returns monthly summary with cash_in_bank, accounts, cash_on_hand, and cash_collections
+    Compatible with dashboard expectations
+    """
+    month_str = request.query_params.get("month")
+    if not month_str:
+        return Response({"detail": "Month parameter required (YYYY-MM)."}, status=400)
+    
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date()
+    except ValueError:
+        return Response({"detail": "Invalid month format. Use YYYY-MM."}, status=400)
+
+    # Get the last day of the month for calculations
+    last_day = calendar.monthrange(month_date.year, month_date.month)[1]
+    target_date = _date(month_date.year, month_date.month, last_day)
+
+    # Compute bank summary for the entire month
+    bank_rows = compute_bank_daily_summary(target_date)
+
+    # Get accounts
+    accounts = []
+    for b in BankAccount.objects.all().order_by("name", "account_number"):
+        accounts.append({
+            "id": b.id,
+            "name": b.name or "",
+            "account_number": b.account_number,
+            "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
+        })
+
+    # Get PCF data for the month
+    cash_on_hand = []
+    for pcf in PettyCashFund.objects.filter(is_active=True):
+        beginning = pcf.opening_balance
+        
+        # Calculate beginning balance from start of month
+        month_start = _date(month_date.year, month_date.month, 1)
+        previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=month_start)
+        for t in previous_txns:
+            if t.type == 'disbursement':
+                beginning -= t.amount
+            elif t.type == 'replenishment':
+                beginning += t.amount
+
+        # Monthly transactions
+        monthly_txns = PettyCashTransaction.objects.filter(
+            pcf=pcf, 
+            date__year=month_date.year, 
+            date__month=month_date.month
+        )
+        disbursements = monthly_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = monthly_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        total_disb = PettyCashTransaction.objects.filter(
+            pcf=pcf, 
+            date__lte=target_date, 
+            type='disbursement'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_rep = PettyCashTransaction.objects.filter(
+            pcf=pcf, 
+            date__lte=target_date, 
+            type='replenishment'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
+        ending = beginning - disbursements + replenishments
+
+        # Get monthly transactions with descriptions
+        transactions = [
+            {
+                "id": t.id,
+                "type": t.type,
+                "amount": float(t.amount),
+                "description": t.description or "",
+                "date": str(t.date)
+            }
+            for t in monthly_txns.order_by('-date', '-id')
+        ]
+
+        cash_on_hand.append({
+            "id": pcf.id,
+            "name": pcf.name,
+            "location": pcf.location,
+            "location_display": pcf.get_location_display(),
+            "note": pcf.note or "",
+            "beginning": float(beginning),
+            "disbursements": float(disbursements),
+            "replenishments": float(replenishments),
+            "ending": float(ending),
+            "unreplenished": float(unreplenished),
+            "current_balance": float(pcf.current_balance),
+            "unreplenished_amount": float(pcf.unreplenished_amount),
+            "transactions": transactions,
+        })
+
+    # PDC Summary for the month
+    active_pdcs = Pdc.objects.exclude(status__in=['deposited', 'returned'])
+    this_month_pdcs = active_pdcs.filter(
+        maturity_date__year=month_date.year,
+        maturity_date__month=month_date.month
+    )
+    matured_pdcs = Pdc.objects.filter(status='matured')
+    
+    this_month_total = this_month_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_active_total = active_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    matured_total = matured_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    pdc_summary = {
+        'this_month': float(this_month_total),
+        'total': float(total_active_total),
+        'matured': float(matured_total),
+    }
+
+    # Compute collections summary for the month
+    cash_collections = compute_collections_summary(target_date)
+
+    return Response({
+        "month": month_date.strftime("%Y-%m"),
+        "cash_in_bank": bank_rows,
+        "accounts": accounts,
+        "cash_on_hand": cash_on_hand,
+        "cash_collections": cash_collections,
+        "pdc_summary": pdc_summary,
     })
 
 
@@ -643,7 +842,7 @@ def monthly_full_report(request):
     
     # Calculate collections and deposits separately for monthly report
     monthly_collections = bank_transactions.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-    monthly_deposits = bank_transactions.filter(type__in=DEPOSIT_TYPES.union(LOCAL_DEPOSIT_TYPES)).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    monthly_deposits = bank_transactions.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     
     # 8. BANK BALANCE SUMMARY BY BANK (like daily reports)
     bank_balance_summary = []
@@ -655,7 +854,7 @@ def monthly_full_report(request):
         
         # Collections and deposits for this bank
         bank_collections = bank_monthly_txns.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        bank_deposits = bank_monthly_txns.filter(type__in=DEPOSIT_TYPES.union(LOCAL_DEPOSIT_TYPES)).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        bank_deposits = bank_monthly_txns.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # Monthly inflows and outflows for this bank
         bank_monthly_inflows = bank_monthly_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -742,7 +941,7 @@ def compute_collections_summary(target_date):
         
         # For report columns (tracking)
         collections = today_txns.filter(type="collection").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = today_txns.filter(type__in=DEPOSIT_TYPES.union(LOCAL_DEPOSIT_TYPES)).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        local_deposits = today_txns.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # For balance formula
         deposits = today_txns.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -850,6 +1049,10 @@ def detailed_daily_summary(request):
         unreplenished = max(Decimal('0.00'), total_disb - total_rep)
         ending = beginning - disbursements + replenishments
 
+        # Ensure consistency with model fields
+        current_balance = pcf.current_balance or Decimal('0.00')
+        unreplenished_amount = pcf.unreplenished_amount or Decimal('0.00')
+
         # Get today's transactions with descriptions
         transactions = [
             {
@@ -907,6 +1110,32 @@ def detailed_daily_summary(request):
 
     # Compute collections summary (grouped by bank)
     cash_collections = compute_collections_summary(target_date)
+    
+    # Get individual collection records for Collections KPI
+    individual_collections = []
+    try:
+        # Try filtering by date, but also include collections with null dates
+        collections_qs = Collection.objects.filter(
+            models.Q(date=target_date) | models.Q(date__isnull=True)
+        )
+        print(f"DEBUG: Found {collections_qs.count()} collections for date {target_date}")
+        
+        for collection in collections_qs:
+            collection_data = {
+                "id": collection.id,
+                "amount": float(collection.amount),
+                "description": collection.description or "",
+                "date": str(collection.date) if collection.date else None,
+                "status": collection.status,
+            }
+            individual_collections.append(collection_data)
+            print(f"DEBUG: Collection {collection.id}: amount={collection.amount}, date={collection.date}")
+            
+    except Exception as e:
+        # Fallback if Collection model has different structure
+        logger.warning(f"Could not fetch individual collections: {e}")
+        print(f"DEBUG: Error fetching collections: {e}")
+        individual_collections = []
 
     return Response({
         "date": target_date.isoformat(),
@@ -914,6 +1143,7 @@ def detailed_daily_summary(request):
         "accounts": accounts,
         "cash_on_hand": cash_on_hand,
         "cash_collections": cash_collections,
+        "individual_collections": individual_collections,  # New field for KPI
         "pdc_summary": pdc_summary,
     })
 
@@ -2327,3 +2557,24 @@ def reset_all_data(request):
             'PCF Funds'
         ]
     })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def recalc_bank_balance(request, bank_id):
+    """
+    POST /api/bankaccounts/{bank_id}/recalc_balance/
+    Manually trigger bank balance recalculation
+    """
+    try:
+        bank = BankAccount.objects.get(id=bank_id)
+        bank.recalc_balance()
+        return Response({
+            "success": True,
+            "message": f"Balance recalculated for {bank.name}",
+            "new_balance": float(bank.balance)
+        })
+    except BankAccount.DoesNotExist:
+        return Response({"error": "Bank account not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

@@ -103,6 +103,8 @@ class Transaction(models.Model):
         ('adjustments', 'Adjustments'),
         ('transfer', 'Transfer'),
         ('fund_transfer', 'Fund Transfer'),
+        ('fund_transfer_out', 'Fund Transfer Out'),
+        ('fund_transfer_in', 'Fund Transfer In'),
         ('interbank_transfer', 'Interbank Transfer'),
         ('post_dated_check', 'Post-Dated Check'),
     ]
