@@ -22,6 +22,7 @@ import Banks from "./components/Banks.jsx";
 import BankDetail from "./components/BankDetail.jsx";
 import CashSummary from "./components/CashSummary.jsx";
 import Analysis from "./components/Analysis.jsx";
+import CashOnHandCollections from "./components/CashOnHandCollections.jsx";
 import CollectCash from "./components/CollectCash.jsx";
 
 import DebugPage from "./components/DebugPage.jsx";
@@ -210,6 +211,12 @@ export default function App() {
         <Route
           path="/collect-cash"
           element={isAuthenticated ? <CollectCash /> : <Navigate to="/login" replace />}
+        />
+
+        {/* Collections / Cash On Hand */}
+        <Route
+          path="/collections"
+          element={isAuthenticated ? <CashOnHandCollections /> : <Navigate to="/login" replace />}
         />
 
         {/* Analysis */}

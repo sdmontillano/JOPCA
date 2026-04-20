@@ -345,6 +345,42 @@ class DailyCashPositionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 
+class FundTransferViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request):
+        from .serializers import FundTransferInputSerializer
+        serializer = FundTransferInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        from_bank = data['from_bank']
+        to_bank = data['to_bank']
+        date = data.get('date') or now().date()
+        amount = data['amount']
+        description = data.get('description', '')
+
+        with transaction.atomic():
+            out_tx = Transaction.objects.create(
+                bank_account=from_bank,
+                date=date,
+                type='fund_transfer_out',
+                amount=amount,
+                description=f"Fund transfer to {to_bank.name or to_bank.account_number}: {description}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
+            in_tx = Transaction.objects.create(
+                bank_account=to_bank,
+                date=date,
+                type='fund_transfer_in',
+                amount=amount,
+                description=f"Fund transfer from {from_bank.name or from_bank.account_number}: {description}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
+        return Response({"outgoing_transaction": out_tx.id, "incoming_transaction": in_tx.id}, status=201)
+
+
 class CollectionViewSet(viewsets.ModelViewSet):
     queryset = Collection.objects.all().order_by('-created_at')
     serializer_class = CollectionSerializer

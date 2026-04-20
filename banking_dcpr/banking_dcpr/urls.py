@@ -21,6 +21,7 @@ from core.views import (
     UserViewSet,
     AuditLogViewSet,
     CollectionViewSet,
+    FundTransferViewSet,
     bank_reconciliation_summary,
     cash_counts_summary,
     pcf_alerts,
@@ -68,6 +69,7 @@ urlpatterns = [
 
     # transactions list endpoint
     path('transactions/', TransactionListCreate.as_view(), name='transactions'),
+    path('fund-transfers/', FundTransferViewSet.as_view({'post': 'create'}), name='fund-transfers'),
 
     # summary endpoints
     path('summary/detailed-daily/', detailed_daily_summary, name='detailed_daily_summary'),

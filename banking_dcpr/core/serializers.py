@@ -357,3 +357,11 @@ class CollectionSerializer(serializers.ModelSerializer):
         model = Collection
         fields = ['id', 'amount', 'status', 'date', 'created_at', 'transaction', 'description']
         read_only_fields = ['id', 'created_at']
+
+
+class FundTransferInputSerializer(serializers.Serializer):
+    from_bank = serializers.PrimaryKeyRelatedField(queryset=BankAccount.objects.all())
+    to_bank = serializers.PrimaryKeyRelatedField(queryset=BankAccount.objects.all())
+    date = serializers.DateField(required=False)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
