@@ -24,8 +24,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
 
-const INFLOW_TYPES = ['collection', 'deposit', 'collections'];
-const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer'];
+const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'fund_transfer_in'];
+const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'fund_transfer_out', 'transfer', 'interbank_transfer'];
 
 const typeColors = {
   collections: { bg: "#DCFCE7", color: "#166534" },
@@ -35,6 +35,8 @@ const typeColors = {
   bank_charges: { bg: "#FEE2E2", color: "#991B1B" },
   adjustments: { bg: "#F3F4F6", color: "#374151" },
   fund_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
+  fund_transfer_in: { bg: "#DCFCE7", color: "#166534" },
+  fund_transfer_out: { bg: "#FEE2E2", color: "#991B1B" },
   transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
   interbank_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
 };
