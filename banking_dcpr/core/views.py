@@ -1379,6 +1379,21 @@ class PdcViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(pdc)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=["get"])
+    def by_bank(self, request):
+        """Get all returned PDC for a specific bank"""
+        bank_id = request.query_params.get("bank_id")
+        if not bank_id:
+            return Response({"detail": "bank_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        pdcs = Pdc.objects.filter(
+            deposit_bank_id=bank_id,
+            status=Pdc.STATUS_RETURNED
+        ).order_by("-returned_date")
+        
+        serializer = self.get_serializer(pdcs, many=True)
+        return Response(serializer.data)
+
 
 # ---------------------------------------------------------------------
 # PCF ViewSets

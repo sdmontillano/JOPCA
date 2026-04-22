@@ -84,6 +84,13 @@ export default function BankDetail() {
 
   const formatAmount = (amount, type) => {
     const num = Number(amount ?? 0);
+    // Returned check - no prefix (neutral, doesn't affect balance)
+    if (type === "returned_check") {
+      return `₱${Math.abs(num).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
     const prefix = INFLOW_TYPES.includes(type) ? "+" : "-";
     return `${prefix}₱${Math.abs(num).toLocaleString("en-PH", {
       minimumFractionDigits: 2,
@@ -113,8 +120,31 @@ export default function BankDetail() {
       const data = txRes.data;
       
       // Handle paginated response
-      const results = data.results ?? [];
+      let results = data.results ?? [];
       const totalCount = data.count ?? results.length;
+      
+      // Also fetch returned PDC for this bank (for display - no balance impact)
+      try {
+        const pdcRes = await api.get(`/pdc/by_bank/?bank_id=${id}`);
+        const returnedPdcs = pdcRes.data || [];
+        
+        // Convert returned PDC to transaction-like format and merge
+        const returnedItems = returnedPdcs.map(p => ({
+          id: `pdc-${p.id}`,
+          type: "returned_check",
+          amount: p.amount,
+          date: p.returned_date,
+          created_at: p.returned_date,
+          description: `Returned PDC - Check #${p.check_no || 'N/A'}${p.returned_reason ? ' - ' + p.returned_reason : ''}`,
+          check_no: p.check_no,
+          created_by_username: p.created_by?.username || '-'
+        }));
+        
+        // Merge: returned items first (most recent), then transactions
+        results = [...returnedItems, ...results];
+      } catch (pdcErr) {
+        console.log("No returned PDC found:", pdcErr.message);
+      }
       
       setTransactions(results);
       setCount(totalCount);

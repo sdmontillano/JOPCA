@@ -180,8 +180,6 @@ export default function CollectCash() {
       // Update collection status to DEPOSITED
       await api.patch(`/api/collections/${selectedCollection.id}/`, {
         status: "DEPOSITED",
-        bank_account: depositForm.bank_account,
-        deposit_date: depositForm.deposit_date,
       });
 
       // Create a transaction record for the deposit
