@@ -207,7 +207,6 @@ function CollectionsHistory({ defaultExpanded = false }) {
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Particulars</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Location</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Beginning</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Collections</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
@@ -218,7 +217,7 @@ function CollectionsHistory({ defaultExpanded = false }) {
                     <TableBody>
                       {rows.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                          <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
                             No collections data
                           </TableCell>
                         </TableRow>
@@ -231,7 +230,6 @@ function CollectionsHistory({ defaultExpanded = false }) {
                                 {r.account_number ?? ""}
                               </Typography>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 500, fontSize: "0.8rem", color: "#374151" }}>{r.location}</TableCell>
                             <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.beginning ?? 0)}</TableCell>
                             <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
                             <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
@@ -554,7 +552,6 @@ export default function CashOnHandCollections({
             <TableHead>
               <TableRow sx={{ bgcolor: "#F9FAFB" }}>
                 <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Particulars</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Location</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Beginning</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Collections</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Local Deposits</TableCell>
@@ -565,7 +562,7 @@ export default function CashOnHandCollections({
             <TableBody>
               {collections.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
                     No collections data for this date
                   </TableCell>
                 </TableRow>
@@ -579,7 +576,6 @@ export default function CashOnHandCollections({
                           {col.account_number}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={{ color: "#6B7280" }}>{col.location}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#6B7280" }}>{formatCurrency(col.beginning)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatCurrency(col.collections)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatCurrency(col.local_deposits)}</TableCell>
