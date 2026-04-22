@@ -138,7 +138,17 @@ def compute_bank_daily_summary(target_date):
         local_deposits = deposit_total + local_deposit_total
         
         adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        returned_checks = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Get returned from transactions (old data, if any)
+        transactions_returned = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # ALSO get returned PDC amounts for this bank (new way - no transaction needed)
+        pdcs_returned = Pdc.objects.filter(
+            deposit_bank=bank,
+            status=Pdc.STATUS_RETURNED,
+            returned_date=target_date
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        returned_checks = _safe_decimal(transactions_returned) + _safe_decimal(pdcs_returned)
+        
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
