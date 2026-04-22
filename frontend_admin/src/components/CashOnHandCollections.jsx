@@ -203,15 +203,16 @@ function CollectionsHistory({ defaultExpanded = false }) {
                       {isToday && <Chip label="TODAY" size="small" sx={{ height: 18, fontSize: "0.65rem", bgcolor: "#1E293B", color: "white" }} />}
                     </Box>
                   </Box>
+                  <Box sx={{ width: "100%", overflowX: "auto" }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Particulars</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Beginning</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Collections</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Ending</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B" }}>Destination</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "35%" }}>Particulars</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Beginning</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Collections</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Local Deposits</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Ending</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Destination</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -256,7 +257,6 @@ function CollectionsHistory({ defaultExpanded = false }) {
                       )}
                       <TableRow sx={{ bgcolor: "#F1F5F9", borderTop: "2px solid #E5E7EB" }}>
                         <TableCell sx={{ fontWeight: 700, fontSize: "0.8rem", color: "#1E293B" }}>TOTALS</TableCell>
-                        <TableCell></TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8rem" }}>{formatCurrency(totals.beginning)}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.collections)}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.local_deposits)}</TableCell>
@@ -265,6 +265,7 @@ function CollectionsHistory({ defaultExpanded = false }) {
                       </TableRow>
                     </TableBody>
                   </Table>
+                  </Box>
                 </Paper>
               );
             })}
@@ -478,7 +479,7 @@ export default function CashOnHandCollections({
   }
 
   return (
-    <Paper elevation={0} sx={{ borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden" }}>
+    <Paper elevation={0} sx={{ borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden", maxWidth: "100%" }}>
       {/* Header */}
       <Box
         onClick={() => setExpanded(!expanded)}
@@ -551,12 +552,12 @@ export default function CashOnHandCollections({
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "#F9FAFB" }}>
-                <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Particulars</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Beginning</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Collections</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Local Deposits</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Ending</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Transactions</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: "#374151", width: "40%" }}>Particulars</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Beginning</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Collections</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Local Deposits</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Ending</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Transactions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
