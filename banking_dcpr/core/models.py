@@ -9,7 +9,7 @@ import logging
 from django.utils import timezone
 from django.contrib.auth.models import User
 
-from .constants import INFLOW_TYPES, OUTFLOW_TYPES, ADJUSTMENT_TYPES
+from .constants import INFLOW_TYPES, OUTFLOW_TYPES, ADJUSTMENT_TYPES, BANK_BALANCE_INFLOW, BANK_BALANCE_OUTFLOW
 
 def _is_inflow(tx_type):
     return (tx_type or "").strip().lower() in INFLOW_TYPES
@@ -59,23 +59,19 @@ class BankAccount(models.Model):
 
     def recalc_balance(self):
         """
-        Recalculate the bank's balance from opening_balance + inflows - outflows + adjustments across all transactions.
-        This centralizes balance computation and avoids incremental drift.
-        Note: Adjustments can be positive or negative.
+        Recalculate the bank's balance using the SAME formula as Dashboard.
+        balance = opening + deposits + fund_transfers_in - disbursements - fund_transfers_out
+        This matches the Cash in Bank table ending balance.
         """
-        inflows = self.transaction_set.filter(
-            type__in=INFLOW_TYPES
+        inflows = self.transactions.filter(
+            type__in=BANK_BALANCE_INFLOW
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
-        outflows = self.transaction_set.filter(
-            type__in=OUTFLOW_TYPES
+        outflows = self.transactions.filter(
+            type__in=BANK_BALANCE_OUTFLOW
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
-        adjustments = self.transaction_set.filter(
-            type__in=ADJUSTMENT_TYPES
-        ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
-
-        new_balance = (self.opening_balance or Decimal('0.00')) + _safe_decimal(inflows) - _safe_decimal(outflows) + _safe_decimal(adjustments)
+        new_balance = (self.opening_balance or Decimal('0.00')) + _safe_decimal(inflows) - _safe_decimal(outflows)
         if new_balance < 0:
             raise ValidationError("Bank account balance cannot be negative.")
         self.balance = new_balance
