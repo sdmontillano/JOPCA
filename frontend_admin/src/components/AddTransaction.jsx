@@ -62,14 +62,10 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
 
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
-    { value: "collection", label: "Collection" },
     { value: "disbursement", label: "Disbursement" },
-    { value: "returned_check", label: "Returned Check" },
     { value: "bank_charges", label: "Bank Charges" },
     { value: "adjustments", label: "Adjustments" },
-    { value: "transfer", label: "Transfer" },
     { value: "fund_transfer", label: "Fund Transfer" },
-    { value: "interbank_transfer", label: "Interbank Transfer" },
   ];
 
   const pdcStatuses = [
