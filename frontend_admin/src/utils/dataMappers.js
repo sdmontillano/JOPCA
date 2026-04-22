@@ -21,8 +21,10 @@ function groupLineItemsByBank(lineItems = []) {
         beginning: 0,
         collections: 0,
         local_deposits: 0,
+        deposits: 0,
         disbursements: 0,
-        fund_transfers: 0,
+        fund_transfers_in: 0,
+        fund_transfers_out: 0,
         returned_checks: 0,
         bank_charges: 0,
         adjustments: 0,
@@ -35,23 +37,25 @@ function groupLineItemsByBank(lineItems = []) {
     row.raw_rows.push({ ...li, total });
 
     const t = (li.type || li.txn_type || "").toString().toLowerCase();
-    if (t.includes("deposit") || t.includes("local_deposit")) row.local_deposits += total;
+    if (t.includes("deposit") && !t.includes("local") && !t.includes("collection")) row.deposits += total;
+    else if (t.includes("local_deposit")) row.local_deposits += total;
     else if (t.includes("collect")) row.collections += total;
     else if (t.includes("disburse")) row.disbursements += total;
-    else if (t.includes("fund")) row.fund_transfers += total;
+    else if (t === "fund_transfer_in") row.fund_transfers_in += total;
+    else if (t === "fund_transfer_out") row.fund_transfers_out += total;
     else if (t.includes("returned")) row.returned_checks += total;
     else if (t.includes("bank_charge") || t.includes("bank charge")) row.bank_charges += total;
     else if (t.includes("adjust")) row.adjustments += total;
     // No fallback - only categorize known transaction types
 
+    // Formula: Beginning + Deposits - Disbursements + Fund Transfers In - Fund Transfers Out
+    // Collections, Local Deposits, Returned Checks, Adjustments are tracking only - do NOT affect ending
     row.ending =
       (row.beginning || 0) +
-      (row.collections || 0) +
-      (row.local_deposits || 0) -
+      (row.deposits || 0) -
       (row.disbursements || 0) +
-      (row.fund_transfers || 0) -
-      (row.returned_checks || 0) +
-      (row.adjustments || 0);
+      (row.fund_transfers_in || 0) -
+      (row.fund_transfers_out || 0);
   });
 
   return Object.values(map);
