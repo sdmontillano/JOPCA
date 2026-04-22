@@ -641,7 +641,9 @@ function DashboardInner() {
           collections: 0,
           local_deposits: 0,
           disbursements: 0,
-          fund_transfers: 0,
+          deposits: 0,
+          fund_transfers_in: 0,
+          fund_transfers_out: 0,
           returned_checks: 0,
           adjustments: 0,
           ending: 0,
@@ -657,13 +659,14 @@ function DashboardInner() {
       // - Local Deposits: cash deposited TO bank (increases bank balance)
       // - Disbursements: payments from bank (decreases bank balance)
       // - Fund Transfers: transfers between accounts
-      // - Returned Checks: checks returned (decreases bank balance)
-      // - Adjustments: bank charges, etc.
+      // - Returned Checks: tracking only (does NOT affect ending balance)
+      // - Adjustments: tracking only (does NOT affect ending balance)
       if (type.includes("collect")) row.collections += total;
       else if (type.includes("local_deposit")) row.local_deposits += total;
-      else if (type.includes("deposit") && !type.includes("local")) row.local_deposits += total;
+      else if ((type.includes("deposit") && !type.includes("local") && !type.includes("collection"))) row.deposits += total;
       else if (type.includes("disburse")) row.disbursements += total;
-      else if (type.includes("fund") || type.includes("interbank")) row.fund_transfers += total;
+      else if (type === "fund_transfer_in") row.fund_transfers_in += total;
+      else if (type === "fund_transfer_out") row.fund_transfers_out += total;
       else if (type.includes("return")) row.returned_checks += total;
       else if (type.includes("adjust") || type.includes("bank_charge")) row.adjustments += total;
       row.raw_rows.push(t.raw || t);
