@@ -212,7 +212,7 @@ function CollectionsHistory({ defaultExpanded = false }) {
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Collections</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
                         <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Ending</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Destination</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Transactions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
