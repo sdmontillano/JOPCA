@@ -31,7 +31,7 @@ import ExportButtons from "./ExportButtons";
 import api from "../services/tokenService";
 
 const INFLOW_TYPES = ['collection', 'deposit', 'collections'];
-const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'returned_check', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer'];
+const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer'];
 
 const typeColors = {
   collections: { bg: "#DCFCE7", color: "#166534" },
