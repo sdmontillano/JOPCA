@@ -1369,8 +1369,16 @@ class PdcViewSet(viewsets.ModelViewSet):
             if returned_date_parsed is None:
                 return Response({"detail": "invalid returned_date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # DO NOT create a transaction - returned checks do not affect bank balances
-        # They simply mark the PDC as not receivable anymore
+        # Create a returned_check transaction when PDC is returned
+        if pdc.deposit_bank and pdc.amount:
+            Transaction.objects.create(
+                bank_account=pdc.deposit_bank,
+                date=returned_date_parsed or now().date(),
+                type='returned_check',
+                amount=pdc.amount,
+                description=f"Returned PDC - Check #{pdc.check_no or 'N/A'} - {returned_reason or 'PDC returned'}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
 
         pdc.status = Pdc.STATUS_RETURNED
         pdc.returned_date = returned_date_parsed or now().date()
