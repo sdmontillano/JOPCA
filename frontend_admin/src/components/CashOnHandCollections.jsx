@@ -207,12 +207,12 @@ function CollectionsHistory({ defaultExpanded = false }) {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "35%" }}>Particulars</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Beginning</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Collections</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Local Deposits</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Ending</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.7rem", bgcolor: "#1E293B", width: "13%" }}>Destination</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", minWidth: 150, bgcolor: "#1E293B" }}>Particulars</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Beginning</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Collections</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Ending</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Destination</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
