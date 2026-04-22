@@ -1370,15 +1370,22 @@ class PdcViewSet(viewsets.ModelViewSet):
                 return Response({"detail": "invalid returned_date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Create a returned_check transaction when PDC is returned
-        if pdc.deposit_bank and pdc.amount:
-            Transaction.objects.create(
-                bank_account=pdc.deposit_bank,
-                date=returned_date_parsed or now().date(),
-                type='returned_check',
-                amount=pdc.amount,
-                description=f"Returned PDC - Check #{pdc.check_no or 'N/A'} - {returned_reason or 'PDC returned'}",
-                created_by=request.user if request.user.is_authenticated else None
-            )
+        # Only create transaction if PDC has a bank assigned
+        try:
+            if pdc.deposit_bank and pdc.amount:
+                Transaction.objects.create(
+                    bank_account=pdc.deposit_bank,
+                    date=returned_date_parsed or now().date(),
+                    type='returned_check',
+                    amount=pdc.amount,
+                    description=f"Returned PDC - Check #{pdc.check_no or 'N/A'} - {returned_reason or 'PDC returned'}",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+        except Exception as e:
+            # Log the error but don't fail - just skip creating the transaction
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to create returned_check transaction for PDC {pdc.id}: {e}")
 
         pdc.status = Pdc.STATUS_RETURNED
         pdc.returned_date = returned_date_parsed or now().date()
