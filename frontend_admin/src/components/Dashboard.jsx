@@ -664,11 +664,11 @@ function DashboardInner() {
       if (type.includes("collect")) row.collections += total;
       else if (type.includes("local_deposit")) row.local_deposits += total;
       else if ((type.includes("deposit") && !type.includes("local") && !type.includes("collection"))) row.deposits += total;
-      else if (type.includes("disburse")) row.disbursements += total;
+      else if (type === "disbursement") row.disbursements += total;
       else if (type === "fund_transfer_in") row.fund_transfers_in += total;
       else if (type === "fund_transfer_out") row.fund_transfers_out += total;
-      else if (type.includes("return")) row.returned_checks += total;
-      else if (type.includes("adjust") || type.includes("bank_charge")) row.adjustments += total;
+      else if (type === "returned_check") row.returned_checks += total;
+      else if (type === "adjustments" || type === "bank_charges") row.adjustments += total;
       row.raw_rows.push(t.raw || t);
       // Cash in Bank Formula: Beginning + Deposits - Disbursements + Fund Transfers In - Fund Transfers Out
       // Note: Collections are NOT included (they go to Cash on Hand, not bank balance)
