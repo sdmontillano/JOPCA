@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -25,23 +26,27 @@ export default function Banks() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const fetchAccounts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get("/api/bankaccounts/");
+      const data = res.data?.results ?? res.data ?? [];
+      setAccounts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching bank accounts", err);
+      setError("Failed to load bank accounts.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    async function fetchAccounts() {
-      try {
-        const res = await api.get("/api/bankaccounts/");
-        if (mounted) {
-          const data = res.data?.results ?? res.data ?? [];
-          setAccounts(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        console.error("Error fetching bank accounts", err);
-        if (mounted) setError("Failed to load bank accounts.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    async function load() {
+      if (mounted) await fetchAccounts();
     }
-    fetchAccounts();
+    load();
     return () => {
       mounted = false;
     };
@@ -99,6 +104,18 @@ export default function Banks() {
             </Box>
           </Box>
           <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchAccounts}
+              sx={{
+                borderColor: "#E5E7EB",
+                color: "#475569",
+                "&:hover": { bgcolor: "#F3F4F6", borderColor: "#D1D5DB" },
+              }}
+            >
+              Refresh
+            </Button>
             <ExportButtons 
               data={accounts} 
               filename="bank_accounts" 
