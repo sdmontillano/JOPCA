@@ -137,7 +137,7 @@ export default function BankDetail() {
           created_at: p.returned_date,
           description: `Returned PDC - Check #${p.check_no || 'N/A'}${p.returned_reason ? ' - ' + p.returned_reason : ''}`,
           check_no: p.check_no,
-          created_by_username: p.created_by?.username || '-'
+          created_by_username: p.created_by_username || (p.created_by?.username) || '-'
         }));
         
         // Merge: returned items first (most recent), then transactions

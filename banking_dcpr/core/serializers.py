@@ -219,6 +219,7 @@ class PdcSerializer(serializers.ModelSerializer):
     date_deposited = serializers.DateField(required=False, allow_null=True)
     returned_date = serializers.DateField(required=False, allow_null=True)
     returned_reason = serializers.CharField(required=False, allow_null=True)
+    created_by_username = serializers.ReadOnlyField(source="created_by.username")
 
     class Meta:
         model = Pdc
@@ -235,10 +236,11 @@ class PdcSerializer(serializers.ModelSerializer):
             "returned_date",
             "returned_reason",
             "created_by",
+            "created_by_username",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "deposit_bank", "created_by", "created_at", "updated_at"]
+        read_only_fields = ["id", "deposit_bank", "created_by", "created_by_username", "created_at", "updated_at"]
 
 
 # ---------------------------------------------------------------------
