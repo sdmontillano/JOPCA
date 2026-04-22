@@ -1,7 +1,7 @@
 # core/utils/summary.py
 from decimal import Decimal
 from django.db.models import Sum
-from ..models import BankAccount, Transaction
+from ..models import BankAccount, Transaction, Collection, Pdc
 from ..constants import (
     DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, 
     ADJUSTMENT_TYPES, PDC_TYPES, LOCAL_DEPOSIT_TYPES,
@@ -69,20 +69,21 @@ def compute_cash_daily_summary(target_date):
 
 def compute_bank_daily_summary(target_date):
     """
-    Returns list of dicts for each BankAccount with beginning, breakdown for target_date, and ending.
-    Numeric fields are returned as floats.
+    Compute daily summary for each bank account.
+    Returns list of dicts with bank_id, particulars, account_number, beginning, deposits, disbursements, fund_transfers_in, fund_transfers_out, collections, local_deposits, returned_checks, adjustments, pdc, ending.
     
-    Formula (CORRECT DCPR):
-    Ending_Bank = Beginning_Bank + Deposits - Disbursements + Fund_Transfers_In - Fund_Transfers_Out
-    
-    - deposit = ONLY type that adds to bank balance
-    - disbursement = ONLY type that subtracts from bank balance  
-    - fund_transfer_in/out = neutral (moves between accounts)
-    - collection = tracking only, NOT in balance formula
+    CORRECT DCPR FORMULA: Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
     """
+    from decimal import Decimal
+    from django.db.models import Sum
+    from ..constants import (
+        DEPOSIT_TYPES, OUTFLOW_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, 
+        LOCAL_DEPOSIT_TYPES, ADJUSTMENT_TYPES, RETURNED_TYPES, PDC_TYPES
+    )
+    
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
-
+    
     for bank in banks:
         # Beginning balance: prior deposits only (NOT collections)
         prior_deposits = (
