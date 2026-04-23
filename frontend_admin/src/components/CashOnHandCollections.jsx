@@ -207,12 +207,12 @@ function CollectionsHistory({ defaultExpanded = false }) {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", minWidth: 150, bgcolor: "#1E293B" }}>Particulars</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Beginning</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Collections</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
-                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Ending</TableCell>
-                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Transactions</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", minWidth: 180, bgcolor: "#1E293B", py: 0.75 }}>Particulars</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B", py: 0.75 }}>Beginning</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B", py: 0.75 }}>Collections</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B", py: 0.75 }}>Local Deposits</TableCell>
+                        <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B", py: 0.75 }}>Ending</TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B", py: 0.75, minWidth: 280 }}>Transactions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -224,18 +224,18 @@ function CollectionsHistory({ defaultExpanded = false }) {
                         </TableRow>
                       ) : (
                         rows.map((r, idx) => (
-                          <TableRow key={r.bank_id ?? `${r.name}-${r.account_number}-${idx}`} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
-                            <TableCell sx={{ fontWeight: 500, fontSize: "0.8rem", color: "#374151" }}>
+                          <TableRow key={r.bank_id ?? `${r.name}-${r.account_number}-${idx}`} sx={{ "&:hover": { bgcolor: "#F9FAFB" }, "&:nth-of-type(even)": { bgcolor: "#F9FAFB" } }}>
+                            <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap", pl: 3, color: "#374151" }}>
                               {r.name}
                               <Typography variant="caption" display="block" sx={{ color: "#9CA3AF", fontSize: "0.7rem" }}>
                                 {r.account_number ?? ""}
                               </Typography>
                             </TableCell>
-                            <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#6B7280" }}>{formatCurrency(r.beginning ?? 0)}</TableCell>
-                            <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.collections ?? 0)}</TableCell>
-                            <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
-                            <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
-                            <TableCell sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                            <TableCell align="right" sx={{ color: "#6B7280" }}>{formatCurrency(r.beginning ?? 0)}</TableCell>
+                            <TableCell align="right" sx={{ color: "#166534", fontWeight: 500 }}>{formatCurrency(r.collections ?? 0)}</TableCell>
+                            <TableCell align="right" sx={{ color: "#991B1B", fontWeight: 500 }}>{formatCurrency(r.local_deposits ?? 0)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
+                            <TableCell sx={{ color: "#6B7280" }}>
                               {(r.transactions || []).map((t, i) => (
                                 <Chip 
                                   key={i}
@@ -276,7 +276,7 @@ function CollectionsHistory({ defaultExpanded = false }) {
   );
 }
 
-// Transaction Row Component
+// Transaction Row Component - strictly maps to 6 columns
 function CollectionTransactionRow({ transaction }) {
   const isCollection = transaction.type === "collections";
   const isLocalDeposit = transaction.type === "local_deposits";
@@ -301,6 +301,8 @@ function CollectionTransactionRow({ transaction }) {
   const destLabel = collectionType === "cash" ? "Cash" : collectionType === "bank_transfer" ? "Bank" : collectionType === "check" ? "Check/PDC" : "-";
   const destColor = collectionType === "cash" ? "#166534" : collectionType === "bank_transfer" ? "#1D4ED8" : collectionType === "check" ? "#92400E" : "#6B7280";
 
+  const amountPrefix = isCollection ? "+" : isLocalDeposit ? "-" : "";
+
   return (
     <TableRow
       sx={{
@@ -308,10 +310,13 @@ function CollectionTransactionRow({ transaction }) {
         "&:hover": { bgcolor: "#F3F4F6" },
       }}
     >
+      {/* Column 1: Particulars */}
       <TableCell sx={{ pl: 6, color: "#6B7280", fontSize: "0.75rem" }}>
         {transaction.date}
       </TableCell>
+      {/* Column 2: Beginning - empty placeholder */}
       <TableCell />
+      {/* Column 3: Collections - show amount here */}
       <TableCell
         align="right"
         sx={{
@@ -320,13 +325,15 @@ function CollectionTransactionRow({ transaction }) {
           fontSize: "0.8rem",
         }}
       >
-        {isCollection && "+"}
-        {isLocalDeposit && "-"}
-        {formatCurrency(transaction.amount)}
+        {amountPrefix}{formatCurrency(transaction.amount)}
       </TableCell>
-      <TableCell colSpan={3} />
+      {/* Column 4: Local Deposits - empty placeholder */}
+      <TableCell />
+      {/* Column 5: Ending - empty placeholder */}
+      <TableCell />
+      {/* Column 6: Transactions - far right, always */}
       <TableCell sx={{ fontSize: "0.75rem", color: "#374151" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
           <Chip
             label={destLabel}
             size="small"
@@ -484,49 +491,46 @@ export default function CashOnHandCollections({
       <Box
         onClick={() => setExpanded(!expanded)}
         sx={{
-          px: 2,
-          py: 1.5,
-          bgcolor: "#FEF3C7",
+          p: 2,
+          bgcolor: "#1E293B",
           borderBottom: expanded ? "1px solid #E5E7EB" : "none",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           cursor: "pointer",
-          "&:hover": { bgcolor: "#FDE68A" }
+          color: "white",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <ReceiptLongIcon sx={{ color: "#92400E", fontSize: 20 }} />
-          <Typography variant="body2" sx={{ fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-            Collections
-          </Typography>
-          {collections.length > 0 && (
-            <Chip 
-              label={`${collections.length} ${collections.length === 1 ? 'bank' : 'banks'}`} 
-              size="small" 
-              sx={{ bgcolor: "#92400E", color: "white", height: 20, fontSize: "0.65rem" }} 
-            />
-          )}
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Stack direction="row" spacing={2} sx={{ display: { xs: "none", md: "flex" } }}>
-            <Typography variant="body2" sx={{ color: "#166534", fontWeight: 600 }}>
-              Collections: {formatCurrency(summary.totalCollections)}
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <ReceiptLongIcon sx={{ fontSize: 28, color: "white" }} />
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.1rem", color: "white" }}>
+              Collections
             </Typography>
-            <Typography variant="body2" sx={{ color: "#991B1B", fontWeight: 600 }}>
-              Local Deposits: {formatCurrency(summary.totalLocalDeposits)}
+            <Typography variant="caption" sx={{ opacity: 0.9, color: "rgba(255,255,255,0.8)" }}>
+              {collections.length} bank{collections.length !== 1 ? "s" : ""} • {formatCurrency(summary.totalEnding)} total
             </Typography>
-            <Typography variant="body2" sx={{ color: "#1E293B", fontWeight: 700 }}>
-              Ending: {formatCurrency(summary.totalEnding)}
-            </Typography>
-          </Stack>
-          <IconButton size="small">
-            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-      </Box>
+          </Box>
+</Stack>
 
-      <Collapse in={expanded}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Chip
+            label={`Total: ${formatCurrency(summary.totalEnding)}`}
+            size="small"
+            sx={{
+              bgcolor: "rgba(255,255,255,0.2)",
+              color: "white",
+              fontWeight: 700,
+              backdropFilter: "blur(4px)",
+            }}
+          />
+          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ color: "white" }}>
+          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </IconButton>
+      </Stack>
+    </Box>
+
+    <Collapse in={expanded}>
         {/* View History Button */}
         <Box sx={{ px: 2, py: 1, display: "flex", justifyContent: "flex-end", borderBottom: "1px solid #E5E7EB" }}>
           <Button 
@@ -551,13 +555,13 @@ export default function CashOnHandCollections({
         {!showHistory && (
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: "#F9FAFB" }}>
-                <TableCell sx={{ fontWeight: 600, color: "#374151", width: "40%" }}>Particulars</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Beginning</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Collections</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Local Deposits</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Ending</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "#374151", width: "12%" }}>Transactions</TableCell>
+              <TableRow>
+                <TableCell sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", minWidth: 180, bgcolor: "#1E293B" }}>Particulars</TableCell>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Beginning</TableCell>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Collections</TableCell>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Local Deposits</TableCell>
+                <TableCell align="right" sx={{ color: "white", fontWeight: 700, whiteSpace: "nowrap", bgcolor: "#1E293B" }}>Ending</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B", minWidth: 250 }}>Transactions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -570,21 +574,21 @@ export default function CashOnHandCollections({
               ) : (
                 collections.map((col, idx) => (
                   <React.Fragment key={col.bank_id || idx}>
-                    <TableRow sx={{ "&:hover": { bgcolor: "#F3F4F6" } }}>
-                      <TableCell sx={{ fontWeight: 500, color: "#374151" }}>
+                    <TableRow sx={{ "&:hover": { bgcolor: "#F9FAFB" }, "&:nth-of-type(even)": { bgcolor: "#F9FAFB" } }}>
+                      <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap", pl: 3, color: "#374151" }}>
                         {col.name}
                         <Typography variant="caption" display="block" sx={{ color: "#9CA3AF", fontSize: "0.7rem" }}>
                           {col.account_number}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#6B7280" }}>{formatCurrency(col.beginning)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatCurrency(col.collections)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatCurrency(col.local_deposits)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#6B7280" }}>{formatCurrency(col.beginning)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#166534", fontWeight: 500 }}>{formatCurrency(col.collections)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#991B1B", fontWeight: 500 }}>{formatCurrency(col.local_deposits)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>{formatCurrency(col.ending)}</TableCell>
-                      <TableCell sx={{ color: "#6B7280" }}>
+                      <TableCell sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
                         {col.transactions && col.transactions.length > 0 
                           ? `${col.transactions.length} ${col.transactions.length === 1 ? 'txn' : 'txns'}` 
-                          : "No txns"}
+                          : <Typography variant="caption" sx={{ color: "#9CA3AF", fontStyle: "italic" }}>No transactions</Typography>}
                       </TableCell>
                     </TableRow>
                     {/* Transaction rows */}
@@ -599,13 +603,13 @@ export default function CashOnHandCollections({
 
               {/* Summary Row */}
               <TableRow sx={{ bgcolor: "#1E293B" }}>
-                <TableCell colSpan={2} sx={{ fontWeight: 700, fontSize: "0.85rem", color: "#FFFFFF" }}>
+                <TableCell sx={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.85rem", letterSpacing: "0.03em", pl: 3 }}>
                   GRAND TOTAL
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}>{formatCurrency(summary.totalBeginning)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}>{formatCurrency(summary.totalCollections)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}>{formatCurrency(summary.totalLocalDeposits)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, fontSize: "1rem", p: 1, color: "#F59E0B" }}>{formatCurrency(summary.totalEnding)}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>{formatCurrency(summary.totalBeginning)}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>{formatCurrency(summary.totalCollections)}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, color: "#FFFFFF" }}>{formatCurrency(summary.totalLocalDeposits)}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 800, color: "#F59E0B", fontSize: "0.9rem" }}>{formatCurrency(summary.totalEnding)}</TableCell>
                 <TableCell></TableCell>
               </TableRow>
             </TableBody>

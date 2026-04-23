@@ -15,7 +15,7 @@ LOCAL_DEPOSIT_TYPE_LIST = list(LOCAL_DEPOSIT_TYPES)
 class BankAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankAccount
-        fields = ["id", "name", "account_number", "area", "opening_balance", "balance"]
+        fields = ["id", "name", "account_number", "area", "opening_balance", "balance", "start_date"]
 
 
 class TransactionSerializer(serializers.ModelSerializer):

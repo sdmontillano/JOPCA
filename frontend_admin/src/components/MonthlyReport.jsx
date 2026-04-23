@@ -348,7 +348,7 @@ export default function MonthlyReport() {
       {report && (
         <>
           {/* Summary Cards */}
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2, mb: 3 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(6, 1fr)" }, gap: 2, mb: 3 }}>
             {/* Collections */}
             <Paper
               sx={{
@@ -370,6 +370,30 @@ export default function MonthlyReport() {
               </Typography>
               <Typography variant="caption" sx={{ color: "#6B7280" }}>
                 Cash received
+              </Typography>
+            </Paper>
+
+            {/* Undeposited Cash */}
+            <Paper
+              sx={{
+                p: 2.5,
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "#FDE68A",
+                bgcolor: "#FFFBEB",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                <WalletIcon sx={{ fontSize: 16, color: "#B45309" }} />
+                <Typography variant="caption" sx={{ color: "#92400E", fontWeight: 500, textTransform: "uppercase", fontSize: "0.65rem" }}>
+                  Undeposited Cash
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "#B45309" }}>
+                {formatCurrency(report.summary?.undeposited_total || 0)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#92400E" }}>
+                Cash not yet deposited
               </Typography>
             </Paper>
 

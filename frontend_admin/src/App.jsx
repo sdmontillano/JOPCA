@@ -11,6 +11,7 @@ import AdminHome from "./components/AdminHome.jsx";
 import AdminUsers from "./components/AdminUsers.jsx";
 import AdminTransactions from "./components/AdminTransactions.jsx";
 import AdminBanks from "./components/AdminBanks.jsx";
+import AdminCollections from "./components/AdminCollections.jsx";
 import AdminPdc from "./components/AdminPdc.jsx";
 import AdminPcf from "./components/AdminPcf.jsx";
 import AdminAuditLogs from "./components/AdminAuditLogs.jsx";
@@ -144,6 +145,10 @@ export default function App() {
         <Route
           path="/admin/banks"
           element={isAuthenticated && isAdmin ? <AdminBanks /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/admin/collections"
+          element={isAuthenticated && isAdmin ? <AdminCollections /> : <Navigate to="/dashboard" replace />}
         />
         <Route
           path="/admin/pdc"

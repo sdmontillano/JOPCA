@@ -6,7 +6,7 @@ const STORAGE_KEY = "token";
 
 // Track when token was last set - don't clear token immediately after setting
 let tokenSetTime = 0;
-const TOKEN_GRACE_PERIOD = 5000; // 5 seconds grace period after login
+const TOKEN_GRACE_PERIOD = 10000; // 10 seconds grace period after login
 
 /**
  * Unwrap API response data to handle both paginated and non-paginated responses.

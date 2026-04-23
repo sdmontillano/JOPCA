@@ -15,13 +15,14 @@ import ExportButtons from "./ExportButtons";
 
 export default function AdminBanks() {
   const { showToast } = useToast();
+  const today = new Date().toISOString().slice(0, 10);
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedBank, setSelectedBank] = useState(null);
-  const [formData, setFormData] = useState({ name: "", account_number: "", opening_balance: "0.00" });
+  const [formData, setFormData] = useState({ name: "", account_number: "", opening_balance: "0.00", start_date: today });
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -56,11 +57,16 @@ export default function AdminBanks() {
     if (bank) {
       setIsEditing(true);
       setSelectedBank(bank);
-      setFormData({ name: bank.name, account_number: bank.account_number, opening_balance: bank.opening_balance });
+      setFormData({ 
+        name: bank.name, 
+        account_number: bank.account_number, 
+        opening_balance: bank.opening_balance,
+        start_date: bank.start_date || today 
+      });
     } else {
       setIsEditing(false);
       setSelectedBank(null);
-      setFormData({ name: "", account_number: "", opening_balance: "0.00" });
+      setFormData({ name: "", account_number: "", opening_balance: "0.00", start_date: today });
     }
     setDialogOpen(true);
   };
@@ -74,7 +80,8 @@ export default function AdminBanks() {
     // Convert opening_balance to number
     const payload = {
       ...formData,
-      opening_balance: parseFloat(formData.opening_balance) || 0
+      opening_balance: parseFloat(formData.opening_balance) || 0,
+      start_date: formData.start_date || null,
     };
 
     setSaving(true);
@@ -173,6 +180,7 @@ export default function AdminBanks() {
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Name</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Account Number</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Opening Balance</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Start Date</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Created</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Actions</TableCell>
                 </TableRow>
@@ -180,7 +188,7 @@ export default function AdminBanks() {
               <TableBody>
                 {filteredBanks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#64748b" }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#64748b" }}>
                       No banks found
                     </TableCell>
                   </TableRow>
@@ -192,6 +200,9 @@ export default function AdminBanks() {
                       <TableCell sx={{ fontFamily: "monospace" }}>{bank.account_number}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
                         {formatAmount(bank.opening_balance)}
+                      </TableCell>
+                      <TableCell sx={{ color: "#64748b" }}>
+                        {bank.start_date || "-"}
                       </TableCell>
                       <TableCell sx={{ color: "#64748b" }}>
                         {bank.created_at ? new Date(bank.created_at).toLocaleDateString() : "-"}
@@ -243,6 +254,15 @@ export default function AdminBanks() {
               onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value })}
               fullWidth
               inputProps={{ step: "0.01" }}
+            />
+            <TextField
+              label="Start Date"
+              type="date"
+              value={formData.start_date}
+              onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              helperText="When this bank account starts tracking"
             />
           </Box>
         </DialogContent>

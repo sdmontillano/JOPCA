@@ -41,6 +41,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
     date: today,
     amount: "",
     description: "",
+    start_date: today,
   });
 
   const [pcfFunds, setPcfFunds] = useState([]);
@@ -117,6 +118,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
       date: today,
       amount: "",
       description: "",
+      start_date: today,
     });
     setSelectedPcf("");
     setPcfBalance(null);
@@ -192,6 +194,7 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
           location: form.location,
           opening_balance: Number(form.opening_balance) || 0,
           note: form.note?.trim() || '',
+          start_date: form.start_date || null,
         };
 
         await api.post("/api/pcf/", pcfPayload);
@@ -499,15 +502,26 @@ export default function AddPcfModal({ open, onClose, onCreated = null }) {
                 </FormControl>
 
                 <TextField
-                  label={form.existing_pcf ? "Amount to Add (₱)" : "Opening Balance (₱)"}
+                  label="Opening Balance (₱)"
                   name="opening_balance"
                   type="number"
                   value={form.opening_balance}
                   onChange={handleChange}
                   inputProps={{ step: "0.01", min: 0 }}
                   fullWidth
-                  required={!!form.existing_pcf}
+                  required={!form.existing_pcf}
                   helperText={form.existing_pcf ? "Enter amount to add to this PCF" : "Initial balance for new PCF (optional)"}
+                />
+
+                <TextField
+                  label="Start Date"
+                  name="start_date"
+                  type="date"
+                  value={form.start_date}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                  helperText="When this PCF starts tracking"
                 />
 
                 <Divider />

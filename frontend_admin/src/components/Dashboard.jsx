@@ -753,6 +753,9 @@ function DashboardInner() {
   const bankCollections = cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
   const cashCollections = collectionsData.reduce((sum, collection) => sum + Number(collection.amount || 0), 0);
   const totalCollections = bankCollections + cashCollections;
+  const undepositedCash = collectionsData
+    .filter(c => c.status === "UNDEPOSITED")
+    .reduce((sum, c) => sum + Number(c.amount || 0), 0);
   const totalEndingAllBanks = cashInBank.reduce((sum, bank) => sum + Number(bank.ending || 0), 0);
   const totalPcfBalance = pcfData.reduce((sum, pcf) => sum + Number(pcf.current_balance || pcf.ending || 0), 0);
   const totalPcfUnreplenished = pcfData.reduce((sum, pcf) => sum + Number(pcf.unreplenished || pcf.unreplenished_amount || 0), 0);
@@ -867,7 +870,7 @@ function DashboardInner() {
         </Stack>
 
         {/* KPI Cards Row - Modern Minimal */}
-        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2 }}>
+        <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(6, 1fr)" }, gap: 2 }}>
           {/* Collections Card */}
           <Paper elevation={0} sx={{ 
             p: 2.5, 
@@ -896,6 +899,37 @@ function DashboardInner() {
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: "#166534", letterSpacing: "-0.01em" }}>
               {formatPeso(totalCollections)}
+            </Typography>
+          </Paper>
+
+          {/* Undeposited Cash Card */}
+          <Paper elevation={0} sx={{ 
+            p: 2.5, 
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: "#FDE68A",
+            bgcolor: "#FFFBEB",
+            transition: "all 0.15s ease",
+            "&:hover": { borderColor: "#F59E0B", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Box sx={{ 
+                width: 32, 
+                height: 32, 
+                borderRadius: 1, 
+                bgcolor: "#FEF3C7",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}>
+                <AccountBalanceWalletIcon sx={{ fontSize: 16, color: "#B45309" }} />
+              </Box>
+              <Typography variant="caption" sx={{ color: "#92400E", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}>
+                Undeposited Cash
+              </Typography>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#B45309", letterSpacing: "-0.01em" }}>
+              {formatPeso(undepositedCash)}
             </Typography>
           </Paper>
 

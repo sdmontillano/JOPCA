@@ -33,11 +33,13 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
   }, [openProp, isControlled]);
 
   const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     name: "",
     account_number: "",
     area: "main_office",
     opening_balance: "",
+    start_date: today,
   });
   const [accounts, setAccounts] = useState([]);
   const [message, setMessage] = useState(null);
@@ -69,6 +71,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
       account_number: "",
       area: "main_office",
       opening_balance: "",
+      start_date: today,
     });
 
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -105,6 +108,7 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
           const val = parseFloat(form.opening_balance);
           return isNaN(val) ? null : val;
         })(),
+        start_date: form.start_date || null,
       };
 
       const res = await api.post("/api/bankaccounts/", payload);
@@ -198,6 +202,17 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
               fullWidth
             />
 
+            <TextField
+              label="Start Date"
+              name="start_date"
+              type="date"
+              value={form.start_date}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              helperText="When this bank account starts tracking"
+            />
+
             {message && (
               <Alert severity={message.type} sx={{ mt: 1 }}>
                 {message.text}
@@ -239,6 +254,16 @@ export default function AddBankAccount({ open: openProp = undefined, onClose = u
             value={form.opening_balance}
             onChange={handleChange}
             inputProps={{ min: 0, step: "0.01" }}
+          />
+
+          <TextField
+            label="Start Date"
+            name="start_date"
+            type="date"
+            value={form.start_date}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            helperText="When this bank account starts tracking"
           />
 
           <Box sx={{ display: "flex", gap: 2, mt: 1 }}>

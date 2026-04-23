@@ -139,6 +139,15 @@ export default function Login() {
 
         showToast("Login successful!", "success");
 
+        // Verify token works before redirect (prevents 401 loop on dashboard)
+        try {
+          await api.get("/api/bankaccounts/");
+          console.log("Token verified successfully");
+        } catch (verifyErr) {
+          console.warn("Token verification failed:", verifyErr);
+          // Continue anyway - token is saved, verification might fail due to other reasons
+        }
+
         // Force redirect with window.location as fallback
         setTimeout(() => {
           const target = loginAs === "admin" ? "/admin/home" : "/dashboard";

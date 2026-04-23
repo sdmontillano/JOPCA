@@ -5,9 +5,14 @@ Import from this module instead of redefining sets in multiple files.
 """
 
 # DEPOSIT_TYPES - The ONLY types that ADD to bank balance directly
+# Note: bank_transfer is NOT here to avoid double counting in Local Deposits
+# It is handled by BANK_BALANCE_INFLOW instead
 DEPOSIT_TYPES = frozenset([
     "deposit", "deposits",
 ])
+
+# INFLOW_TYPES = DEPOSIT_TYPES (only deposit adds to bank balance)
+INFLOW_TYPES = DEPOSIT_TYPES
 
 # FUND_TRANSFER_IN - Money transferred INTO this bank account
 FUND_TRANSFER_IN = frozenset([
@@ -18,9 +23,6 @@ FUND_TRANSFER_IN = frozenset([
 FUND_TRANSFER_OUT = frozenset([
     "fund_transfer_out",
 ])
-
-# INFLOW_TYPES = DEPOSIT_TYPES (only deposit adds to bank balance)
-INFLOW_TYPES = DEPOSIT_TYPES
 
 # BANK_BALANCE_INFLOW - Types that add to bank balance (for BankAccount.recalculate_balance)
 # Same as Dashboard: deposits + fund_transfers_in

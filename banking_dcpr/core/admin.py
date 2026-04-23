@@ -23,11 +23,12 @@ class TransactionAdmin(admin.ModelAdmin):
 
 @admin.register(BankAccount)
 class BankAccountAdmin(admin.ModelAdmin):
-    list_display = ('name', 'account_number', 'opening_balance_display', 'balance_display')
+    list_display = ('name', 'account_number', 'area', 'opening_balance_display', 'balance_display', 'start_date')
     search_fields = ('name', 'account_number')
-    list_filter = ('name',)
+    list_filter = ('area',)
     ordering = ('-balance',)
     readonly_fields = ('balance',)
+    fields = ('name', 'account_number', 'area', 'opening_balance', 'balance', 'start_date')
     inlines = [TransactionInline]
 
     def opening_balance_display(self, obj):
@@ -97,10 +98,11 @@ class PdcAdmin(admin.ModelAdmin):
 
 @admin.register(PettyCashFund)
 class PettyCashFundAdmin(admin.ModelAdmin):
-    list_display = ('name', 'location', 'opening_balance', 'current_balance_display', 'is_active')
+    list_display = ('name', 'location', 'opening_balance', 'current_balance_display', 'is_active', 'start_date')
     search_fields = ('name', 'location')
     list_filter = ('location', 'is_active')
     readonly_fields = ('created_at', 'updated_at')
+    fields = ('name', 'location', 'opening_balance', 'note', 'is_active', 'min_balance_threshold', 'start_date')
     ordering = ('name',)
 
     def current_balance_display(self, obj):

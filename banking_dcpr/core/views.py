@@ -837,11 +837,26 @@ def monthly_full_report(request):
     
     pdc_total = pdc_this_month.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    # 7. COLLECTIONS VS DEPOSITS BREAKDOWN (like daily reports)
+    # 7. UNDEPOSITED CASH (from Collection model - only undeposited for THIS MONTH)
+    month_undeposited = Collection.objects.filter(
+        status=Collection.STATUS_UNDEPOSITED,
+        date__year=month_date.year,
+        date__month=month_date.month
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    # Keep all-time undeposited for display (optional)
+    undeposited_total = Collection.objects.filter(status=Collection.STATUS_UNDEPOSITED).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    # 8. COLLECTIONS VS DEPOSITS BREAKDOWN (like daily reports)
     from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES
     
     # Calculate collections and deposits separately for monthly report
-    monthly_collections = bank_transactions.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    # collections = bank transactions + THIS MONTH's collection records only
+    bank_collection_txns = bank_transactions.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    monthly_collections_from_model = Collection.objects.filter(
+        date__year=month_date.year,
+        date__month=month_date.month
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    monthly_collections = bank_collection_txns + monthly_collections_from_model
     monthly_deposits = bank_transactions.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     
     # 8. BANK BALANCE SUMMARY BY BANK (like daily reports)
@@ -890,6 +905,7 @@ def monthly_full_report(request):
             "bank_net": float(bank_net),
             "monthly_collections": float(monthly_collections),
             "monthly_deposits": float(monthly_deposits),
+            "undeposited_total": float(month_undeposited),
             "pcf_txn_count": pcf_transactions.count(),
             "pcf_total_disbursements": float(pcf_total_disb),
             "pcf_total_replenishments": float(pcf_total_rep),

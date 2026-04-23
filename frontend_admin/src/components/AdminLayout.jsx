@@ -17,6 +17,7 @@ const DRAWER_WIDTH = 280;
 const adminSections = [
   { id: "home", title: "Home", path: "/admin/home", icon: <DashboardIcon /> },
   { id: "transactions", title: "Transactions", path: "/admin/transactions", icon: <ReceiptIcon /> },
+  { id: "collections", title: "Cash Collection", path: "/admin/collections", icon: <ReceiptIcon /> },
   { id: "banks", title: "Banks", path: "/admin/banks", icon: <AccountBalanceIcon /> },
   { id: "pdc", title: "PDC", path: "/admin/pdc", icon: <EventNoteIcon /> },
   { id: "pcf", title: "PCF", path: "/admin/pcf", icon: <AccountBalanceWalletIcon /> },

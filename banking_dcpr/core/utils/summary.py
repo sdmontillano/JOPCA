@@ -73,6 +73,8 @@ def compute_bank_daily_summary(target_date):
     Returns list of dicts with bank_id, particulars, account_number, beginning, deposits, disbursements, fund_transfers_in, fund_transfers_out, collections, local_deposits, returned_checks, adjustments, pdc, ending.
     
     CORRECT DCPR FORMULA: Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
+    
+    Uses start_date to determine which transactions to include.
     """
     from decimal import Decimal
     from django.db.models import Sum
@@ -85,39 +87,46 @@ def compute_bank_daily_summary(target_date):
     banks = BankAccount.objects.all().order_by("name", "account_number")
     
     for bank in banks:
+        # Get the effective start date for this bank (default to very early date if not set)
+        effective_start = bank.start_date if bank.start_date else None
+        
         # Beginning balance: prior deposits only (NOT collections)
-        prior_deposits = (
-            Transaction.objects.filter(
-                bank_account=bank, 
-                date__lt=target_date, 
-                type__in=DEPOSIT_TYPES
-            )
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # Only count transactions from start_date onwards
+        prior_deposits_qs = Transaction.objects.filter(
+            bank_account=bank, 
+            date__lt=target_date, 
+            type__in=DEPOSIT_TYPES
         )
-        prior_disbursements = (
-            Transaction.objects.filter(
-                bank_account=bank, 
-                date__lt=target_date, 
-                type__in=OUTFLOW_TYPES
-            )
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        if effective_start:
+            prior_deposits_qs = prior_deposits_qs.filter(date__gte=effective_start)
+        prior_deposits = prior_deposits_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        prior_disbursements_qs = Transaction.objects.filter(
+            bank_account=bank, 
+            date__lt=target_date, 
+            type__in=OUTFLOW_TYPES
         )
-        prior_transfers_in = (
-            Transaction.objects.filter(
-                bank_account=bank,
-                date__lt=target_date,
-                type__in=FUND_TRANSFER_IN
-            )
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        if effective_start:
+            prior_disbursements_qs = prior_disbursements_qs.filter(date__gte=effective_start)
+        prior_disbursements = prior_disbursements_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        prior_transfers_in_qs = Transaction.objects.filter(
+            bank_account=bank,
+            date__lt=target_date,
+            type__in=FUND_TRANSFER_IN
         )
-        prior_transfers_out = (
-            Transaction.objects.filter(
-                bank_account=bank,
-                date__lt=target_date,
-                type__in=FUND_TRANSFER_OUT
-            )
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        if effective_start:
+            prior_transfers_in_qs = prior_transfers_in_qs.filter(date__gte=effective_start)
+        prior_transfers_in = prior_transfers_in_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        prior_transfers_out_qs = Transaction.objects.filter(
+            bank_account=bank,
+            date__lt=target_date,
+            type__in=FUND_TRANSFER_OUT
         )
+        if effective_start:
+            prior_transfers_out_qs = prior_transfers_out_qs.filter(date__gte=effective_start)
+        prior_transfers_out = prior_transfers_out_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out, Decimal("0"))
 

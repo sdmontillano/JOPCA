@@ -38,7 +38,7 @@ export default function PdcPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [returnDialog, setReturnDialog] = useState({ open: false, pdc: null, reason: "" });
-  const [depositDialog, setDepositDialog] = useState({ open: false, pdc: null, bankId: null });
+  const [depositDialog, setDepositDialog] = useState({ open: false, pdc: null, bankId: null, depositDate: new Date().toISOString().slice(0, 10) });
   const navigate = useNavigate();
 
   const fetchPdcs = async () => {
@@ -101,11 +101,11 @@ export default function PdcPage() {
   };
 
   const handleDeposit = (pdc) => {
-    setDepositDialog({ open: true, pdc, bankId: bankAccounts[0]?.id || null });
+    setDepositDialog({ open: true, pdc, bankId: bankAccounts[0]?.id || null, depositDate: new Date().toISOString().slice(0, 10) });
   };
 
   const handleCloseDepositDialog = () => {
-    setDepositDialog({ open: false, pdc: null, bankId: null });
+    setDepositDialog({ open: false, pdc: null, bankId: null, depositDate: null });
   };
 
   const handleConfirmDeposit = async () => {
@@ -114,7 +114,7 @@ export default function PdcPage() {
       await pdcService.depositPdc(
         depositDialog.pdc.id, 
         depositDialog.pdc.deposit_bank_id, 
-        new Date().toISOString().slice(0, 10), 
+        depositDialog.depositDate, 
         "WEB-DEPOSIT"
       );
       showToast("PDC deposited successfully!", "success");
@@ -371,6 +371,17 @@ export default function PdcPage() {
               <Typography variant="body1" sx={{ mt: 2 }}>
                 <strong>Bank:</strong> {bankAccounts.find(b => b.id === depositDialog.pdc.deposit_bank_id)?.name || "Not assigned"}
               </Typography>
+              
+              <TextField
+                label="Deposit Date"
+                type="date"
+                value={depositDialog.depositDate}
+                onChange={(e) => setDepositDialog({ ...depositDialog, depositDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                sx={{ mt: 2 }}
+                helperText="Select the date when you deposited this check"
+              />
             </Box>
           )}
         </DialogContent>

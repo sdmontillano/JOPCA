@@ -53,6 +53,7 @@ class BankAccount(models.Model):
     area = models.CharField(max_length=50, choices=AREAS, default='main_office')
     opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    start_date = models.DateField(null=True, blank=True, help_text="When this bank account starts tracking")
 
     def __str__(self):
         return f"{self.name} ({self.account_number})"
@@ -348,6 +349,7 @@ class PettyCashFund(models.Model):
         max_digits=12, decimal_places=2, default=Decimal('1000.00'),
         help_text='Alert when balance falls below this amount'
     )
+    start_date = models.DateField(null=True, blank=True, help_text="When this PCF starts tracking")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
