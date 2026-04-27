@@ -563,6 +563,8 @@ export default function MonthlyReport() {
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Beginning</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Collections</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Local Deposits</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Adj (+)</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Adj (-)</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Inflows</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Outflows</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#374151" }}>Net Change</TableCell>
@@ -573,7 +575,7 @@ export default function MonthlyReport() {
               <TableBody>
                 {report.bank_balance_summary?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                    <TableCell colSpan={12} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
                       No bank balance data for this month
                     </TableCell>
                   </TableRow>
@@ -590,6 +592,8 @@ export default function MonthlyReport() {
                       <TableCell align="right" sx={{ color: "#6B7280" }}>{formatCurrency(bank.beginning_balance)}</TableCell>
                       <TableCell align="right" sx={{ color: "#92400E" }}>{formatCurrency(bank.collections)}</TableCell>
                       <TableCell align="right" sx={{ color: "#166534" }}>{formatCurrency(bank.local_deposits)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#166534" }}>{formatCurrency(bank.adjustment_in || 0)}</TableCell>
+                      <TableCell align="right" sx={{ color: "#991B1B" }}>{formatCurrency(bank.adjustment_out || 0)}</TableCell>
                       <TableCell align="right" sx={{ color: "#166534" }}>{formatCurrency(bank.inflows)}</TableCell>
                       <TableCell align="right" sx={{ color: "#991B1B" }}>{formatCurrency(bank.outflows)}</TableCell>
                       <TableCell align="right" sx={{ color: "#1E293B", fontWeight: 600 }}>

@@ -156,6 +156,7 @@ def obtain_auth_token_with_role(request):
         'username': user.username,
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser,
+        'is_admin': user.is_staff or user.is_superuser,
     })
 
 
@@ -286,12 +287,11 @@ class BankAccountViewSet(viewsets.ModelViewSet):
                 'success': True,
                 'message': f'Balance updated for {bank_account.name}',
                 'new_balance': float(bank_account.balance),
-                'debug': debug_info
             })
         except Exception as e:
             return Response({
                 'success': False,
-                'error': str(e)
+                'error': 'Balance update failed'
             }, status=400)
 
     def perform_update(self, serializer):
@@ -439,13 +439,9 @@ class FundTransferViewSet(viewsets.ViewSet):
             return Response({"outgoing_transaction": out_tx.id, "incoming_transaction": in_tx.id}, status=201)
             
         except Exception as e:
-            import traceback
-            error_details = str(e)
-            error_trace = traceback.format_exc()
-            print(f"FundTransferViewSet Error: {error_details}")
-            print(f"Traceback: {error_trace}")
+            print(f"FundTransferViewSet Error: {e}")
             return Response(
-                {"detail": f"Fund transfer failed: {error_details}"}, 
+                {"detail": "Fund transfer failed"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -618,43 +614,52 @@ def detailed_monthly_summary(request):
             "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
         })
 
-    # Get PCF data for the month
+    # Get PCF data for the month - optimized with prefetch
     cash_on_hand = []
-    for pcf in PettyCashFund.objects.filter(is_active=True):
+    pcfs = list(PettyCashFund.objects.filter(is_active=True))
+    pcf_ids = [p.id for p in pcfs]
+    month_start = _date(month_date.year, month_date.month, 1)
+
+    # Bulk fetch all transactions for the month
+    monthly_txns_map = {}
+    for t in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__year=month_date.year, date__month=month_date.month):
+        if t.pcf_id not in monthly_txns_map:
+            monthly_txns_map[t.pcf_id] = []
+        monthly_txns_map[t.pcf_id].append(t)
+
+    # Bulk fetch cumulative totals up to target_date
+    disb_cumulative = {
+        r['pcf_id']: r['total'] or Decimal('0.00')
+        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='disbursement')
+        .values('pcf_id').annotate(total=Sum('amount'))
+    }
+    rep_cumulative = {
+        r['pcf_id']: r['total'] or Decimal('0.00')
+        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='replenishment')
+        .values('pcf_id').annotate(total=Sum('amount'))
+    }
+
+    for pcf in pcfs:
         beginning = pcf.opening_balance
-        
-        # Calculate beginning balance from start of month
-        month_start = _date(month_date.year, month_date.month, 1)
-        previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=month_start)
-        for t in previous_txns:
+        pcf_id = pcf.id
+
+        # Calculate beginning from transactions before month
+        prev_txns = PettyCashTransaction.objects.filter(pcf_id=pcf_id, date__lt=month_start)
+        for t in prev_txns:
             if t.type == 'disbursement':
                 beginning -= t.amount
             elif t.type == 'replenishment':
                 beginning += t.amount
 
-        # Monthly transactions
-        monthly_txns = PettyCashTransaction.objects.filter(
-            pcf=pcf, 
-            date__year=month_date.year, 
-            date__month=month_date.month
-        )
-        disbursements = monthly_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        replenishments = monthly_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        monthly_txns = monthly_txns_map.get(pcf_id, [])
+        disbursements = sum(t.amount for t in monthly_txns if t.type == 'disbursement')
+        replenishments = sum(t.amount for t in monthly_txns if t.type == 'replenishment')
 
-        total_disb = PettyCashTransaction.objects.filter(
-            pcf=pcf, 
-            date__lte=target_date, 
-            type='disbursement'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        total_rep = PettyCashTransaction.objects.filter(
-            pcf=pcf, 
-            date__lte=target_date, 
-            type='replenishment'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_disb = disb_cumulative.get(pcf_id, Decimal('0.00'))
+        total_rep = rep_cumulative.get(pcf_id, Decimal('0.00'))
         unreplenished = max(Decimal('0.00'), total_disb - total_rep)
         ending = beginning - disbursements + replenishments
 
-        # Get monthly transactions with descriptions
         transactions = [
             {
                 "id": t.id,
@@ -663,7 +668,7 @@ def detailed_monthly_summary(request):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in monthly_txns.order_by('-date', '-id')
+            for t in sorted(monthly_txns, key=lambda x: (x.date, x.id), reverse=True)
         ]
 
         cash_on_hand.append({
@@ -875,8 +880,12 @@ def monthly_full_report(request):
         bank_monthly_inflows = bank_monthly_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         bank_monthly_outflows = bank_monthly_txns.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
+        # Get monthly adjustments
+        monthly_adjustment_in = bank_monthly_txns.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        monthly_adjustment_out = bank_monthly_txns.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
         # Monthly net change
-        bank_monthly_net = bank_monthly_inflows - bank_monthly_outflows
+        bank_monthly_net = bank_monthly_inflows - bank_monthly_outflows + monthly_adjustment_in - monthly_adjustment_out
         
         bank_balance_summary.append({
             "bank_name": bank.name,
@@ -887,6 +896,8 @@ def monthly_full_report(request):
             "local_deposits": float(bank_deposits),
             "inflows": float(bank_monthly_inflows),
             "outflows": float(bank_monthly_outflows),
+            "adjustment_in": float(monthly_adjustment_in),
+            "adjustment_out": float(monthly_adjustment_out),
             "net_change": float(bank_monthly_net),
             "ending_balance": float(bank.balance),
             "transaction_count": bank_monthly_txns.count()
@@ -1047,29 +1058,51 @@ def detailed_daily_summary(request):
         })
 
     cash_on_hand = []
-    for pcf in PettyCashFund.objects.filter(is_active=True):
+    pcfs = list(PettyCashFund.objects.filter(is_active=True))
+    pcf_ids = [p.id for p in pcfs]
+
+    # Bulk fetch daily transactions
+    daily_txns_map = {}
+    for t in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date=target_date):
+        if t.pcf_id not in daily_txns_map:
+            daily_txns_map[t.pcf_id] = []
+        daily_txns_map[t.pcf_id].append(t)
+
+    # Bulk fetch cumulative totals
+    disb_cumulative = {
+        r['pcf_id']: r['total'] or Decimal('0.00')
+        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='disbursement')
+        .values('pcf_id').annotate(total=Sum('amount'))
+    }
+    rep_cumulative = {
+        r['pcf_id']: r['total'] or Decimal('0.00')
+        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='replenishment')
+        .values('pcf_id').annotate(total=Sum('amount'))
+    }
+
+    for pcf in pcfs:
         beginning = pcf.opening_balance
-        previous_txns = PettyCashTransaction.objects.filter(pcf=pcf, date__lt=target_date)
+        pcf_id = pcf.id
+
+        previous_txns = PettyCashTransaction.objects.filter(pcf_id=pcf_id, date__lt=target_date)
         for t in previous_txns:
             if t.type == 'disbursement':
                 beginning -= t.amount
             elif t.type == 'replenishment':
                 beginning += t.amount
 
-        daily_txns = PettyCashTransaction.objects.filter(pcf=pcf, date=target_date)
-        disbursements = daily_txns.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        replenishments = daily_txns.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        daily_txns = daily_txns_map.get(pcf_id, [])
+        disbursements = sum(t.amount for t in daily_txns if t.type == 'disbursement')
+        replenishments = sum(t.amount for t in daily_txns if t.type == 'replenishment')
 
-        total_disb = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        total_rep = PettyCashTransaction.objects.filter(pcf=pcf, date__lte=target_date, type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_disb = disb_cumulative.get(pcf_id, Decimal('0.00'))
+        total_rep = rep_cumulative.get(pcf_id, Decimal('0.00'))
         unreplenished = max(Decimal('0.00'), total_disb - total_rep)
         ending = beginning - disbursements + replenishments
 
-        # Ensure consistency with model fields
         current_balance = pcf.current_balance or Decimal('0.00')
         unreplenished_amount = pcf.unreplenished_amount or Decimal('0.00')
 
-        # Get today's transactions with descriptions
         transactions = [
             {
                 "id": t.id,
@@ -1078,7 +1111,7 @@ def detailed_daily_summary(request):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in daily_txns.order_by('-date', '-id')
+            for t in sorted(daily_txns, key=lambda x: (x.date, x.id), reverse=True)
         ]
 
         cash_on_hand.append({
@@ -2503,8 +2536,13 @@ def create_user(request):
     username = request.data.get('username', '').strip()
     password = request.data.get('password', '')
     email = request.data.get('email', '')
-    is_staff = request.data.get('is_staff', False)
-    is_superuser = request.data.get('is_superuser', False)
+    
+    # Handle string "true"/"false" or boolean
+    is_staff_raw = request.data.get('is_staff', False)
+    is_superuser_raw = request.data.get('is_superuser', False)
+    
+    is_staff = str(is_staff_raw).lower() in ('true', '1', 'yes', 'on') if is_staff_raw else False
+    is_superuser = str(is_superuser_raw).lower() in ('true', '1', 'yes', 'on') if is_superuser_raw else False
     
     if not username or not password:
         return Response({

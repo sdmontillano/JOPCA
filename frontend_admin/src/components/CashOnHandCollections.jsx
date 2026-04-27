@@ -33,7 +33,9 @@ import LocalAtmIcon from "@mui/icons-material/LocalAtm";
 import api from "../services/tokenService";
 
 function formatCurrency(value) {
-  return `₱${Number(value ?? 0).toLocaleString("en-PH", {
+  const num = Number(value ?? 0);
+  if (isNaN(num)) return "₱0.00";
+  return `₱${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -398,6 +400,7 @@ export default function CashOnHandCollections({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState([]);
+  const [banks, setBanks] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [summary, setSummary] = useState({
     totalBeginning: 0,
@@ -468,6 +471,7 @@ export default function CashOnHandCollections({
     } catch (error) {
       console.error("Error fetching collections data:", error);
       setCollections([]);
+      setSummary({ totalBeginning: 0, totalCollections: 0, totalLocalDeposits: 0, totalEnding: 0 });
     } finally {
       setLoading(false);
     }

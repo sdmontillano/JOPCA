@@ -36,9 +36,6 @@ import DashboardSettings from "./components/DashboardSettings.jsx";
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   
-  // Simple token check - NO validation on app load
-  // Just check if token exists in localStorage
-  // This prevents double login issue - no validation happens until user makes an API call
   const isAuthenticated = localStorage.getItem("token") !== null;
   const isAdmin = localStorage.getItem("userRole") === "admin";
 

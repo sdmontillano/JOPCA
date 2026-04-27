@@ -25,7 +25,9 @@ import { toCsv } from "../utils/csvUtils";
 import PcfHistory from "./PcfHistory";
 
 function formatCurrency(value) {
-  return `₱${Number(value ?? 0).toLocaleString("en-PH", {
+  const num = Number(value ?? 0);
+  if (isNaN(num)) return "₱0.00";
+  return `₱${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

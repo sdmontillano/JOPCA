@@ -30,8 +30,8 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ExportButtons from "./ExportButtons";
 import api from "../services/tokenService";
 
-const INFLOW_TYPES = ['collection', 'deposit', 'collections'];
-const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer'];
+const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'adjustment_in'];
+const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer', 'adjustment_out'];
 
 const typeColors = {
   collections: { bg: "#DCFCE7", color: "#166534" },
@@ -40,6 +40,8 @@ const typeColors = {
   returned_check: { bg: "#FEF3C7", color: "#B45309" },
   bank_charges: { bg: "#FEE2E2", color: "#991B1B" },
   adjustments: { bg: "#F3F4F6", color: "#374151" },
+  adjustment_in: { bg: "#DCFCE7", color: "#166534" },
+  adjustment_out: { bg: "#FEE2E2", color: "#991B1B" },
   fund_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
   transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
   interbank_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },

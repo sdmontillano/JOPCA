@@ -24,8 +24,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
 
-const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'fund_transfer_in'];
-const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'fund_transfer_out', 'transfer', 'interbank_transfer'];
+const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'fund_transfer_in', 'adjustment_in'];
+const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'fund_transfer_out', 'transfer', 'interbank_transfer', 'adjustment_out'];
 
 const typeColors = {
   collections: { bg: "#DCFCE7", color: "#166534" },
@@ -34,6 +34,8 @@ const typeColors = {
   returned_check: { bg: "#FEF3C7", color: "#B45309" },
   bank_charges: { bg: "#FEE2E2", color: "#991B1B" },
   adjustments: { bg: "#F3F4F6", color: "#374151" },
+  adjustment_in: { bg: "#DCFCE7", color: "#166534" },
+  adjustment_out: { bg: "#FEE2E2", color: "#991B1B" },
   fund_transfer: { bg: "#DBEAFE", color: "#1D4ED8" },
   fund_transfer_in: { bg: "#DCFCE7", color: "#166534" },
   fund_transfer_out: { bg: "#FEE2E2", color: "#991B1B" },
@@ -211,7 +213,13 @@ export default function BankDetail() {
           <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
             <Paper sx={{ p: 2, bgcolor: "#1E293B", borderRadius: 1 }}>
               <Typography variant="subtitle2" sx={{ color: "#fff" }}>Current Balance</Typography>
-              <Typography variant="h6" sx={{ fontWeight: "bold", color: "#fff" }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: "bold", 
+                  color: Number(bank?.balance ?? 0) < 0 ? "#EF4444" : "#fff"
+                }}
+              >
                 {`₱${Number(bank?.balance ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </Typography>
             </Paper>

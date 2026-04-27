@@ -41,7 +41,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [loginAs, setLoginAs] = useState("user");
   
   // Registration form state
   const [showRegister, setShowRegister] = useState(false);
@@ -118,18 +117,20 @@ export default function Login() {
         password,
       });
 
-      console.debug("Login response", res.status, res.data);
-
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
+      const isAdmin = res?.data?.is_admin === true || res?.data?.is_staff === true || res?.data?.is_superuser === true;
+      const isStaff = res?.data?.is_staff === true;
+      const isSuperuser = res?.data?.is_superuser === true;
 
       if (res.status === 200 && token) {
-        // Save token and user role immediately
+        // Save token and user role based on backend response
         try {
           persistToken(token);
-          localStorage.setItem("userRole", loginAs);
+          localStorage.setItem("userRole", isAdmin ? "admin" : "user");
+          localStorage.setItem("isStaff", isStaff ? "true" : "false");
+          localStorage.setItem("isSuperuser", isSuperuser ? "true" : "false");
           localStorage.setItem("username", username);
-          console.log("Login data saved:", { token: !!token, userRole: loginAs, username });
         } catch (err) {
           console.error("Failed to save login data:", err);
           setError("Failed to save login data.");
@@ -139,30 +140,12 @@ export default function Login() {
 
         showToast("Login successful!", "success");
 
-        // Verify token works before redirect (prevents 401 loop on dashboard)
-        try {
-          await api.get("/api/bankaccounts/");
-          console.log("Token verified successfully");
-        } catch (verifyErr) {
-          console.warn("Token verification failed:", verifyErr);
-          // Continue anyway - token is saved, verification might fail due to other reasons
-        }
-
-        // Force redirect with window.location as fallback
+        // Immediate redirect based on role
         setTimeout(() => {
-          const target = loginAs === "admin" ? "/admin/home" : "/dashboard";
-          console.log("Redirecting to:", target);
-          try {
-            navigate(target);
-            // Fallback if navigate doesn't work
-            setTimeout(() => {
-              window.location.hash = target;
-            }, 100);
-          } catch (err) {
-            console.error("Navigation failed:", err);
-            window.location.hash = target;
-          }
-        }, 500);
+          const target = isAdmin ? "/admin/home" : "/dashboard";
+          window.location.hash = target;
+          window.location.reload();
+        }, 300);
       } else {
         // If backend returns 200 but no token, show response for debugging
         console.warn("Login response missing token", res.data);
@@ -261,20 +244,6 @@ export default function Login() {
           </Box>
 
           <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1 }}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Login as</InputLabel>
-              <Select
-                value={loginAs}
-                label="Login as"
-                onChange={(e) => setLoginAs(e.target.value)}
-                disabled={loading}
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="user">Normal User</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
-              </Select>
-            </FormControl>
-
             <TextField label="Username" fullWidth autoFocus sx={{ mb: 2, "& .MuiInputBase-root": { borderRadius: 2 } }} value={username} onChange={(e) => setUsername(e.target.value)} disabled={loading} />
 
             <TextField

@@ -22,8 +22,11 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import SaveIcon from "@mui/icons-material/Save";
+import PrintIcon from "@mui/icons-material/Print";
+import DownloadIcon from "@mui/icons-material/Download";
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
+import { exportAnalysisPDF, exportAnalysisExcel } from "../utils/exportUtils";
 
 export default function Analysis() {
   const [data, setData] = useState(null);
@@ -31,11 +34,32 @@ export default function Analysis() {
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [user, setUser] = useState(null);
   const [perBankValues, setPerBankValues] = useState({});
   const [remarksValues, setRemarksValues] = useState({});
   const navigate = useNavigate();
+
+  const handleExportPDF = () => {
+    setExporting(true);
+    try {
+      exportAnalysisPDF(data, selectedDate, user);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+    }
+    setExporting(false);
+  };
+
+  const handleExportExcel = () => {
+    setExporting(true);
+    try {
+      exportAnalysisExcel(data, selectedDate, user);
+    } catch (err) {
+      console.error('Excel export failed:', err);
+    }
+    setExporting(false);
+  };
 
   useEffect(() => {
     fetchData(selectedDate);
@@ -258,7 +282,35 @@ export default function Analysis() {
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<PrintIcon />}
+              onClick={handleExportPDF}
+              disabled={exporting || loading}
+              sx={{ 
+                bgcolor: "#DC2626", 
+                textTransform: "none",
+                "&:hover": { bgcolor: "#B91C1C" }
+              }}
+            >
+              PDF
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={handleExportExcel}
+              disabled={exporting || loading}
+              sx={{ 
+                bgcolor: "#16A34A", 
+                textTransform: "none",
+                "&:hover": { bgcolor: "#15803D" }
+              }}
+            >
+              Excel
+            </Button>
             <TextField
               type="date"
               size="small"

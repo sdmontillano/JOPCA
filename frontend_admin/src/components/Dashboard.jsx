@@ -31,6 +31,10 @@ import {
   Badge,
   Fab,
   Zoom,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
@@ -45,6 +49,8 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import CloseIcon from "@mui/icons-material/Close";
+import PrintIcon from "@mui/icons-material/Print";
+import DownloadIcon from "@mui/icons-material/Download";
 import WalletIcon from "@mui/icons-material/Wallet";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -56,6 +62,7 @@ import PaidIcon from "@mui/icons-material/Paid";
 import api, { unwrapResponse, getResponseCount, clearTokens } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
+import { exportDashboardPDF, exportDashboardExcel } from "../utils/exportUtils";
 
 import AddBankAccount from "./AddBankAccount";
 import AddTransaction from "./AddTransaction";
@@ -96,9 +103,9 @@ function monthString(d = new Date()) {
 }
 
 // Cash In Bank 2-Day Inline Component
-function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onToggleCollapse = () => {} }) {
+function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onToggleCollapse = () => {}, selectedDate = null }) {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const defaultCenter = initialCenterDate || isoDateOffset(todayIso, -1);
+  const defaultCenter = initialCenterDate || (selectedDate ? isoDateOffset(selectedDate, -1) : isoDateOffset(todayIso, -1));
   const [centerDate, setCenterDate] = useState(defaultCenter);
   const [dataMap, setDataMap] = useState({});
   const [loading, setLoading] = useState(false);
@@ -309,7 +316,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                         <TableBody>
                           {rows.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                              <TableCell colSpan={9} align="center" sx={{ py: 3, color: "text.secondary" }}>
                                 No data available
                               </TableCell>
                             </TableRow>
@@ -485,6 +492,8 @@ export default function Dashboard() {
 
 function DashboardInner() {
   // State
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [selectedDate, setSelectedDate] = useState(todayIso);
   const [dailyReport, setDailyReport] = useState({});
   const [dailyRaw, setDailyRaw] = useState(null);
   const [monthlyReport, setMonthlyReport] = useState({});
@@ -500,6 +509,7 @@ function DashboardInner() {
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [pcfModalOpen, setPcfModalOpen] = useState(false);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
+  const [adminRestrictedOpen, setAdminRestrictedOpen] = useState(false);
 
   // UI states
   const [showCashInBank, setShowCashInBank] = useState(false);
@@ -508,9 +518,54 @@ function DashboardInner() {
   const [pcfData, setPcfData] = useState([]);
   const [collectionsData, setCollectionsData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
+  const [exporting, setExporting] = useState(false);
   
   // FAB Menu State
   const [fabOpen, setFabOpen] = useState(false);
+
+  const handleExportPDF = () => {
+    setExporting(true);
+    const data = {
+      totalCollections,
+      undepositedCash,
+      cashInBank: totalEndingAllBanks,
+      pcfBalance: totalPcfBalance,
+      pdcThisMonth: effectivePdcSummary.this_month ?? 0,
+      pdcTotal: effectivePdcSummary.total ?? 0,
+      pcfData,
+      collectionsData,
+      cashInBankData: cashInBank,
+    };
+    try {
+      exportDashboardPDF(data, selectedDate, dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE");
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      setActionAlert({ severity: 'error', text: 'Failed to export PDF' });
+    }
+    setExporting(false);
+  };
+
+  const handleExportExcel = () => {
+    setExporting(true);
+    const data = {
+      totalCollections,
+      undepositedCash,
+      cashInBank: totalEndingAllBanks,
+      pcfBalance: totalPcfBalance,
+      pdcThisMonth: effectivePdcSummary.this_month ?? 0,
+      pdcTotal: effectivePdcSummary.total ?? 0,
+      pcfData,
+      collectionsData,
+      cashInBankData: cashInBank,
+    };
+    try {
+      exportDashboardExcel(data, selectedDate, dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE");
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      setActionAlert({ severity: 'error', text: 'Failed to export Excel' });
+    }
+    setExporting(false);
+  };
 
   // PDC fallback hook
   const reportMonth = manualMonth || monthString();
@@ -521,23 +576,31 @@ function DashboardInner() {
 
   // Fetch all data
   const fetchAll = useCallback(async (monthOverride = null) => {
+    const effectiveDate = selectedDate;
     setError(null);
     setRefreshing(true);
+    setLoading(true);
     try {
-      // Fetch daily data with error handling
+      // Clear existing data first to prevent showing stale data
+      setDailyReport({});
+      setMonthlyReport({});
+      setPcfData([]);
+      setCollectionsData([]);
+      
+      // Fetch daily data with error handling (using selected date)
       let dailyRes;
       try {
-        dailyRes = await api.get("/summary/detailed-daily/");
+        dailyRes = await api.get("/summary/detailed-daily/", { params: { date: effectiveDate } });
       } catch (dailyErr) {
         console.error("Failed to fetch daily data:", dailyErr);
         throw new Error(`Failed to load daily data: ${dailyErr.response?.data?.detail || dailyErr.message || 'Unknown error'}`);
       }
 
-      // Fetch monthly data with error handling
+      // Fetch monthly data with error handling (using selected date's month)
       let monthlyRes;
       try {
-        const today = new Date();
-        const monthStr = monthOverride || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+        const selected = new Date(effectiveDate);
+        const monthStr = monthOverride || `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, "0")}`;
         monthlyRes = await api.get(`/summary/detailed-monthly/?month=${monthStr}`);
       } catch (monthlyErr) {
         console.error("Failed to fetch monthly data:", monthlyErr);
@@ -623,7 +686,7 @@ function DashboardInner() {
     const timer = setTimeout(() => {
       fetchAll();
       fetchAlertsCount();
-    }, 500); // 0.5 second delay for dashboard data fetch
+    }, 500);
     return () => clearTimeout(timer);
   }, [fetchAll]);
 
@@ -710,7 +773,8 @@ function DashboardInner() {
         disbursements: 0,
         fund_transfers_out: 0,
         fund_transfers_in: 0,
-        adjustments: 0,
+        adjustment_in: 0,
+        adjustment_out: 0,
         ending: Number(a.balance ?? a.amount ?? 0) || 0,
         raw_rows: [],
         raw_account: a,
@@ -803,6 +867,49 @@ function DashboardInner() {
     );
   }
 
+  // Print styles
+  const printStyles = `
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 15mm;
+      }
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print, .MuiAppBar-root, .MuiFab-root, .MuiSnackbar-root {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .MuiPaper-root {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+      }
+      .MuiTable-root {
+        font-size: 11px;
+      }
+      .MuiTableCell-root {
+        padding: 4px 8px;
+      }
+      .break-inside-avoid {
+        break-inside: avoid;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+    }
+    .print-only { display: none; }
+  `;
+
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
@@ -815,7 +922,9 @@ function DashboardInner() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <>
+      <style>{printStyles}</style>
+      <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <TopNav
         onOpenAddBank={() => setBankModalOpen(true)}
         onOpenAddPdc={handleOpenAddPdc}
@@ -842,32 +951,91 @@ function DashboardInner() {
               Daily Cash Position Report
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
-              {dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE"} — {dailyReport?.date || ""}
+              {dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE"} — {dailyReport?.date || selectedDate}
             </Typography>
+
           </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            {(localStorage.getItem("isStaff") === "true" || localStorage.getItem("isSuperuser") === "true") && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  localStorage.setItem("userRole", "admin");
-                  window.location.hash = "#/admin";
-                  window.location.reload();
-                }}
-                sx={{ 
-                  borderColor: "#1E293B", 
-                  color: "#1E293B",
-                  textTransform: "none",
-                  "&:hover": { bgcolor: "#1E293B", color: "#FFFFFF" }
-                }}
-              >
-                Go to Admin
-              </Button>
-            )}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={handleExportExcel}
+              disabled={exporting || loading}
+              sx={{ 
+                bgcolor: "#16A34A", 
+                textTransform: "none",
+                "&:hover": { bgcolor: "#15803D" }
+              }}
+            >
+              Excel
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                const isStaff = localStorage.getItem("isStaff") === "true";
+                const isSuperuser = localStorage.getItem("isSuperuser") === "true";
+                
+                if (!isStaff && !isSuperuser) {
+                  setAdminRestrictedOpen(true);
+                  return;
+                }
+                
+                localStorage.setItem("userRole", "admin");
+                window.location.hash = "#/admin/home";
+                window.location.reload();
+              }}
+              sx={{ 
+                borderColor: "#DC2626", 
+                color: "#DC2626",
+                textTransform: "none",
+                fontWeight: "bold",
+                "&:hover": { bgcolor: "#DC2626", color: "#FFFFFF" }
+              }}
+            >
+              GO TO ADMIN
+            </Button>
           </Box>
 
         </Stack>
+
+        {/* Admin Restricted Dialog */}
+        <Dialog
+          open={adminRestrictedOpen}
+          onClose={() => setAdminRestrictedOpen(false)}
+          PaperProps={{
+            sx: { borderRadius: 2, minWidth: 350 }
+          }}
+        >
+          <DialogTitle sx={{ 
+            bgcolor: "#DC2626", 
+            color: "white", 
+            textAlign: "center",
+            fontWeight: "bold"
+          }}>
+            Access Restricted
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3, pb: 2 }}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h6" sx={{ color: "#DC2626", fontWeight: "bold", mb: 1 }}>
+                Restricted - Admin Only
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                You do not have permission to access the Admin page.
+              </Typography>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+            <Button 
+              onClick={() => setAdminRestrictedOpen(false)} 
+              variant="contained"
+              sx={{ bgcolor: "#DC2626", "&:hover": { bgcolor: "#B91C1C" } }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* KPI Cards Row - Modern Minimal */}
         <Box sx={{ mb: 3, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(6, 1fr)" }, gap: 2 }}>
@@ -1086,12 +1254,12 @@ function DashboardInner() {
 
         {/* PCF Cash on Hand Section */}
         <Box sx={{ mb: 3 }}>
-          <PcfTable pcfs={cashOnHand} showExport={true} defaultExpanded={true} />
+          <PcfTable pcfs={cashOnHand} showExport={false} defaultExpanded={true} />
         </Box>
 
         {/* Bank Collections Section */}
         <Box sx={{ mb: 3 }}>
-          <CashOnHandCollections showExport={true} defaultExpanded={true} />
+          <CashOnHandCollections showExport={false} defaultExpanded={true} />
         </Box>
 
         {/* Cash in Bank Section */}
@@ -1129,7 +1297,7 @@ function DashboardInner() {
 
             {showCashInBank && (
               <Box sx={{ p: 2, bgcolor: "#F9FAFB" }}>
-                <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} />
+                <CashInBank2DayInline initialCenterDate={null} collapsed={cashCollapsed} onToggleCollapse={() => setCashCollapsed((c) => !c)} selectedDate={selectedDate} />
               </Box>
             )}
 
@@ -1144,7 +1312,8 @@ function DashboardInner() {
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Disbursements</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Fund Transfer</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Fund Receipt</TableCell>
-                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Adjustments</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Adjustment (+)</TableCell>
+                  <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Adjustment (-)</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Returned</TableCell>
                   <TableCell align="right" sx={{ color: "white", fontWeight: 700, bgcolor: "#1E293B" }}>Ending</TableCell>
                 </TableRow>
@@ -1165,9 +1334,10 @@ function DashboardInner() {
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.disbursements ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.fund_transfers_out ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.fund_transfers_in ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.adjustments ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#166534" }}>{formatPeso(r.adjustment_in ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, color: "#991B1B" }}>{formatPeso(r.adjustment_out ?? 0)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, color: "#B45309" }}>{formatPeso(r.returned_checks ?? 0)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B" }}>{formatPeso(r.ending ?? 0)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: (r.ending ?? 0) < 0 ? "#EF4444" : "#1E293B" }}>{formatPeso(r.ending ?? 0)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -1187,7 +1357,7 @@ function DashboardInner() {
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, color: "#FFFFFF" }}></TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, fontSize: "1rem", p: 1, color: "#F59E0B" }}>
+                  <TableCell align="right" sx={{ fontWeight: 700, fontSize: "1rem", p: 1, color: totalEndingAllBanks < 0 ? "#EF4444" : "#F59E0B" }}>
                     {formatPeso(totalEndingAllBanks)}
                   </TableCell>
                 </TableRow>
@@ -1322,5 +1492,6 @@ function DashboardInner() {
         onClose={() => setAlertsModalOpen(false)}
       />
     </Box>
+    </>
   );
 }

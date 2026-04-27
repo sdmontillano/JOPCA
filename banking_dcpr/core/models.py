@@ -73,8 +73,6 @@ class BankAccount(models.Model):
         ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
 
         new_balance = (self.opening_balance or Decimal('0.00')) + _safe_decimal(inflows) - _safe_decimal(outflows)
-        if new_balance < 0:
-            raise ValidationError("Bank account balance cannot be negative.")
         self.balance = new_balance
         super().save(update_fields=['balance'])
 
@@ -98,6 +96,8 @@ class Transaction(models.Model):
         ('returned_check', 'Returned Check'),
         ('bank_charges', 'Bank Charges'),
         ('adjustments', 'Adjustments'),
+        ('adjustment_in', 'Adjustment (+)'),
+        ('adjustment_out', 'Adjustment (-)'),
         ('transfer', 'Transfer'),
         ('fund_transfer', 'Fund Transfer'),
         ('fund_transfer_out', 'Fund Transfer Out'),
@@ -217,8 +217,7 @@ class Transaction(models.Model):
 
         prospective_ending = beginning + _safe_decimal(today_inflows) - _safe_decimal(today_outflows) + _safe_decimal(today_adjustments) + delta
 
-        if prospective_ending < Decimal("0"):
-            raise ValidationError("This transaction would make the daily ending balance negative for the selected date.")
+        # Allow negative balances - removed validation that prevented negative
 
     def save(self, *args, **kwargs):
         """

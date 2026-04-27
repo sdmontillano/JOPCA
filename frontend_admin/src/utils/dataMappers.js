@@ -1,6 +1,10 @@
 // src/utils/dataMappers.js
 function unwrap(raw) {
-  return raw && raw.data ? raw.data : raw || {};
+  if (!raw) return {};
+  if (typeof raw === 'object' && 'data' in raw) {
+    return raw.data ?? {};
+  }
+  return raw;
 }
 
 function toNumber(v) {
@@ -8,17 +12,20 @@ function toNumber(v) {
 }
 
 function sum(items = [], key = "total") {
-  return items.reduce((s, it) => s + toNumber(it[key] ?? it.amount ?? 0), 0);
+  if (!items || !Array.isArray(items)) return 0;
+  return items.reduce((s, it) => s + (it ? toNumber(it[key] ?? it.amount ?? 0) : 0), 0);
 }
 
 function groupLineItemsByBank(lineItems = []) {
+  if (!Array.isArray(lineItems)) return {};
   const map = {};
   lineItems.forEach((li) => {
+    if (!li || typeof li !== 'object') return;
     const bankName = li.bank_account__name || li.bank_account_name || li.bank || li.particulars || "Unknown Bank";
     if (!map[bankName]) {
       map[bankName] = {
         particulars: bankName,
-        beginning: 0,
+        beginning: li.beginning ?? li.beginning_balance ?? 0,
         collections: 0,
         local_deposits: 0,
         deposits: 0,
@@ -27,7 +34,8 @@ function groupLineItemsByBank(lineItems = []) {
         fund_transfers_out: 0,
         returned_checks: 0,
         bank_charges: 0,
-        adjustments: 0,
+        adjustment_in: 0,
+        adjustment_out: 0,
         ending: 0,
         raw_rows: [],
       };
@@ -40,13 +48,12 @@ function groupLineItemsByBank(lineItems = []) {
     if (t.includes("deposit") && !t.includes("local") && !t.includes("collection")) row.deposits += total;
     else if (t.includes("local_deposit")) row.local_deposits += total;
     else if (t.includes("collect")) row.collections += total;
-else if (t === "disbursement") row.disbursements += total;
+    else if (t === "disbursement") row.disbursements += total;
     else if (t === "returned_check") row.returned_checks += total;
-    else if (t === "adjustments" || t === "bank_charges") row.adjustments += total;
-    // No fallback - only categorize known transaction types
+    else if (t === "adjustment_in") row.adjustment_in += total;
+    else if (t === "adjustment_out") row.adjustment_out += total;
+    else if (t === "adjustments" || t === "bank_charges") row.adjustment_out += total;
 
-    // Formula: Beginning + Deposits - Disbursements + Fund Transfers In - Fund Transfers Out
-    // Collections, Local Deposits, Returned Checks, Adjustments are tracking only - do NOT affect ending
     row.ending =
       (row.beginning || 0) +
       (row.deposits || 0) -
@@ -105,7 +112,8 @@ function buildPcfRowsFromUnreplenished(unreplenished = []) {
       fund_transfers: 0,
       returned_checks: 0,
       bank_charges: 0,
-      adjustments: 0,
+      adjustment_in: 0,
+      adjustment_out: 0,
       replenishments,
       ending,
       raw_rows: rows,
@@ -194,7 +202,8 @@ export function mapDailyResponse(raw = {}) {
         fund_transfers_in: toNumber(r.fund_transfers_in || 0),
         transfers: toNumber(r.transfers),
         returned_checks: toNumber(r.returned_checks),
-        adjustments: toNumber(r.adjustments),
+        adjustment_in: toNumber(r.adjustment_in ?? 0),
+        adjustment_out: toNumber(r.adjustment_out ?? 0),
         pdc: toNumber(r.pdc),
         ending: toNumber(r.ending),
         raw_rows: r.raw_rows || [],
