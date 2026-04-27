@@ -27,6 +27,14 @@ import DownloadIcon from "@mui/icons-material/Download";
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { exportAnalysisPDF, exportAnalysisExcel } from "../utils/exportUtils";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import AddBankAccount from "./AddBankAccount";
+import PdcCreateModal from "./PdcCreateModal";
+import AddPcfModal from "./AddPcfModal";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import WalletIcon from "@mui/icons-material/Wallet";
 
 export default function Analysis() {
   const [data, setData] = useState(null);
@@ -39,6 +47,10 @@ export default function Analysis() {
   const [user, setUser] = useState(null);
   const [perBankValues, setPerBankValues] = useState({});
   const [remarksValues, setRemarksValues] = useState({});
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleExportPDF = () => {
@@ -627,6 +639,20 @@ export default function Analysis() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+        ]}
+      />
+
+      <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={() => fetchData(selectedDate)} />
+      <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchData} />
+      <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchData} />
+      <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchData} />
     </Box>
   );
 }

@@ -35,6 +35,15 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PaidIcon from "@mui/icons-material/Paid";
 import api from "../services/tokenService";
 import { useToast } from "../ToastContext";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import AddBankAccount from "./AddBankAccount";
+import PdcCreateModal from "./PdcCreateModal";
+import AddPcfModal from "./AddPcfModal";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import WalletIcon from "@mui/icons-material/Wallet";
 
 export default function CollectCash() {
   const navigate = useNavigate();
@@ -61,6 +70,10 @@ export default function CollectCash() {
   const [depositLoading, setDepositLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -602,6 +615,20 @@ export default function CollectCash() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+        ]}
+      />
+
+      <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={fetchCollections} />
+      <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchCollections} />
+      <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchCollections} />
+      <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchCollections} />
     </Box>
   );
 }

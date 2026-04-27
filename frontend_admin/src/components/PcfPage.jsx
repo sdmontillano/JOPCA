@@ -22,6 +22,11 @@ import PcfTable from "./PcfTable";
 import PcfReports from "./PcfReports";
 import CashCountPage from "./CashCountPage";
 import AddPcfModal from "./AddPcfModal";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import AddBankAccount from "./AddBankAccount";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 
 export default function PcfPage() {
   const [pcfs, setPcfs] = useState([]);
@@ -29,6 +34,8 @@ export default function PcfPage() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
 
   const fetchPcfs = async () => {
     setLoading(true);
@@ -144,6 +151,17 @@ export default function PcfPage() {
         onClose={() => setShowAddModal(false)}
         onCreated={handlePcfCreated}
       />
+
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setShowAddModal(true) },
+        ]}
+      />
+
+      <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={fetchPcfs} />
+      <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchPcfs} />
     </Box>
   );
 }

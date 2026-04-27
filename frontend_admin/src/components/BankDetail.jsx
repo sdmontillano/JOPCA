@@ -23,6 +23,13 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/tokenService";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import PdcCreateModal from "./PdcCreateModal";
+import AddPcfModal from "./AddPcfModal";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import WalletIcon from "@mui/icons-material/Wallet";
 
 const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'fund_transfer_in', 'adjustment_in'];
 const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'fund_transfer_out', 'transfer', 'interbank_transfer', 'adjustment_out'];
@@ -59,6 +66,9 @@ export default function BankDetail() {
 
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
 
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
@@ -362,6 +372,18 @@ export default function BankDetail() {
           </Box>
         )}
       </Paper>
+
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+        ]}
+      />
+
+      <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={() => fetchTransactions(1)} />
+      <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={() => fetchTransactions(1)} />
+      <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={() => fetchTransactions(1)} />
     </Box>
   );
 }

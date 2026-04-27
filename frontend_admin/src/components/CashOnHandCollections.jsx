@@ -31,6 +31,14 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LocalAtmIcon from "@mui/icons-material/LocalAtm";
 import api from "../services/tokenService";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import AddBankAccount from "./AddBankAccount";
+import PdcCreateModal from "./PdcCreateModal";
+import AddPcfModal from "./AddPcfModal";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import WalletIcon from "@mui/icons-material/Wallet";
 
 function formatCurrency(value) {
   const num = Number(value ?? 0);
@@ -412,6 +420,10 @@ export default function CashOnHandCollections({
   // New collections from API
   const [apiCollections, setApiCollections] = useState([]);
   const [apiLoading, setApiLoading] = useState(true);
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
 
   const fetchApiCollections = useCallback(async () => {
     setApiLoading(true);
@@ -490,7 +502,8 @@ export default function CashOnHandCollections({
   }
 
   return (
-    <Paper elevation={0} sx={{ borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden", maxWidth: "100%" }}>
+    <>
+      <Paper elevation={0} sx={{ borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", overflow: "hidden", maxWidth: "100%" }}>
       {/* Header */}
       <Box
         onClick={() => setExpanded(!expanded)}
@@ -620,8 +633,21 @@ export default function CashOnHandCollections({
           </Table>
         )}
       </Collapse>
+    </Paper>
 
-      
-          </Paper>
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+        ]}
+      />
+
+      <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={fetchApiCollections} />
+      <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchApiCollections} />
+      <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchApiCollections} />
+      <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchApiCollections} />
+    </>
   );
 }

@@ -18,11 +18,20 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import api from "../services/tokenService";
+import QuickActionFAB from "./QuickActionFAB";
+import AddBankAccount from "./AddBankAccount";
+import AddTransaction from "./AddTransaction";
+import PdcCreateModal from "./PdcCreateModal";
+import AddPcfModal from "./AddPcfModal";
 
 export default function Banks() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
   const navigate = useNavigate();
 
   const fetchAccounts = async () => {
@@ -189,6 +198,44 @@ export default function Banks() {
           ))
         )}
       </Paper>
+
+      {/* Quick Action FAB */}
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true), color: "primary.main" },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true), color: "primary.main" },
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true), color: "info.main" },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true), color: "secondary.main" },
+        ]}
+      />
+
+      {/* Add Transaction Modal */}
+      <AddTransaction
+        open={addTransactionOpen}
+        onClose={() => setAddTransactionOpen(false)}
+        onCreated={() => { setAddTransactionOpen(false); fetchAccounts(); }}
+      />
+
+      {/* Add Bank Modal */}
+      <AddBankAccount
+        open={addBankOpen}
+        onClose={() => setAddBankOpen(false)}
+        onCreated={() => { setAddBankOpen(false); fetchAccounts(); }}
+      />
+
+      {/* Add PDC Modal */}
+      <PdcCreateModal
+        open={addPdcOpen}
+        onClose={() => setAddPdcOpen(false)}
+        onCreated={() => { setAddPdcOpen(false); }}
+      />
+
+      {/* Add PCF Modal */}
+      <AddPcfModal
+        open={addPcfOpen}
+        onClose={() => setAddPcfOpen(false)}
+        onCreated={() => { setAddPcfOpen(false); }}
+      />
     </Box>
   );
 }

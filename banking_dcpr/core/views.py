@@ -79,10 +79,11 @@ class UserViewSet(viewsets.ModelViewSet):
         user = User.objects.create_user(
             username=username,
             password=password,
-            email=email,
-            is_staff=is_staff,
-            is_superuser=is_superuser
+            email=email
         )
+        user.is_staff = is_staff
+        user.is_superuser = is_superuser
+        user.save()
         
         serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -2557,10 +2558,11 @@ def create_user(request):
     user = User.objects.create_user(
         username=username,
         password=password,
-        email=email if email else f'{username}@jopca.local',
-        is_staff=is_staff,
-        is_superuser=is_superuser
+        email=email if email else f'{username}@jopca.local'
     )
+    user.is_staff = is_staff
+    user.is_superuser = is_superuser
+    user.save()
     
     return Response({
         'status': 'success',

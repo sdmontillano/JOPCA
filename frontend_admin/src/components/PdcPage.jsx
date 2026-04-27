@@ -27,6 +27,13 @@ import pdcService from "../services/pdcService";
 import api from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../ToastContext";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import AddBankAccount from "./AddBankAccount";
+import AddPcfModal from "./AddPcfModal";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import WalletIcon from "@mui/icons-material/Wallet";
 
 export default function PdcPage() {
   const { showToast } = useToast();
@@ -39,6 +46,9 @@ export default function PdcPage() {
   const [toDate, setToDate] = useState("");
   const [returnDialog, setReturnDialog] = useState({ open: false, pdc: null, reason: "" });
   const [depositDialog, setDepositDialog] = useState({ open: false, pdc: null, bankId: null, depositDate: new Date().toISOString().slice(0, 10) });
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
   const navigate = useNavigate();
 
   const fetchPdcs = async () => {
@@ -397,6 +407,18 @@ export default function PdcPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+        ]}
+      />
+
+      <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={fetchPdcs} />
+      <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchPdcs} />
+      <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchPdcs} />
     </Box>
   );
 }

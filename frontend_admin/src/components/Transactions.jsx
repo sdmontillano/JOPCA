@@ -25,9 +25,16 @@ import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ExportButtons from "./ExportButtons";
+import QuickActionFAB from "./QuickActionFAB";
+import AddTransaction from "./AddTransaction";
+import AddBankAccount from "./AddBankAccount";
+import PdcCreateModal from "./PdcCreateModal";
+import AddPcfModal from "./AddPcfModal";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import WalletIcon from "@mui/icons-material/Wallet";
 import api from "../services/tokenService";
 
 const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'adjustment_in'];
@@ -53,6 +60,10 @@ export default function Transactions() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [bankAccounts, setBankAccounts] = useState([]);
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
+  const [addBankOpen, setAddBankOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [addPcfOpen, setAddPcfOpen] = useState(false);
 
   // Filters - NO default date (show all by default)
   const [filters, setFilters] = useState({
@@ -453,6 +464,44 @@ export default function Transactions() {
           </>
         )}
       </Paper>
+
+      {/* Quick Action FAB */}
+      <QuickActionFAB
+        customActions={[
+          { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true), color: "primary.main" },
+          { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true), color: "primary.main" },
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true), color: "info.main" },
+          { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true), color: "secondary.main" },
+        ]}
+      />
+
+      {/* Add Transaction Modal */}
+      <AddTransaction
+        open={addTransactionOpen}
+        onClose={() => setAddTransactionOpen(false)}
+        onCreated={() => { setAddTransactionOpen(false); fetchTransactions(); }}
+      />
+
+      {/* Add Bank Modal */}
+      <AddBankAccount
+        open={addBankOpen}
+        onClose={() => setAddBankOpen(false)}
+        onCreated={() => { setAddBankOpen(false); fetchBankAccounts(); }}
+      />
+
+      {/* Add PDC Modal */}
+      <PdcCreateModal
+        open={addPdcOpen}
+        onClose={() => setAddPdcOpen(false)}
+        onCreated={() => { setAddPdcOpen(false); }}
+      />
+
+      {/* Add PCF Modal */}
+      <AddPcfModal
+        open={addPcfOpen}
+        onClose={() => setAddPcfOpen(false)}
+        onCreated={() => { setAddPcfOpen(false); }}
+      />
     </Box>
   );
 }
