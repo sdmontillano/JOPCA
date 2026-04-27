@@ -15,7 +15,7 @@ LOCAL_DEPOSIT_TYPE_LIST = list(LOCAL_DEPOSIT_TYPES)
 class BankAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankAccount
-        fields = ["id", "name", "account_number", "area", "opening_balance", "balance", "start_date"]
+        fields = ["id", "name", "account_number", "area", "opening_balance", "balance", "start_date", "created_at"]
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -89,6 +89,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         amount = Decimal(amount)
 
         # 1) Immediate bank balance check (current stored balance)
+        # Allow negative balances - removed validation
         current_balance = Decimal(bank.balance or 0)
 
         if tx_type in OUTFLOW_TYPE_LIST:
@@ -96,8 +97,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         else:
             resulting_balance = current_balance + amount
 
-        if resulting_balance < 0:
-            raise serializers.ValidationError({"non_field_errors": ["Insufficient funds: this transaction would make the bank balance negative."]})
+        # Allow negative balances - removed validation that prevented negative
 
         # 2) Per-bank daily ending check (compute beginning for this bank, not global)
         if date:
@@ -131,8 +131,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             # prospective ending for this bank on that date
             ending = beginning + Decimal(inflows_today) - Decimal(outflows_today)
 
-            if ending < 0:
-                raise serializers.ValidationError({"non_field_errors": ["This transaction would make the daily ending balance negative for the selected date."]})
+            # Allow negative balances - removed validation that prevented negative
 
         return data
 

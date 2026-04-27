@@ -54,6 +54,8 @@ class BankAccount(models.Model):
     opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     start_date = models.DateField(null=True, blank=True, help_text="When this bank account starts tracking")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} ({self.account_number})"
