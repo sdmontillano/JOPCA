@@ -29,6 +29,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import SearchIcon from "@mui/icons-material/Search";
 import DownloadIcon from "@mui/icons-material/Download";
+import HistoryIcon from "@mui/icons-material/History";
 import api from "../services/tokenService";
 import QuickActionFAB from "./QuickActionFAB";
 import AddTransaction from "./AddTransaction";
@@ -147,12 +148,16 @@ export default function MonthlyReport() {
   const [searchPcf, setSearchPcf] = useState("");
   const [filterBankType, setFilterBankType] = useState("all");
   const [filterPcfType, setFilterPcfType] = useState("all");
+  const [recentTab, setRecentTab] = useState(false);
   const [addTransactionOpen, setAddTransactionOpen] = useState(false);
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
 
   const navigate = useNavigate();
+
+  const [recentTxns, setRecentTxns] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   const fetchReport = useCallback(() => {
     setLoading(true);
@@ -169,10 +174,22 @@ export default function MonthlyReport() {
       });
   }, [selectedMonth]);
 
-
+  const fetchRecentTxns = useCallback(() => {
+    setRecentLoading(true);
+    api
+      .get("/pcf-transactions/", { params: { page_size: 15 } })
+      .then((res) => {
+        setRecentTxns(res.data?.results || res.results || res || []);
+        setRecentLoading(false);
+      })
+      .catch(() => {
+        setRecentLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     fetchReport();
+    fetchRecentTxns();
   }, [fetchReport]);
 
   const toggleSection = (section) => {
@@ -331,6 +348,19 @@ export default function MonthlyReport() {
             >
               <DownloadIcon />
             </IconButton>
+            <Button
+              variant={recentTab ? "contained" : "outlined"}
+              startIcon={<HistoryIcon />}
+              onClick={() => setRecentTab(!recentTab)}
+              sx={{
+                bgcolor: recentTab ? "#1E293B" : "transparent",
+                color: recentTab ? "white" : "#475569",
+                borderColor: "#E5E7EB",
+                "&:hover": { bgcolor: recentTab ? "#334155" : "#F3F4F6", borderColor: "#D1D5DB" },
+              }}
+            >
+              Recent
+            </Button>
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
@@ -619,6 +649,93 @@ export default function MonthlyReport() {
               </TableBody>
             </Table>
           </Paper>
+
+          {/* Recent PCF Transactions */}
+          {recentTab && (
+            <Paper sx={{ mb: 2, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF", overflow: "hidden" }}>
+              <Box sx={{ p: 2, bgcolor: "#F8FAFB", borderBottom: "1px solid #E5E7EB" }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <HistoryIcon sx={{ color: "#1E293B", fontSize: 20 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B" }}>
+                    Recent PCF Transactions
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "#6B7280", ml: 1 }}>
+                    Last 15 transactions
+                  </Typography>
+                </Box>
+              </Box>
+              <TableContainer sx={{ maxHeight: 400 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>PCF Name</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Location</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
+                      <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
+                      <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {recentLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                          <CircularProgress size={24} />
+                        </TableCell>
+                      </TableRow>
+                    ) : recentTxns.length > 0 ? (
+                      recentTxns.map((t, idx) => {
+                        const isPositive = ["replenishment"].includes(t.type?.toLowerCase());
+                        const isNegative = ["disbursement", "unreplenished"].includes(t.type?.toLowerCase());
+                        let amountColor = "#6B7280";
+                        if (isPositive) amountColor = "#166534";
+                        if (isNegative) amountColor = "#991B1B";
+                        const prefix = isNegative ? "-" : isPositive ? "+" : "";
+                        return (
+                          <TableRow key={t.id || idx} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
+                            <TableCell sx={{ color: "#6B7280", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                              {formatDate(t.date)}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 500, color: "#374151", fontSize: "0.85rem" }}>
+                              {t.pcf_name || t.pcf?.name || "-"}
+                            </TableCell>
+                            <TableCell sx={{ color: "#6B7280", fontSize: "0.8rem" }}>
+                              {t.location || "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={t.type?.replace("_", " ") || "N/A"}
+                                size="small"
+                                sx={{
+                                  bgcolor: isPositive ? "#DCFCE7" : isNegative ? "#FEE2E2" : "#F3F4F6",
+                                  color: isPositive ? "#166534" : isNegative ? "#991B1B" : "#374151",
+                                  fontWeight: 500,
+                                  fontSize: "0.7rem",
+                                  textTransform: "capitalize",
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ color: "#374151", fontSize: "0.85rem", maxWidth: 200 }}>
+                              {t.description || <Typography component="span" sx={{ color: "#9CA3AF", fontStyle: "italic" }}>No description</Typography>}
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, color: amountColor, fontSize: "0.85rem" }}>
+                              {prefix}{formatCurrency(t.amount)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                          No recent PCF transactions
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          )}
 
           {/* A. BANK TRANSACTIONS SECTION */}
           <Paper sx={{ mb: 2, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF", overflow: "hidden" }}>

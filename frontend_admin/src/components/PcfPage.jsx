@@ -12,11 +12,18 @@ import {
   Tabs,
   Tab,
   Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import WalletIcon from "@mui/icons-material/Wallet";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import EventNoteIcon from "@mui/icons-material/EventNote";
+import HistoryIcon from "@mui/icons-material/History";
 import api, { unwrapResponse } from "../services/tokenService";
 import PcfTable from "./PcfTable";
 import PcfReports from "./PcfReports";
@@ -36,6 +43,8 @@ export default function PcfPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addTransactionOpen, setAddTransactionOpen] = useState(false);
   const [addBankOpen, setAddBankOpen] = useState(false);
+  const [recentTxns, setRecentTxns] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   const fetchPcfs = async () => {
     setLoading(true);
@@ -59,6 +68,27 @@ export default function PcfPage() {
   const handlePcfCreated = () => {
     fetchPcfs();
   };
+
+  const fetchRecentTxns = async () => {
+    setRecentLoading(true);
+    try {
+      const res = await api.get("/api/pcf-transactions/?page_size=15");
+      const data = unwrapResponse(res?.data);
+      setRecentTxns(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch recent transactions", err);
+      setRecentTxns([]);
+    } finally {
+      setRecentLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPcfs();
+    if (activeTab === 3) {
+      fetchRecentTxns();
+    }
+  }, [activeTab]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -109,6 +139,11 @@ export default function PcfPage() {
           label="Reports"
         />
         <Tab
+          icon={<HistoryIcon />}
+          iconPosition="start"
+          label="Recent"
+        />
+        <Tab
           icon={<EventNoteIcon />}
           iconPosition="start"
           label="Cash Count"
@@ -143,6 +178,56 @@ export default function PcfPage() {
           {activeTab === 1 && <PcfReports />}
 
           {activeTab === 2 && <CashCountPage />}
+
+          {activeTab === 3 && (
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                Recent PCF Transactions (Last 15)
+              </Typography>
+              {recentLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : recentTxns.length === 0 ? (
+                <Typography color="text.secondary">No recent transactions found.</Typography>
+              ) : (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "#F3F4F6" }}>
+                        <TableCell sx={{ fontWeight: "bold" }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>PCF Name</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Location</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }} align="right">Amount</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Description</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {recentTxns.map((txn) => (
+                        <TableRow key={txn.id} hover>
+                          <TableCell>{txn.date}</TableCell>
+                          <TableCell>{txn.pcf_name}</TableCell>
+                          <TableCell>{txn.location}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              size="small" 
+                              label={txn.type}
+                              color={txn.type === "replenishment" ? "success" : txn.type === "unreplenished" ? "warning" : "error"}
+                            />
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: txn.type === "replenishment" ? "green" : "red", fontWeight: "bold" }}>
+                            {txn.type === "replenishment" ? "+" : "-"}₱{Number(txn.amount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>{txn.description || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Paper>
+          )}
         </>
       )}
 
