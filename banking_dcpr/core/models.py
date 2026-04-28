@@ -63,7 +63,8 @@ class BankAccount(models.Model):
     def recalc_balance(self):
         """
         Recalculate the bank's balance using the SAME formula as Dashboard.
-        balance = opening + deposits + fund_transfers_in - disbursements - fund_transfers_out
+        balance = opening + deposits + fund_transfers_in + adjustment_in 
+                 - disbursements - fund_transfers_out - adjustment_out
         This matches the Cash in Bank table ending balance.
         """
         inflows = self.transactions.filter(
@@ -273,13 +274,22 @@ class DailyCashPosition(models.Model):
             type__in=DISBURSEMENT_TYPES
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
-        # Adjustments = Bank Charges + Other Adjustments (not returned checks - those are outflows)
-        # These are negative adjustments (reduce cash)
+        # Adjustments = Bank Charges + Adjustment In/Out
+        # adjustment_in adds to balance, adjustment_out subtracts
         bank_charges = transactions.filter(
             type__in=["bank_charges", "bank_charge"]
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
         
-        self.adjustments = -bank_charges
+        adjustment_in = transactions.filter(
+            type="adjustment_in"
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
+        
+        adjustment_out = transactions.filter(
+            type="adjustment_out"
+        ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
+        
+        # Net adjustments: positive minus negative, plus bank charges (negative)
+        self.adjustments = adjustment_in - adjustment_out - bank_charges
 
         # Returned Checks - handled as part of outflows
         returned_checks = transactions.filter(
@@ -292,8 +302,7 @@ class DailyCashPosition(models.Model):
         ).aggregate(Sum("amount"))["amount__sum"] or Decimal('0.00')
 
         # DCP Formula: Beginning + Collections - Disbursements - Returned Checks + Adjustments
-        # Note: Local Deposits is tracking only (NOT in formula)
-        # Collections = Cash on Hand (not in bank)
+        # Adjustments now includes: adjustment_in - adjustment_out - bank_charges
         self.ending_balance = (
             self.beginning_balance + self.collections
             - self.disbursements - returned_checks + self.adjustments

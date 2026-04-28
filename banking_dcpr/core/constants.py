@@ -25,17 +25,19 @@ FUND_TRANSFER_OUT = frozenset([
 ])
 
 # BANK_BALANCE_INFLOW - Types that add to bank balance (for BankAccount.recalculate_balance)
-# Same as Dashboard: deposits + fund_transfers_in
+# Same as Dashboard: deposits + fund_transfers_in + adjustment_in
 BANK_BALANCE_INFLOW = frozenset([
     "deposit", "deposits",
     "fund_transfer_in",
+    "adjustment_in",
 ])
 
 # BANK_BALANCE_OUTFLOW - Types that subtract from bank balance (for BankAccount.recalculate_balance)
-# Same as Dashboard: disbursements + fund_transfers_out
+# Same as Dashboard: disbursements + fund_transfers_out + adjustment_out
 BANK_BALANCE_OUTFLOW = frozenset([
     "disbursement", "disbursements",
     "fund_transfer_out",
+    "adjustment_out",
 ])
 
 # OUTFLOW_TYPES - Types that SUBTRACT from bank balance
