@@ -127,8 +127,30 @@ def compute_bank_daily_summary(target_date):
         if effective_start:
             prior_transfers_out_qs = prior_transfers_out_qs.filter(date__gte=effective_start)
         prior_transfers_out = prior_transfers_out_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Prior adjustments for beginning balance (default to 0 if none found)
+        prior_adjustment_in = Decimal("0")
+        prior_adjustment_out = Decimal("0")
+        
+        prior_adjustment_in_qs = Transaction.objects.filter(
+            bank_account=bank,
+            date__lt=target_date,
+            type="adjustment_in"
+        )
+        if effective_start:
+            prior_adjustment_in_qs = prior_adjustment_in_qs.filter(date__gte=effective_start)
+        prior_adjustment_in = prior_adjustment_in_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        prior_adjustment_out_qs = Transaction.objects.filter(
+            bank_account=bank,
+            date__lt=target_date,
+            type="adjustment_out"
+        )
+        if effective_start:
+            prior_adjustment_out_qs = prior_adjustment_out_qs.filter(date__gte=effective_start)
+        prior_adjustment_out = prior_adjustment_out_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out, Decimal("0"))
+        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out + prior_adjustment_in - prior_adjustment_out, Decimal("0"))
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
@@ -137,6 +159,10 @@ def compute_bank_daily_summary(target_date):
         disbursements = today_qs.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers_in = today_qs.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers_out = today_qs.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Get adjustment_in and adjustment_out for today
+        adjustment_in = today_qs.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        adjustment_out = today_qs.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # For reporting only (not in balance formula)
         collections = today_qs.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -160,8 +186,11 @@ def compute_bank_daily_summary(target_date):
         
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
-        ending = beginning + _safe_decimal(deposits) - _safe_decimal(disbursements) + _safe_decimal(fund_transfers_in) - _safe_decimal(fund_transfers_out)
+        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut
+        ending = beginning + _safe_decimal(deposits) - _safe_decimal(disbursements) + _safe_decimal(fund_transfers_in) - _safe_decimal(fund_transfers_out) + _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out)
+
+        # Net adjustments for display: (adjustment_in - adjustment_out)
+        net_adjustments = _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out)
 
         rows.append({
             "bank_id": bank.id,
@@ -175,7 +204,7 @@ def compute_bank_daily_summary(target_date):
             "collections": _to_float(_safe_decimal(collections)),  # reporting only
             "local_deposits": _to_float(_safe_decimal(local_deposits)),  # reporting only
             "returned_checks": _to_float(_safe_decimal(returned_checks)),
-            "adjustments": _to_float(_safe_decimal(adjustments)),
+            "adjustments": _to_float(net_adjustments),
             "pdc": _to_float(_safe_decimal(pdc)),
             "ending": _to_float(ending),
         })
