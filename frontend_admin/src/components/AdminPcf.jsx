@@ -14,8 +14,11 @@ import { useToast } from "../ToastContext";
 
 const PCF_LOCATIONS = [
   { value: "office", label: "Office" },
-  { value: "warehouse", label: "Warehouse" },
-  { value: "store", label: "Store" },
+  { value: "quarry", label: "Quarry" },
+  { value: "tagoloan", label: "Tagoloan" },
+  { value: "midsayap", label: "Midsayap" },
+  { value: "valencia", label: "Valencia" },
+  { value: "other", label: "Other" },
 ];
 
 export default function AdminPcf() {

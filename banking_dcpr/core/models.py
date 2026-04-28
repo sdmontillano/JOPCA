@@ -348,6 +348,10 @@ class PettyCashFund(models.Model):
     LOCATION_CHOICES = [
         ('office', 'Main Office'),
         ('quarry', 'Quarry'),
+        ('tagoloan', 'Tagoloan'),
+        ('midsayap', 'Midsayap'),
+        ('valencia', 'Valencia'),
+        ('other', 'Other'),
     ]
 
     name = models.CharField(max_length=100)
