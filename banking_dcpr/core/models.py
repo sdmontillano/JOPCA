@@ -344,6 +344,7 @@ class PettyCashFund(models.Model):
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=50, choices=LOCATION_CHOICES, default='office')
     opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    current_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text='Current balance (auto-updated)')
     note = models.TextField(blank=True, default='', help_text='Notes or description for this PCF')
     is_active = models.BooleanField(default=True)
     min_balance_threshold = models.DecimalField(
@@ -365,8 +366,7 @@ class PettyCashFund(models.Model):
         if self.min_balance_threshold < 0:
             raise ValidationError({'min_balance_threshold': 'Minimum balance threshold must be non-negative.'})
 
-    @property
-    def current_balance(self):
+    def get_current_balance(self):
         disbursements = self.transactions.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         replenishments = self.transactions.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         return self.opening_balance + replenishments - disbursements
@@ -387,6 +387,12 @@ class PettyCashFund(models.Model):
 
     def touch(self):
         self.save(update_fields=['updated_at'])
+
+    def recalc_balance(self):
+        disbursements = self.transactions.filter(type='disbursement').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        replenishments = self.transactions.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        self.current_balance = self.opening_balance + replenishments - disbursements
+        super().save(update_fields=['current_balance', 'updated_at'])
 
 
 # ---------------------------------------------------------------------
@@ -489,18 +495,20 @@ def update_balance_on_delete(sender, instance, **kwargs):
 # ---------------------------------------------------------------------
 # PCF Signals: auto-update PCF timestamps
 # ---------------------------------------------------------------------
+# PCF Signals: auto-update PCF balance on transaction changes
+# ---------------------------------------------------------------------
 @receiver(post_save, sender=PettyCashTransaction)
-def update_pcf_timestamp_on_save(sender, instance, **kwargs):
+def update_pcf_balance_on_save(sender, instance, **kwargs):
     try:
-        instance.pcf.touch()
+        instance.pcf.recalc_balance()
     except Exception:
         logger.exception("Error in post_save handler for PettyCashTransaction")
 
 
 @receiver(post_delete, sender=PettyCashTransaction)
-def update_pcf_timestamp_on_delete(sender, instance, **kwargs):
+def update_pcf_balance_on_delete(sender, instance, **kwargs):
     try:
-        instance.pcf.touch()
+        instance.pcf.recalc_balance()
     except Exception:
         logger.exception("Error in post_delete handler for PettyCashTransaction")
 

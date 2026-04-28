@@ -119,7 +119,7 @@ export default function Login() {
 
       // Accept multiple token field names
       const token = res?.data?.token ?? res?.data?.access ?? res?.data?.key ?? null;
-      const isAdmin = res?.data?.is_admin === true || res?.data?.is_staff === true || res?.data?.is_superuser === true;
+      const isAdmin = res?.data?.is_superuser === true;
       const isStaff = res?.data?.is_staff === true;
       const isSuperuser = res?.data?.is_superuser === true;
 

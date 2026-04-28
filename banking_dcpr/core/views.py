@@ -157,7 +157,7 @@ def obtain_auth_token_with_role(request):
         'username': user.username,
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser,
-        'is_admin': user.is_staff or user.is_superuser,
+        'is_admin': user.is_superuser,
     })
 
 
