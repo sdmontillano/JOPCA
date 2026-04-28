@@ -274,7 +274,7 @@ export function PcfSummaryCard({ pcfs = [], onViewAll }) {
         name: pcf.name || pcf.particulars || "Unnamed PCF",
         subtitle: pcf.location_display || pcf.location,
         value: pcf.ending,
-        color: (pcf.unreplenished ?? 0) > 0 ? "warning.main" : undefined,
+        color: (pcf.unreplenished_amount ?? 0) > 0 ? "warning.main" : undefined,
       }))}
       total={total}
       totalLabel="Total PCF"

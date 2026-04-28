@@ -364,11 +364,11 @@ export default function PcfTable({ pcfs = [], showExport = true, defaultExpanded
                                 align="right"
                                 sx={{
                                   fontWeight: 700,
-                                  bgcolor: (pcf.unreplenished ?? 0) > 0 ? "#FEF3C7" : "#F3F4F6",
-                                  color: (pcf.unreplenished ?? 0) > 0 ? "#B45309" : "#9CA3AF",
+                                  bgcolor: (pcf.unreplenished_amount ?? pcf.unreplenished ?? 0) > 0 ? "#FEF3C7" : "#F3F4F6",
+                                  color: (pcf.unreplenished_amount ?? pcf.unreplenished ?? 0) > 0 ? "#B45309" : "#9CA3AF",
                                 }}
                               >
-                                {(pcf.unreplenished ?? 0) > 0 ? formatCurrency(pcf.unreplenished) : "-"}
+                                {(pcf.unreplenished_amount ?? pcf.unreplenished ?? 0) > 0 ? formatCurrency(pcf.unreplenished_amount ?? pcf.unreplenished) : "-"}
                               </TableCell>
                               <TableCell sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
                                 {hasTransactions ? (

@@ -306,8 +306,8 @@ const PcfReports = () => {
                     <TableCell align="right">{formatPeso(pcf.beginning)}</TableCell>
                     <TableCell align="right">{formatPeso(pcf.disbursements)}</TableCell>
                     <TableCell align="right">{formatPeso(pcf.replenishments)}</TableCell>
-                    <TableCell align="right" sx={{ color: pcf.unreplenished > 0 ? '#ed6c02' : 'inherit' }}>
-                      {formatPeso(pcf.unreplenished)}
+                    <TableCell align="right" sx={{ color: pcf.unreplenished_amount ?? pcf.unreplenished > 0 ? '#ed6c02' : 'inherit' }}>
+                      {formatPeso(pcf.unreplenished_amount ?? pcf.unreplenished)}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatPeso(pcf.ending)}</TableCell>
                   </TableRow>
@@ -355,8 +355,8 @@ const PcfReports = () => {
                     <TableCell>{pcf.location_display}</TableCell>
                     <TableCell align="right">{formatPeso(pcf.disbursements)}</TableCell>
                     <TableCell align="right">{formatPeso(pcf.replenishments)}</TableCell>
-                    <TableCell align="right" sx={{ color: pcf.unreplenished > 0 ? '#ed6c02' : 'inherit' }}>
-                      {formatPeso(pcf.unreplenished)}
+                    <TableCell align="right" sx={{ color: pcf.unreplenished_amount ?? pcf.unreplenished > 0 ? '#ed6c02' : 'inherit' }}>
+                      {formatPeso(pcf.unreplenished_amount ?? pcf.unreplenished)}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -266,7 +266,7 @@ const CashCountPage = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions> 
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button 
             variant="contained" 

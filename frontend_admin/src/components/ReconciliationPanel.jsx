@@ -172,8 +172,8 @@ const ReconciliationPanel = ({ collapsed, onToggleCollapse }) => {
                           <TableCell>{pcf.pcf_name}</TableCell>
                           <TableCell>{pcf.location_display}</TableCell>
                           <TableCell align="right">{formatPeso(pcf.available_balance)}</TableCell>
-                          <TableCell align="right" sx={{ color: pcf.unreplenished > 0 ? '#ed6c02' : 'inherit' }}>
-                            {formatPeso(pcf.unreplenished)}
+                          <TableCell align="right" sx={{ color: (pcf.unreplenished_amount ?? pcf.unreplenished ?? 0) > 0 ? '#ed6c02' : 'inherit' }}>
+                            {formatPeso(pcf.unreplenished_amount ?? pcf.unreplenished)}
                           </TableCell>
                         </TableRow>
                       ))
