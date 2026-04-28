@@ -974,10 +974,10 @@ function DashboardInner() {
               variant="outlined"
               size="small"
               onClick={() => {
-                const isStaff = localStorage.getItem("isStaff") === "true";
+                const isAdminRole = localStorage.getItem("userRole") === "admin";
                 const isSuperuser = localStorage.getItem("isSuperuser") === "true";
                 
-                if (!isStaff && !isSuperuser) {
+                if (!isAdminRole || !isSuperuser) {
                   setAdminRestrictedOpen(true);
                   return;
                 }
@@ -1028,11 +1028,14 @@ function DashboardInner() {
           </DialogContent>
           <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
             <Button 
-              onClick={() => setAdminRestrictedOpen(false)} 
+              onClick={() => {
+                setAdminRestrictedOpen(false);
+                window.location.hash = "#/dashboard";
+              }} 
               variant="contained"
               sx={{ bgcolor: "#DC2626", "&:hover": { bgcolor: "#B91C1C" } }}
             >
-              Close
+              Go to Dashboard
             </Button>
           </DialogActions>
         </Dialog>
