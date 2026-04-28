@@ -389,10 +389,15 @@ class PettyCashFund(models.Model):
         return self.transactions.filter(type='replenishment').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
     @property
+    def total_unreplenished(self):
+        return self.transactions.filter(type='unreplenished').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    @property
     def unreplenished_amount(self):
         total_disb = self.total_disbursements
+        total_unrep = self.total_unreplenished
         total_rep = self.total_replenishments
-        return max(Decimal('0.00'), total_disb - total_rep)
+        return max(Decimal('0.00'), total_disb + total_unrep - total_rep)
 
     def touch(self):
         self.save(update_fields=['updated_at'])
