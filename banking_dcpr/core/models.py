@@ -411,6 +411,7 @@ class PettyCashTransaction(models.Model):
     TRANSACTION_TYPES = [
         ('disbursement', 'Disbursement'),
         ('replenishment', 'Replenishment'),
+        ('unreplenished', 'Unreplenished'),
     ]
 
     pcf = models.ForeignKey(PettyCashFund, on_delete=models.CASCADE, related_name='transactions')
