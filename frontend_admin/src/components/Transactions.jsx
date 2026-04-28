@@ -71,6 +71,12 @@ export default function Transactions() {
   const [recentTxns, setRecentTxns] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
 
+  // PCF transactions state
+  const [pcfTxns, setPcfTxns] = useState([]);
+  const [pcfLoading, setPcfLoading] = useState(true);
+  const [pcfSearch, setPcfSearch] = useState("");
+  const [pcfFilterType, setPcfFilterType] = useState("all");
+
   // Filters - NO default date (show all by default)
   const [filters, setFilters] = useState({
     bank_account_id: "",
@@ -185,9 +191,28 @@ export default function Transactions() {
     }
   };
 
+  // Fetch PCF transactions
+  const fetchPcfTxns = async () => {
+    try {
+      setPcfLoading(true);
+      const res = await api.get("/pcf-transactions/");
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setPcfTxns(data);
+      } else {
+        setPcfTxns(data.results || []);
+      }
+    } catch (err) {
+      console.error("Error fetching PCF transactions", err);
+    } finally {
+      setPcfLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchBankAccounts();
     fetchTransactions();
+    fetchPcfTxns();
   }, []);
 
   useEffect(() => {
@@ -218,6 +243,28 @@ export default function Transactions() {
   const getTypeColor = (type) => {
     return typeColors[type] || { bg: "#F3F4F6", color: "#374151" };
   };
+
+  // Filter and compute PCF totals
+  const filteredPcfTxns = pcfTxns.filter((t) => {
+    const matchSearch =
+      !pcfSearch ||
+      (t.pcf_name || "").toLowerCase().includes(pcfSearch.toLowerCase()) ||
+      (t.description || "").toLowerCase().includes(pcfSearch.toLowerCase());
+    const matchType = pcfFilterType === "all" || t.type === pcfFilterType;
+    return matchSearch && matchType;
+  });
+
+  const pcfSummary = filteredPcfTxns.reduce(
+    (acc, t) => {
+      if (t.type === "disbursement") {
+        acc.disbursements += Number(t.amount || 0);
+      } else if (t.type === "replenishment") {
+        acc.replenishments += Number(t.amount || 0);
+      }
+      return acc;
+    },
+    { disbursements: 0, replenishments: 0 }
+  );
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#F9FAFB", p: { xs: 2, md: 4 } }}>
@@ -583,6 +630,130 @@ export default function Transactions() {
             )}
           </>
         )}
+      </Paper>
+
+      {/* PCF Transactions Section */}
+      <Paper sx={{ mb: 3, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF", overflow: "hidden" }}>
+        <Box sx={{ p: 2, bgcolor: "#F8FAFB", borderBottom: "1px solid #E5E7EB" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <WalletIcon sx={{ color: "#1E293B", fontSize: 20 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B" }}>
+                PCF Transactions
+              </Typography>
+              <Chip label={`${filteredPcfTxns.length} items`} size="small" sx={{ bgcolor: "#E5E7EB", color: "#6B7280", fontSize: "0.7rem" }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: "#6B7280", fontWeight: 600 }}>
+              {`Disb: ${formatCurrency(pcfSummary.disbursements)} | Rep: ${formatCurrency(pcfSummary.replenishments)}`}
+            </Typography>
+          </Box>
+        </Box>
+        
+        {/* Search and Filter */}
+        <Box sx={{ p: 2, borderBottom: "1px solid #E5E7EB", display: "flex", gap: 2, flexWrap: "wrap" }}>
+          <TextField
+            size="small"
+            placeholder="Search PCF, description..."
+            value={pcfSearch}
+            onChange={(e) => setPcfSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: "#9CA3AF", fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 250 }}
+          />
+          <Stack direction="row" spacing={1}>
+            {["all", "disbursement", "replenishment", "unreplenished"].map((type) => (
+              <Chip
+                key={type}
+                label={type === "all" ? "All" : type}
+                size="small"
+                onClick={() => setPcfFilterType(type)}
+                sx={{
+                  bgcolor: pcfFilterType === type ? "#1E293B" : "#F3F4F6",
+                  color: pcfFilterType === type ? "white" : "#6B7280",
+                  fontSize: "0.7rem",
+                  textTransform: "capitalize",
+                  cursor: "pointer",
+                }}
+              />
+            ))}
+          </Stack>
+        </Box>
+        
+        <TableContainer sx={{ maxHeight: 400 }}>
+          <Table size="small" stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", whiteSpace: "nowrap" }}>Date</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>PCF Name</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Location</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
+                <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
+                <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pcfLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <CircularProgress size={24} />
+                  </TableCell>
+                </TableRow>
+              ) : filteredPcfTxns.length > 0 ? (
+                filteredPcfTxns.map((t, idx) => {
+                  const isPositive = ["replenishment"].includes(t.type?.toLowerCase());
+                  const isNegative = ["disbursement"].includes(t.type?.toLowerCase());
+                  let amountColor = "#6B7280";
+                  if (isPositive) amountColor = "#166534";
+                  if (isNegative) amountColor = "#991B1B";
+                  const prefix = isNegative ? "-" : isPositive ? "+" : "";
+                  return (
+                    <TableRow key={t.id || idx} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
+                      <TableCell sx={{ color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                        {formatDate(t.date)}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500, color: "#374151", fontSize: "0.85rem" }}>
+                        {t.pcf_name || t.pcf?.name || "-"}
+                      </TableCell>
+                      <TableCell sx={{ color: "#6B7280", fontSize: "0.85rem" }}>
+                        {t.location || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={t.type?.replace("_", " ") || "N/A"}
+                          size="small"
+                          sx={{
+                            bgcolor: isPositive ? "#DCFCE7" : isNegative ? "#FEE2E2" : "#F3F4F6",
+                            color: isPositive ? "#166534" : isNegative ? "#991B1B" : "#374151",
+                            fontWeight: 500,
+                            fontSize: "0.7rem",
+                            textTransform: "capitalize",
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: "#374151", fontSize: "0.85rem", maxWidth: 200 }}>
+                        {t.description || <Typography component="span" sx={{ color: "#9CA3AF", fontStyle: "italic", fontSize: "0.8rem" }}>No description</Typography>}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: amountColor, fontSize: "0.85rem" }}>
+                        {prefix}{formatCurrency(t.amount)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                    No PCF transactions found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Paper>
 
       {/* Quick Action FAB */}
