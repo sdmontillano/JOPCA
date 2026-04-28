@@ -37,7 +37,10 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   
   const isAuthenticated = localStorage.getItem("token") !== null;
-  const isAdmin = localStorage.getItem("userRole") === "admin";
+  const isAdminRole = localStorage.getItem("userRole") === "admin";
+  const isSuperuser = localStorage.getItem("isSuperuser") === "true";
+  // Require BOTH userRole=admin AND isSuperuser=true for admin access
+  const isAdmin = isAuthenticated && isAdminRole && isSuperuser;
 
   // Sync across tabs - reload when token changes in another tab
   useEffect(() => {
