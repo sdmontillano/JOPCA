@@ -25,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import HistoryIcon from "@mui/icons-material/History";
 import ExportButtons from "./ExportButtons";
 import QuickActionFAB from "./QuickActionFAB";
 import AddTransaction from "./AddTransaction";
@@ -64,6 +65,11 @@ export default function Transactions() {
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
+
+  // Recent tab state
+  const [recentTab, setRecentTab] = useState(false);
+  const [recentTxns, setRecentTxns] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   // Filters - NO default date (show all by default)
   const [filters, setFilters] = useState({
@@ -161,6 +167,24 @@ export default function Transactions() {
     }
   };
 
+  // Fetch recent transactions
+  const fetchRecentTxns = async () => {
+    try {
+      setRecentLoading(true);
+      const res = await api.get("/transactions/", { params: { page_size: 15 } });
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setRecentTxns(data);
+      } else {
+        setRecentTxns(data.results || []);
+      }
+    } catch (err) {
+      console.error("Error fetching recent transactions", err);
+    } finally {
+      setRecentLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchBankAccounts();
     fetchTransactions();
@@ -250,6 +274,22 @@ export default function Transactions() {
             >
               <RefreshIcon />
             </IconButton>
+            <Button
+              variant={recentTab ? "contained" : "outlined"}
+              startIcon={<HistoryIcon />}
+              onClick={() => {
+                if (!recentTab) fetchRecentTxns();
+                setRecentTab(!recentTab);
+              }}
+              sx={{
+                bgcolor: recentTab ? "#1E293B" : "transparent",
+                color: recentTab ? "white" : "#475569",
+                borderColor: "#E5E7EB",
+                "&:hover": { bgcolor: recentTab ? "#334155" : "#F3F4F6", borderColor: "#D1D5DB" },
+              }}
+            >
+              Recent
+            </Button>
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
@@ -354,6 +394,86 @@ export default function Transactions() {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
+      )}
+
+      {/* Recent Transactions */}
+      {recentTab && (
+        <Paper sx={{ mb: 3, borderRadius: 1, border: "1px solid", borderColor: "#E5E7EB", bgcolor: "#FFFFFF", overflow: "hidden" }}>
+          <Box sx={{ p: 2, bgcolor: "#F8FAFB", borderBottom: "1px solid #E5E7EB" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <HistoryIcon sx={{ color: "#1E293B", fontSize: 20 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#1E293B" }}>
+                Recent Transactions
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#6B7280", ml: 1 }}>
+                Last 15 bank transactions
+              </Typography>
+            </Box>
+          </Box>
+          <TableContainer sx={{ maxHeight: 400 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem", whiteSpace: "nowrap" }}>Date</TableCell>
+                  <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Type</TableCell>
+                  <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
+                  <TableCell sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Bank</TableCell>
+                  <TableCell align="right" sx={{ bgcolor: "#1E293B", color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Amount</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {recentLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <CircularProgress size={24} />
+                    </TableCell>
+                  </TableRow>
+                ) : recentTxns.length > 0 ? (
+                  recentTxns.map((t) => {
+                    const typeColor = getTypeColor(t.type);
+                    const amountColor = getAmountColor(t.type);
+                    const amountPrefix = getAmountPrefix(t.type);
+                    return (
+                      <TableRow key={t.id} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
+                        <TableCell sx={{ color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                          {formatDate(t.date)}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={(t.type || "N/A").replace(/_/g, " ")}
+                            size="small"
+                            sx={{
+                              bgcolor: typeColor.bg,
+                              color: typeColor.color,
+                              fontWeight: 500,
+                              fontSize: "0.7rem",
+                              textTransform: "capitalize",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: "#374151", fontSize: "0.85rem", maxWidth: 200 }}>
+                          {t.description || <Typography component="span" sx={{ color: "#9CA3AF", fontStyle: "italic", fontSize: "0.8rem" }}>No description</Typography>}
+                        </TableCell>
+                        <TableCell sx={{ color: "#6B7280", fontSize: "0.85rem" }}>
+                          {t.bank_name || t.bank?.name || "-"}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, color: amountColor, fontSize: "0.85rem" }}>
+                          {amountPrefix}{formatCurrency(t.amount)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                      No recent transactions
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
       )}
 
       {/* Transactions Table */}
