@@ -2,13 +2,26 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export const formatCurrency = (value) => {
-  let num = Number(value ?? 0);
-  // Handle string input that might have ± or - prefix
-  if (typeof value === 'string') {
-    // Remove any ± or - prefix and parse the number
-    const cleaned = value.replace(/^[±\-]+/, '').replace(/,/g, '');
-    num = Number(cleaned) || 0;
+  // Handle any input type - strip ALL signs and format cleanly
+  let num = 0;
+  
+  if (value === null || value === undefined || value === '') {
+    num = 0;
+  } else if (typeof value === 'number') {
+    num = value;
+  } else if (typeof value === 'string') {
+    // Force remove ALL of these characters at the START: ± + - 
+    const cleaned = value.replace(/^[±\+\-]+/, '').trim();
+    // Also remove commas for parsing
+    const withoutCommas = cleaned.replace(/,/g, '');
+    num = Number(withoutCommas) || 0;
+  } else {
+    num = Number(value) || 0;
   }
+  
+  // Force to positive and format
+  num = Math.abs(num);
+  
   return `₱${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
