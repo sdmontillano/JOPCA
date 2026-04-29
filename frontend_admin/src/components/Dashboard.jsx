@@ -464,6 +464,23 @@ function TopNav({ onOpenAddBank, onOpenAddPdc, onOpenAddTransaction, onOpenAddPc
           </IconButton>
         </Tooltip>
 
+        <Tooltip title="Alerts">
+          <IconButton onClick={onOpenAlerts} sx={{ color: alertCount > 0 ? "error.main" : "inherit" }}>
+            <NotificationsIcon />
+            {alertCount > 0 && (
+              <Chip label={alertCount > 99 ? "99+" : alertCount} size="small" color="error" sx={{ 
+                position: "absolute", 
+                top: 0, 
+                right: 0, 
+                height: 18, 
+                minWidth: 18,
+                fontSize: "0.65rem",
+                padding: "0 4px"
+              }} />
+            )}
+          </IconButton>
+        </Tooltip>
+
         <IconButton onClick={openUserMenu} sx={{ ml: 1 }}>
           <Avatar sx={{ bgcolor: "primary.main" }}><AccountCircleIcon /></Avatar>
         </IconButton>

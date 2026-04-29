@@ -1,11 +1,20 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const formatCurrency = (value) =>
-  `₱${Number(value ?? 0).toLocaleString("en-PH", {
+export const formatCurrency = (value, showSign = false) => {
+  const num = Number(value ?? 0);
+  if (showSign) {
+    const sign = num >= 0 ? "+" : "-";
+    return `${sign}₱${Math.abs(num).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+  return `₱${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+};
 
 export const formatDate = (dateStr) => {
   if (!dateStr) return "-";
@@ -23,6 +32,17 @@ const PAGE_WIDTH = 210;
 const CENTER_X = PAGE_WIDTH / 2;
 const LEFT_MARGIN = 15;
 const RIGHT_MARGIN = PAGE_WIDTH - LEFT_MARGIN;
+const PAGE_BREAK_THRESHOLD = 200;
+
+// Function to check and add new page if needed before rendering table
+const checkAndAddPage = (doc, y, estimatedRows) => {
+  const estimatedHeight = estimatedRows * 6 + 45;
+  if (y + estimatedHeight > 270) {
+    doc.addPage();
+    return 20;
+  }
+  return y;
+};
 
 export const generatePdfReport = async (selectedDate, api, showToast) => {
   try {
@@ -98,6 +118,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     y += 5;
     
     if (collections.length > 0) {
+      y = checkAndAddPage(doc, y, collections.length);
+      
       const tableData = collections.map(t => [
         t.date ? formatDate(t.date) : "-",
         t.bank_name || "-",
@@ -136,6 +158,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     y += 5;
     
     if (disbursements.length > 0) {
+      y = checkAndAddPage(doc, y, disbursements.length);
+      
       const tableData = disbursements.map(t => [
         t.date ? formatDate(t.date) : "-",
         t.bank_name || "-",
@@ -174,6 +198,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     y += 5;
     
     if (adjustments.length > 0) {
+      y = checkAndAddPage(doc, y, adjustments.length);
+      
       const tableData = adjustments.map(t => [
         t.date ? formatDate(t.date) : "-",
         t.bank_name || "-",
@@ -212,6 +238,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     y += 5;
     
     if (pcfTxns.length > 0) {
+      y = checkAndAddPage(doc, y, pcfTxns.length);
+      
       const tableData = pcfTxns.map(t => [
         t.date ? formatDate(t.date) : "-",
         t.pcf_name || t.pcf?.name || "-",
@@ -255,6 +283,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     y += 5;
     
     if (pdcTxns.length > 0) {
+      y = checkAndAddPage(doc, y, pdcTxns.length);
+      
       const tableData = pdcTxns.slice(0, 30).map(p => [
         p.check_no || "-",
         p.bank_name || "-",
@@ -289,6 +319,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     
     const accounts = dailyData?.accounts || [];
     if (accounts.length > 0) {
+      y = checkAndAddPage(doc, y, accounts.length);
+      
       const bankTable = accounts.map(a => [
         a.name || "-",
         a.account_number || "-",
@@ -318,6 +350,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     
     const pcfs = dailyData?.cash_on_hand || [];
     if (pcfs.length > 0) {
+      y = checkAndAddPage(doc, y, pcfs.length);
+      
       const pcfTable = pcfs.map(p => [
         p.pcf_name || "-",
         p.location || "-",
@@ -359,6 +393,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     y += 12;
     
     if (cashSummary && cashSummary.areas) {
+      y = checkAndAddPage(doc, y, Object.keys(cashSummary.areas).length + 2);
+      
       const areaData = [];
       let mainOfficeTotal = 0;
       let partsTotal = 0;
