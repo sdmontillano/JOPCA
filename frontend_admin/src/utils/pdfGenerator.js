@@ -1,10 +1,5 @@
 import jsPDF from "jspdf";
-import jsPDFAutoTable from "jspdf-autotable";
-
-// Register autotable plugin
-jsPDF.prototype.autoTable = function(options) {
-  return jsPDFAutoTable(this, options);
-};
+import autoTable from "jspdf-autotable";
 
 export const formatCurrency = (value) =>
   `₱${Number(value ?? 0).toLocaleString("en-PH", {
@@ -104,7 +99,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         formatCurrency(t.amount)
       ]);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Type", "Description", "Amount"]],
         body: collectionTable,
@@ -144,7 +139,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         formatCurrency(t.amount)
       ]);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Type", "Description", "Amount"]],
         body: disbTable,
@@ -184,7 +179,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         formatCurrency(t.amount)
       ]);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Type", "Description", "Amount"]],
         body: adjustTable,
@@ -217,7 +212,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         formatCurrency(a.balance)
       ]);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         head: [["Bank Name", "Account Number", "Balance"]],
         body: bankTable,
@@ -248,7 +243,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         formatCurrency(p.ending_balance || 0)
       ]);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         head: [["PCF Name", "Location", "Beginning", "Disb", "Rep", "Ending"]],
         body: pcfTable,
