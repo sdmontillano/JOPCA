@@ -1734,25 +1734,24 @@ def pdc_alerts(request):
     today = now().date()
     days_before_warning = 3
     
-    # Auto-update: outstanding PDCs that reached maturity
-    matured_today = Pdc.objects.filter(
+    # Auto-update: outstanding PDCs that reached maturity (use individual save instead of bulk update)
+    matured_pdcs = list(Pdc.objects.filter(
         status='outstanding',
         maturity_date__lte=today
-    )
-    matured_count = matured_today.count()
-    if matured_count > 0:
-        matured_today.update(status='matured')
-        for pdc in matured_today:
-            alerts.append({
-                'id': f'pdc_{pdc.id}_matured',
-                'pdc_id': pdc.id,
-                'check_no': pdc.check_no,
-                'type': 'pdc_matured_auto',
-                'severity': 'success',
-                'message': f'PDC {pdc.check_no} auto-matured on {pdc.maturity_date.strftime("%b %d, %Y")}',
-            })
+    ))
+    for pdc in matured_pdcs:
+        pdc.status = 'matured'
+        pdc.save(update_fields=['status'])
+        alerts.append({
+            'id': f'pdc_{pdc.id}_matured',
+            'pdc_id': pdc.id,
+            'check_no': pdc.check_no,
+            'type': 'pdc_matured_auto',
+            'severity': 'success',
+            'message': f'PDC {pdc.check_no} auto-matured on {pdc.maturity_date.strftime("%b %d, %Y")}',
+        })
     
-    # Get PDCs maturing in the next X days (warning)
+    # Get PDCs maturing in the next X days (warning) - exclude already matured
     warning_date = today + timedelta(days=days_before_warning)
     upcoming_pdcs = Pdc.objects.filter(
         status='outstanding',
@@ -1773,7 +1772,7 @@ def pdc_alerts(request):
             'message': f'PDC {pdc.check_no} matures in {days_until} day(s) ({pdc.maturity_date.strftime("%b %d, %Y")})',
         })
     
-    # Also get overdue PDCs (past maturity but still outstanding)
+    # Also get overdue PDCs (past maturity but still outstanding) - exclude already matured
     overdue_pdcs = Pdc.objects.filter(
         status='outstanding',
         maturity_date__lt=today
