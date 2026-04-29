@@ -26,6 +26,7 @@ from core.views import (
     bank_reconciliation_summary,
     cash_counts_summary,
     pcf_alerts,
+    pdc_alerts,
     pcf_daily_report,
     pcf_weekly_report,
     pcf_monthly_report,
@@ -83,6 +84,7 @@ urlpatterns = [
     path('summary/bank-reconciliation/', bank_reconciliation_summary, name='bank_reconciliation_summary'),
     path('summary/cash-counts/', cash_counts_summary, name='cash_counts_summary'),
     path('summary/pcf-alerts/', pcf_alerts, name='pcf_alerts'),
+    path('summary/pdc-alerts/', pdc_alerts, name='pdc_alerts'),
     path('summary/cash-summary/', cash_summary, name='cash_summary'),
     path('summary/bank-analysis/', bank_analysis, name='bank_analysis'),
 

@@ -1720,6 +1720,81 @@ def pcf_alerts(request):
 
 
 # ---------------------------------------------------------------------
+# PDC Alert Endpoints
+# ---------------------------------------------------------------------
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def pdc_alerts(request):
+    """
+    GET /summary/pdc-alerts/
+    Returns alerts for PDCs maturing soon or auto-maturing today.
+    Auto-matures outstanding PDCs when maturity date is reached.
+    """
+    alerts = []
+    today = now().date()
+    days_before_warning = 3
+    
+    # Auto-update: outstanding PDCs that reached maturity
+    matured_today = Pdc.objects.filter(
+        status='outstanding',
+        maturity_date__lte=today
+    )
+    matured_count = matured_today.count()
+    if matured_count > 0:
+        matured_today.update(status='matured')
+        for pdc in matured_today:
+            alerts.append({
+                'id': f'pdc_{pdc.id}_matured',
+                'pdc_id': pdc.id,
+                'check_no': pdc.check_no,
+                'type': 'pdc_matured_auto',
+                'severity': 'success',
+                'message': f'PDC {pdc.check_no} auto-matured on {pdc.maturity_date.strftime("%b %d, %Y")}',
+            })
+    
+    # Get PDCs maturing in the next X days (warning)
+    warning_date = today + timedelta(days=days_before_warning)
+    upcoming_pdcs = Pdc.objects.filter(
+        status='outstanding',
+        maturity_date__gte=today,
+        maturity_date__lte=warning_date
+    ).order_by('maturity_date')
+    
+    for pdc in upcoming_pdcs:
+        days_until = (pdc.maturity_date - today).days
+        alerts.append({
+            'id': f'pdc_{pdc.id}_maturing',
+            'pdc_id': pdc.id,
+            'check_no': pdc.check_no,
+            'maturity_date': pdc.maturity_date.strftime('%Y-%m-%d'),
+            'days_until': days_until,
+            'type': 'pdc_maturing_soon',
+            'severity': 'warning' if days_until > 0 else 'error',
+            'message': f'PDC {pdc.check_no} matures in {days_until} day(s) ({pdc.maturity_date.strftime("%b %d, %Y")})',
+        })
+    
+    # Also get overdue PDCs (past maturity but still outstanding)
+    overdue_pdcs = Pdc.objects.filter(
+        status='outstanding',
+        maturity_date__lt=today
+    )
+    for pdc in overdue_pdcs:
+        days_overdue = (today - pdc.maturity_date).days
+        alerts.append({
+            'id': f'pdc_{pdc.id}_overdue',
+            'pdc_id': pdc.id,
+            'check_no': pdc.check_no,
+            'maturity_date': pdc.maturity_date.strftime('%Y-%m-%d'),
+            'days_until': -days_overdue,
+            'type': 'pdc_overdue',
+            'severity': 'error',
+            'message': f'PDC {pdc.check_no} is {days_overdue} day(s) overdue (was due {pdc.maturity_date.strftime("%b %d, %Y")})',
+        })
+    
+    return Response({'alerts': alerts})
+
+
+# ---------------------------------------------------------------------
 # PCF Report Endpoints
 # ---------------------------------------------------------------------
 @api_view(["GET"])

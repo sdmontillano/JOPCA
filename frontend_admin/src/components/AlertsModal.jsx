@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, List, ListItem, ListItemIcon, ListItemText,
-  Typography, Box, Chip, Divider, CircularProgress, Alert
+  Typography, Box, Chip, Divider, CircularProgress, Alert, Stack
 } from '@mui/material';
 import {
   Warning as WarningIcon,
   Error as ErrorIcon,
+  CheckCircle as CheckIcon,
   Notifications as NotificationsIcon,
-  AttachMoney as MoneyIcon
+  AttachMoney as MoneyIcon,
+  EventNote as EventNoteIcon
 } from '@mui/icons-material';
 
 import api from '../services/tokenService';
@@ -19,7 +21,8 @@ const safeFormatCurrency = (value) => {
 };
 
 const AlertsModal = ({ open, onClose }) => {
-  const [alerts, setAlerts] = useState([]);
+  const [pcfAlerts, setPcfAlerts] = useState([]);
+  const [pdcAlerts, setPdcAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,9 +30,12 @@ const AlertsModal = ({ open, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/summary/pcf-alerts/');
-      const data = response.data || response;
-      setAlerts(data.alerts || []);
+      const [pcfRes, pdcRes] = await Promise.all([
+        api.get('/summary/pcf-alerts/'),
+        api.get('/summary/pdc-alerts/')
+      ]);
+      setPcfAlerts(pcfRes.data?.alerts || []);
+      setPdcAlerts(pdcRes.data?.alerts || []);
     } catch (err) {
       const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to load alerts';
       setError(String(errorMsg));
@@ -39,24 +45,26 @@ const AlertsModal = ({ open, onClose }) => {
   };
 
   useEffect(() => {
-    let cancelled = false;
     if (open) {
       fetchAlerts();
     }
-    return () => { cancelled = true; };
   }, [open]);
 
-  const lowBalanceAlerts = alerts.filter(a => a.type === 'low_balance');
-  const highUnrepAlerts = alerts.filter(a => a.type === 'high_unreplenished');
+  const pcfOnly = pcfAlerts.filter(a => a.type === 'low_balance' || a.type === 'unreplenished');
+  const pdcMaturing = pdcAlerts.filter(a => a.type === 'pdc_maturing_soon');
+  const pdcOverdue = pdcAlerts.filter(a => a.type === 'pdc_overdue');
+  const pdcMatured = pdcAlerts.filter(a => a.type === 'pdc_matured_auto');
+  
+  const totalAlerts = pcfOnly.length + pdcMaturing.length + pdcOverdue.length;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'primary.main', color: 'white' }}>
         <NotificationsIcon sx={{ color: 'white' }} />
-        <span style={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>PCF Alerts</span>
-        {alerts.length > 0 && (
+        <span style={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>Alerts</span>
+        {totalAlerts > 0 && (
           <Chip 
-            label={alerts.length} 
+            label={totalAlerts} 
             color="warning" 
             size="small" 
             sx={{ ml: 1 }}
@@ -71,7 +79,7 @@ const AlertsModal = ({ open, onClose }) => {
           </Box>
         ) : error ? (
           <Alert severity="error">{error}</Alert>
-        ) : alerts.length === 0 ? (
+        ) : totalAlerts === 0 ? (
           <Box sx={{ textAlign: 'center', p: 4 }}>
             <Box sx={{ 
               width: 80, 
@@ -84,49 +92,62 @@ const AlertsModal = ({ open, onClose }) => {
               mx: 'auto',
               mb: 2
             }}>
-              <NotificationsIcon sx={{ fontSize: 48, color: 'success.main' }} />
+              <CheckIcon sx={{ fontSize: 48, color: 'success.main' }} />
             </Box>
             <Typography variant="h6" color="success.main" fontWeight={700}>
               All Clear!
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              No alerts at this time. All PCFs are healthy.
+              No alerts at this time. All PCFs and PDCs are healthy.
             </Typography>
           </Box>
         ) : (
           <Box>
-            {lowBalanceAlerts.length > 0 && (
+            {/* PDC Alerts Section */}
+            {(pdcMaturing.length > 0 || pdcOverdue.length > 0 || pdcMatured.length > 0) && (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <ErrorIcon color="error" fontSize="small" />
-                  <Typography variant="subtitle1" fontWeight="bold" color="error">
-                    Low Balance Alerts ({lowBalanceAlerts.length})
+                  <EventNoteIcon color="warning" fontSize="small" />
+                  <Typography variant="subtitle1" fontWeight="bold" color="warning.main">
+                    PDC Alerts ({pdcMaturing.length + pdcOverdue.length + pdcMatured.length})
                   </Typography>
                 </Box>
                 <List dense>
-                  {lowBalanceAlerts.map((alert, idx) => (
-                    <ListItem key={`lb-${idx}`} sx={{ bgcolor: 'error.light', borderRadius: 1, mb: 1 }}>
+                  {pdcMatured.map((alert, idx) => (
+                    <ListItem key={`pm-${idx}`} sx={{ bgcolor: '#e8f5e9', borderRadius: 1, mb: 1 }}>
+                      <ListItemIcon>
+                        <CheckIcon sx={{ color: '#2e7d32' }} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={`PDC ${alert.check_no} Auto-Matured`}
+                        secondary={alert.message}
+                      />
+                    </ListItem>
+                  ))}
+                  {pdcMaturing.map((alert, idx) => (
+                    <ListItem key={`pm-${idx}`} sx={{ bgcolor: '#fff3e0', borderRadius: 1, mb: 1 }}>
+                      <ListItemIcon>
+                        <EventNoteIcon sx={{ color: '#ed6c02' }} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={`PDC ${alert.check_no} Maturing Soon`}
+                        secondary={
+                          <Box component="span">
+                            {alert.message}
+                            <Chip label="3 days warning" size="small" sx={{ ml: 1, bgcolor: '#ff9800', color: 'white', fontSize: '0.65rem' }} />
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                  {pdcOverdue.map((alert, idx) => (
+                    <ListItem key={`po-${idx}`} sx={{ bgcolor: '#ffebee', borderRadius: 1, mb: 1 }}>
                       <ListItemIcon>
                         <ErrorIcon color="error" />
                       </ListItemIcon>
                       <ListItemText
-                        primary={alert.pcf_name}
-                        secondary={
-                          <Box component="span">
-                            <Typography variant="body2" component="span">
-                              {alert.location_display || 'N/A'}
-                            </Typography>
-                            <br />
-                            <Typography variant="body2" component="span" color="error.main" fontWeight="bold">
-                              Current: {safeFormatCurrency(alert.current_balance)}
-                            </Typography>
-                            <Typography variant="body2" component="span" color="text.secondary"> | Threshold: {safeFormatCurrency(alert.threshold)}</Typography>
-                            <br />
-                            <Typography variant="caption" component="span" color="error.main">
-                              Deficit: {safeFormatCurrency(alert.deficit)}
-                            </Typography>
-                          </Box>
-                        }
+                        primary={`PDC ${alert.check_no} Overdue`}
+                        secondary={alert.message}
                       />
                     </ListItem>
                   ))}
@@ -135,34 +156,28 @@ const AlertsModal = ({ open, onClose }) => {
               </>
             )}
 
-            {highUnrepAlerts.length > 0 && (
+            {/* PCF Alerts Section */}
+            {pcfOnly.length > 0 && (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <WarningIcon sx={{ color: '#ed6c02' }} fontSize="small" />
+                  <MoneyIcon color="warning" fontSize="small" />
                   <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#ed6c02' }}>
-                    High Unreplenished Alerts ({highUnrepAlerts.length})
+                    PCF Alerts ({pcfOnly.length})
                   </Typography>
                 </Box>
                 <List dense>
-                  {highUnrepAlerts.map((alert, idx) => (
-                    <ListItem key={`ur-${idx}`} sx={{ bgcolor: '#fff3e0', borderRadius: 1, mb: 1 }}>
+                  {pcfOnly.map((alert, idx) => (
+                    <ListItem key={`pcf-${idx}`} sx={{ 
+                      bgcolor: alert.type === 'low_balance' ? '#ffebee' : '#fff3e0', 
+                      borderRadius: 1, 
+                      mb: 1 
+                    }}>
                       <ListItemIcon>
-                        <MoneyIcon sx={{ color: '#ed6c02' }} />
+                        {alert.type === 'low_balance' ? <ErrorIcon color="error" /> : <WarningIcon sx={{ color: '#ed6c02' }} />}
                       </ListItemIcon>
                       <ListItemText
                         primary={alert.pcf_name}
-                        secondary={
-                          <Box component="span">
-                            <Typography variant="body2" component="span">
-                              {alert.location_display || 'N/A'}
-                            </Typography>
-                            <br />
-                            <Typography variant="body2" component="span" sx={{ color: '#ed6c02', fontWeight: 'bold' }}>
-                              Unreplenished: {safeFormatCurrency(alert.unreplenished)}
-                            </Typography>
-                            <Typography variant="body2" component="span" color="text.secondary"> (threshold: {safeFormatCurrency(alert.threshold)})</Typography>
-                          </Box>
-                        }
+                        secondary={alert.message}
                       />
                     </ListItem>
                   ))}

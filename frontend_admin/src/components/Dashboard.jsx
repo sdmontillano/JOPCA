@@ -686,12 +686,20 @@ function DashboardInner() {
     }
   }, []);
 
-  // Fetch alerts count
+  // Fetch alerts count (PCF + PDC)
   const fetchAlertsCount = async () => {
     try {
-      const res = await api.get("/summary/pcf-alerts/");
-      const alerts = res?.data?.alerts || [];
-      setAlertCount(alerts.length);
+      const [pcfRes, pdcRes] = await Promise.all([
+        api.get("/summary/pcf-alerts/"),
+        api.get("/summary/pdc-alerts/")
+      ]);
+      const pcfAlerts = pcfRes?.data?.alerts || [];
+      const pdcAlerts = pdcRes?.data?.alerts || [];
+      
+      const pcfCount = pcfAlerts.length;
+      const pdcCount = pdcAlerts.filter(a => a.type === 'pdc_maturing_soon' || a.type === 'pdc_overdue').length;
+      
+      setAlertCount(pcfCount + pdcCount);
     } catch (err) {
       console.error("Failed to fetch alerts", err);
       setAlertCount(0);
