@@ -53,7 +53,7 @@ const AlertsModal = ({ open, onClose }) => {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'primary.main', color: 'white' }}>
         <NotificationsIcon sx={{ color: 'white' }} />
-        <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>PCF Alerts</Typography>
+        <span style={{ color: 'white', fontWeight: 700, fontSize: '1.25rem' }}>PCF Alerts</span>
         {alerts.length > 0 && (
           <Chip 
             label={alerts.length} 
