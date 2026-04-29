@@ -44,9 +44,7 @@ export default function PdfReportModal({ open, onClose }) {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <PictureAsPdfIcon sx={{ color: "#DC2626" }} />
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          Generate PDF Report
-        </Typography>
+        <span style={{ fontWeight: 700, fontSize: "1.25rem" }}>Generate PDF Report</span>
       </DialogTitle>
       
       <DialogContent>
