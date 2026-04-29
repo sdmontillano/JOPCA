@@ -2,26 +2,19 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export const formatCurrency = (value) => {
-  // Handle any input type - strip ALL signs and format cleanly
   let num = 0;
-  
   if (value === null || value === undefined || value === '') {
     num = 0;
   } else if (typeof value === 'number') {
     num = value;
   } else if (typeof value === 'string') {
-    // Force remove ALL of these characters at the START: ± + - 
     const cleaned = value.replace(/^[±\+\-]+/, '').trim();
-    // Also remove commas for parsing
     const withoutCommas = cleaned.replace(/,/g, '');
     num = Number(withoutCommas) || 0;
   } else {
     num = Number(value) || 0;
   }
-  
-  // Force to positive and format
   num = Math.abs(num);
-  
   return `₱${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -44,17 +37,6 @@ const PAGE_WIDTH = 210;
 const CENTER_X = PAGE_WIDTH / 2;
 const LEFT_MARGIN = 15;
 const RIGHT_MARGIN = PAGE_WIDTH - LEFT_MARGIN;
-const PAGE_BREAK_THRESHOLD = 200;
-
-// Function to check and add new page if needed before rendering table
-const checkAndAddPage = (doc, y, estimatedRows) => {
-  const estimatedHeight = estimatedRows * 6 + 45;
-  if (y + estimatedHeight > 270) {
-    doc.addPage();
-    return 20;
-  }
-  return y;
-};
 
 export const generatePdfReport = async (selectedDate, api, showToast) => {
   try {
@@ -77,18 +59,11 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const dailyData = dailyRes.data;
     const cashSummary = cashSummaryRes.data;
     
-    const collections = bankTxns.filter(t => 
-      t.type === 'collection' || t.type === 'collections'
-    );
-    const deposits = bankTxns.filter(t => 
-      t.type === 'deposit'
-    );
-    const disbursements = bankTxns.filter(t => 
-      t.type === 'disbursement' || t.type === 'withdrawal'
-    );
-    const adjustments = bankTxns.filter(t => 
-      t.type === 'adjustments' || t.type === 'adjustment_in' || t.type === 'adjustment_out'
-    );
+    const collections = bankTxns.filter(t => t.type === 'collection' || t.type === 'collections');
+    const deposits = bankTxns.filter(t => t.type === 'deposit');
+    const disbursements = bankTxns.filter(t => t.type === 'disbursement' || t.type === 'withdrawal');
+    const adjustments = bankTxns.filter(t => t.type === 'adjustments' || t.type === 'adjustment_in' || t.type === 'adjustment_out');
+    const bankCharges = bankTxns.filter(t => t.type === 'bank_charges');
     
     const totalCollection = collections.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalDeposits = deposits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -97,291 +72,40 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       if (t.type === 'adjustment_out') return sum - Number(t.amount || 0);
       return sum + Number(t.amount || 0);
     }, 0);
+    const totalBankCharges = bankCharges.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
     const pcfDisbursements = pcfTxns.filter(t => t.type === 'disbursement');
     const pcfReplenishments = pcfTxns.filter(t => t.type === 'replenishment');
-    const pcfUnreplenished = pcfTxns.filter(t => t.type === 'unreplenished');
     const pcfTotalDisb = pcfDisbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const pcfTotalRep = pcfReplenishments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
     const doc = new jsPDF();
     let y = 20;
     
-    // Header
+    // =============================================
+    // PAGE 1: CASH IN BANK
+    // =============================================
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("JOPCA DAILY REPORT", CENTER_X, y, { align: "center" });
+    doc.text("JOPCA CASH IN BANK", CENTER_X, y, { align: "center" });
     y += 8;
-    
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
-    doc.text(`Date: ${formattedDate}`, CENTER_X, y, { align: "center" });
-    y += 10;
-    
-    doc.setLineWidth(0.3);
+    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+    y += 15;
+    doc.setLineWidth(0.5);
     doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
-    y += 10;
-    
-    // Section 1: TOTAL COLLECTION
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("1. TOTAL COLLECTION", CENTER_X, y, { align: "center" });
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total: ${formatCurrency(totalCollection)}  (${collections.length} transactions)`, CENTER_X, y, { align: "center" });
-    y += 5;
-    
-    if (collections.length > 0) {
-      y = checkAndAddPage(doc, y, collections.length);
-      
-      const tableData = collections.map(t => [
-        t.date ? formatDate(t.date) : "-",
-        t.bank_name || "-",
-        t.type?.replace("_", " ") || "-",
-        t.description || "-",
-        formatCurrency(t.amount)
-      ]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Date", "Bank", "Type", "Description", "Amount"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
-        columnStyles: { 4: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    } else {
-      doc.text("(No collection transactions)", CENTER_X, y, { align: "center" });
-      y += 10;
-    }
-    
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 1B: TOTAL DEPOSIT
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("1B. TOTAL DEPOSIT", CENTER_X, y, { align: "center" });
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total: ${formatCurrency(totalDeposits)}  (${deposits.length} transactions)`, CENTER_X, y, { align: "center" });
-    y += 5;
-    
-    if (deposits.length > 0) {
-      y = checkAndAddPage(doc, y, deposits.length);
-      
-      const depositTable = deposits.map(t => [
-        t.date ? formatDate(t.date) : "-",
-        t.bank_name || "-",
-        t.type?.replace("_", " ") || "-",
-        t.description || "-",
-        formatCurrency(t.amount)
-      ]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Date", "Bank", "Type", "Description", "Amount"]],
-        body: depositTable,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
-        columnStyles: { 4: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    } else {
-      doc.text("(No deposit transactions)", CENTER_X, y, { align: "center" });
-      y += 10;
-    }
-    
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 2: TOTAL DISBURSEMENT
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("2. TOTAL DISBURSEMENT", CENTER_X, y, { align: "center" });
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total: ${formatCurrency(totalDisbursement)}  (${disbursements.length} transactions)`, CENTER_X, y, { align: "center" });
-    y += 5;
-    
-    if (disbursements.length > 0) {
-      y = checkAndAddPage(doc, y, disbursements.length);
-      
-      const tableData = disbursements.map(t => [
-        t.date ? formatDate(t.date) : "-",
-        t.bank_name || "-",
-        t.type?.replace("_", " ") || "-",
-        t.description || "-",
-        formatCurrency(t.amount)
-      ]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Date", "Bank", "Type", "Description", "Amount"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
-        columnStyles: { 4: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    } else {
-      doc.text("(No disbursement transactions)", CENTER_X, y, { align: "center" });
-      y += 10;
-    }
-    
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 3: TOTAL ADJUSTMENTS
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("3. TOTAL ADJUSTMENTS", CENTER_X, y, { align: "center" });
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total: ${formatCurrency(totalAdjustments)}  (${adjustments.length} transactions)`, CENTER_X, y, { align: "center" });
-    y += 5;
-    
-    if (adjustments.length > 0) {
-      y = checkAndAddPage(doc, y, adjustments.length);
-      
-      const tableData = adjustments.map(t => [
-        t.date ? formatDate(t.date) : "-",
-        t.bank_name || "-",
-        t.type?.replace("_", " ") || "-",
-        t.description || "-",
-        formatCurrency(t.amount)
-      ]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Date", "Bank", "Type", "Description", "Amount"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
-        columnStyles: { 4: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    } else {
-      doc.text("(No adjustment transactions)", CENTER_X, y, { align: "center" });
-      y += 10;
-    }
-    
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 4: PCF TRANSACTIONS
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("4. PCF TRANSACTIONS", CENTER_X, y, { align: "center" });
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Disbursements: ${formatCurrency(pcfTotalDisb)}  |  Replenishments: ${formatCurrency(pcfTotalRep)}`, CENTER_X, y, { align: "center" });
-    y += 5;
-    
-    if (pcfTxns.length > 0) {
-      y = checkAndAddPage(doc, y, pcfTxns.length);
-      
-      const tableData = pcfTxns.map(t => [
-        t.date ? formatDate(t.date) : "-",
-        t.pcf_name || t.pcf?.name || "-",
-        t.location || "-",
-        t.type?.replace("_", " ") || "-",
-        t.description || "-",
-        formatCurrency(t.amount)
-      ]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Date", "PCF Name", "Location", "Type", "Description", "Amount"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
-        columnStyles: { 5: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    } else {
-      doc.text("(No PCF transactions)", CENTER_X, y, { align: "center" });
-      y += 10;
-    }
-    
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 5: PDC TRANSACTIONS
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("5. PDC TRANSACTIONS", CENTER_X, y, { align: "center" });
-    y += 8;
-    
-    const pdcMatured = pdcTxns.filter(p => p.status === 'matured').length;
-    const pdcDeposited = pdcTxns.filter(p => p.status === 'deposited').length;
-    const pdcPending = pdcTxns.filter(p => !p.status || p.status === 'pending').length;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Matured: ${pdcMatured}  |  Deposited: ${pdcDeposited}  |  Pending: ${pdcPending}`, CENTER_X, y, { align: "center" });
-    y += 5;
-    
-    if (pdcTxns.length > 0) {
-      y = checkAndAddPage(doc, y, pdcTxns.length);
-      
-      const tableData = pdcTxns.slice(0, 30).map(p => [
-        p.check_no || "-",
-        p.bank_name || "-",
-        formatCurrency(p.amount),
-        p.status || "pending",
-        p.maturity_date ? formatDate(p.maturity_date) : "-"
-      ]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Check #", "Bank", "Amount", "Status", "Maturity Date"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
-        columnStyles: { 2: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    } else {
-      doc.text("(No PDC transactions)", CENTER_X, y, { align: "center" });
-      y += 10;
-    }
-    
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 6: CASH IN BANKS
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("6. CASH IN BANKS", CENTER_X, y, { align: "center" });
     y += 10;
     
     const accounts = dailyData?.accounts || [];
     if (accounts.length > 0) {
-      y = checkAndAddPage(doc, y, accounts.length);
-      
-      const bankTable = accounts.map(a => [
-        a.name || "-",
-        a.account_number || "-",
-        formatCurrency(a.balance)
-      ]);
+      let bankTotal = 0;
+      const bankTable = accounts.map(a => {
+        const bal = Number(a.balance || 0);
+        bankTotal += bal;
+        return [a.name || "-", a.account_number || "-", formatCurrency(bal)];
+      });
+      bankTable.push(["GRAND TOTAL", "", formatCurrency(bankTotal)]);
       
       autoTable(doc, {
         startY: y,
@@ -389,90 +113,235 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         body: bankTable,
         theme: "striped",
         headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 9, hAlign: "center" },
+        styles: { fontSize: 10, hAlign: "center" },
         columnStyles: { 2: { hAlign: "right" } },
+        margin: { left: 30, right: 30 }
+      });
+    }
+    
+    // =============================================
+    // PAGE 2: MONTHLY REPORT
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("JOPCA MONTHLY REPORT", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${formattedDate}`, CENTER_X, y, { align: "center" });
+    y += 15;
+    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
+    y += 10;
+    
+    // COLLECTION Section
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("COLLECTION", LEFT_MARGIN, y);
+    doc.text(`Total: ${formatCurrency(totalCollection)}`, RIGHT_MARGIN, y, { align: "right" });
+    y += 8;
+    if (collections.length > 0) {
+      const tableData = collections.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.description || "-", formatCurrency(t.amount)]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [22, 101, 52], hAlign: "center" },
+        styles: { fontSize: 8, hAlign: "center" },
+        columnStyles: { 3: { hAlign: "right" } },
         margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
       });
       y = doc.lastAutoTable.finalY + 8;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("(No collection)", LEFT_MARGIN, y);
+      y += 8;
     }
     
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 7: PCF CASH SUMMARY
+    // DISBURSEMENT Section
+    y += 5;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("7. PCF CASH SUMMARY", CENTER_X, y, { align: "center" });
+    doc.text("DISBURSEMENT", LEFT_MARGIN, y);
+    doc.text(`Total: ${formatCurrency(totalDisbursement)}`, RIGHT_MARGIN, y, { align: "right" });
+    y += 8;
+    if (disbursements.length > 0) {
+      const tableData = disbursements.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.description || "-", formatCurrency(t.amount)]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [153, 27, 27], hAlign: "center" },
+        styles: { fontSize: 8, hAlign: "center" },
+        columnStyles: { 3: { hAlign: "right" } },
+        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("(No disbursement)", LEFT_MARGIN, y);
+      y += 8;
+    }
+    
+    // PCF TRANSACTIONS Section
+    y += 5;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("PCF TRANSACTIONS", LEFT_MARGIN, y);
+    doc.text(`Disb: ${formatCurrency(pcfTotalDisb)} | Rep: ${formatCurrency(pcfTotalRep)}`, RIGHT_MARGIN, y, { align: "right" });
+    y += 8;
+    if (pcfTxns.length > 0) {
+      const tableData = pcfTxns.map(t => [t.date ? formatDate(t.date) : "-", t.pcf_name || t.pcf?.name || "-", t.type?.replace("_", " ") || "-", t.description || "-", formatCurrency(t.amount)]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "PCF Name", "Type", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [124, 58, 237], hAlign: "center" },
+        styles: { fontSize: 8, hAlign: "center" },
+        columnStyles: { 4: { hAlign: "right" } },
+        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("(No PCF transactions)", LEFT_MARGIN, y);
+      y += 8;
+    }
+    
+    // ADJUSTMENTS Section
+    y += 5;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("ADJUSTMENTS", LEFT_MARGIN, y);
+    doc.text(`Total: ${formatCurrency(totalAdjustments)}`, RIGHT_MARGIN, y, { align: "right" });
+    y += 8;
+    if (adjustments.length > 0) {
+      const tableData = adjustments.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.type?.replace("_", " ") || "-", t.description || "-", formatCurrency(t.amount)]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Type", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [180, 83, 9], hAlign: "center" },
+        styles: { fontSize: 8, hAlign: "center" },
+        columnStyles: { 4: { hAlign: "right" } },
+        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("(No adjustments)", LEFT_MARGIN, y);
+      y += 8;
+    }
+    
+    // BANK CHARGES Section
+    y += 5;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("BANK CHARGES", LEFT_MARGIN, y);
+    doc.text(`Total: ${formatCurrency(totalBankCharges)}`, RIGHT_MARGIN, y, { align: "right" });
+    y += 8;
+    if (bankCharges.length > 0) {
+      const tableData = bankCharges.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.description || "-", formatCurrency(t.amount)]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [107, 114, 128], hAlign: "center" },
+        styles: { fontSize: 8, hAlign: "center" },
+        columnStyles: { 3: { hAlign: "right" } },
+        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("(No bank charges)", LEFT_MARGIN, y);
+      y += 8;
+    }
+    
+    // =============================================
+    // PAGE 3: PCF
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("JOPCA PCF", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+    y += 15;
+    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
     y += 10;
     
     const pcfs = dailyData?.cash_on_hand || [];
     if (pcfs.length > 0) {
-      y = checkAndAddPage(doc, y, pcfs.length);
-      
-      const pcfTable = pcfs.map(p => [
-        p.pcf_name || "-",
-        p.location || "-",
-        formatCurrency(p.beginning_balance || 0),
-        formatCurrency(p.disbursements || 0),
-        formatCurrency(p.replenishments || 0),
-        formatCurrency(p.ending_balance || 0)
-      ]);
+      let pcfTotal = 0;
+      const pcfTable = pcfs.map(p => {
+        const endBal = Number(p.ending_balance || 0);
+        pcfTotal += endBal;
+        return [p.pcf_name || "-", p.location || "-", formatCurrency(p.beginning_balance || 0), formatCurrency(p.disbursements || 0), formatCurrency(p.replenishments || 0), formatCurrency(endBal)];
+      });
+      pcfTable.push(["GRAND TOTAL", "", "", "", "", formatCurrency(pcfTotal)]);
       
       autoTable(doc, {
         startY: y,
         head: [["PCF Name", "Location", "Beginning", "Disb", "Rep", "Ending"]],
         body: pcfTable,
         theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 8, hAlign: "center" },
+        headStyles: { fillColor: [124, 58, 237], hAlign: "center" },
+        styles: { fontSize: 10, hAlign: "center" },
         columnStyles: { 2: { hAlign: "right" }, 3: { hAlign: "right" }, 4: { hAlign: "right" }, 5: { hAlign: "right" } },
-        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
+        margin: { left: 25, right: 25 }
       });
-      y = doc.lastAutoTable.finalY + 8;
     }
     
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 8: CASH POSITION SUMMARY
-    doc.setFontSize(14);
+    // =============================================
+    // PAGE 4: CASH SUMMARY
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("8. CASH POSITION SUMMARY", CENTER_X, y, { align: "center" });
+    doc.text("JOPCA CASH SUMMARY", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+    y += 15;
+    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
     y += 10;
     
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("JOPCA CORPORATION", CENTER_X, y, { align: "center" });
-    y += 6;
-    doc.setFont("helvetica", "normal");
-    doc.text("CASH POSITION SUMMARY", CENTER_X, y, { align: "center" });
-    y += 5;
-    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
-    y += 12;
-    
     if (cashSummary && cashSummary.areas) {
-      y = checkAndAddPage(doc, y, Object.keys(cashSummary.areas).length + 2);
-      
-      const areaData = [];
       let mainOfficeTotal = 0;
       let partsTotal = 0;
+      const areaData = [];
       
       for (const [areaCode, areaDataObj] of Object.entries(cashSummary.areas)) {
         if (areaDataObj.banks && areaDataObj.banks.length > 0) {
-          const areaName = areaDataObj.display_name || areaCode;
           const areaTotalVal = areaDataObj.total || 0;
           const mainOfficeVal = areaDataObj.is_part ? "-" : formatCurrency(areaTotalVal);
           const partsVal = areaDataObj.is_part ? formatCurrency(areaTotalVal) : "-";
           
-          areaData.push([areaName, mainOfficeVal, partsVal, formatCurrency(areaTotalVal)]);
+          if (!areaDataObj.is_part) mainOfficeTotal += areaTotalVal;
+          if (areaDataObj.is_part) partsTotal += areaTotalVal;
           
-          if (areaDataObj.is_part) {
-            partsTotal += areaTotalVal;
-          } else {
-            mainOfficeTotal += areaTotalVal;
-          }
+          areaData.push([areaDataObj.display_name || areaCode, mainOfficeVal, partsVal, formatCurrency(areaTotalVal)]);
         }
       }
       
-      const grandTotalVal = cashSummary.grand_total || 0;
+      const grandTotalVal = mainOfficeTotal + partsTotal;
       areaData.push(["GRAND TOTAL", formatCurrency(mainOfficeTotal), formatCurrency(partsTotal), formatCurrency(grandTotalVal)]);
       
       autoTable(doc, {
@@ -481,124 +350,53 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         body: areaData,
         theme: "striped",
         headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 9, hAlign: "center" },
+        styles: { fontSize: 10, hAlign: "center" },
         columnStyles: { 1: { hAlign: "right" }, 2: { hAlign: "right" }, 3: { hAlign: "right" } },
-        margin: { left: 35, right: 35 }
+        margin: { left: 40, right: 40 }
+      });
+      y = doc.lastAutoTable.finalY + 15;
+    }
+    
+    // PAYABLES
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("PAYABLES:", LEFT_MARGIN, y);
+    y += 8;
+    
+    if (cashSummary && cashSummary.payables) {
+      const payables = cashSummary.payables;
+      const mainDisb = payables.main_office?.disbursements_today || 0;
+      const mainChecks = payables.main_office?.outstanding_checks || 0;
+      const partsDisb = payables.parts?.disbursements_today || 0;
+      const partsChecks = payables.parts?.outstanding_checks || 0;
+      
+      const payablesData = [
+        ["Total Disb. for Today", formatCurrency(mainDisb + partsDisb)],
+        ["Outstanding Checks Due", formatCurrency(mainChecks + partsChecks)],
+        ["GRAND TOTAL", formatCurrency(mainDisb + partsDisb + mainChecks + partsChecks)]
+      ];
+      
+      autoTable(doc, {
+        startY: y,
+        head: [["Description", "Total"]],
+        body: payablesData,
+        theme: "striped",
+        headStyles: { fillColor: [180, 83, 9], hAlign: "center" },
+        styles: { fontSize: 10 },
+        margin: { left: LEFT_MARGIN, right: 100 }
       });
       y = doc.lastAutoTable.finalY + 10;
     }
     
-    if (cashSummary && cashSummary.payables) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("PAYABLES:", LEFT_MARGIN, y);
-      y += 6;
-      
-      const payables = cashSummary.payables;
-      const totalDisbToday = (payables.main_office?.disbursements_today || 0) + (payables.parts?.disbursements_today || 0);
-      const totalChecks = (payables.main_office?.outstanding_checks || 0) + (payables.parts?.outstanding_checks || 0);
-      const payablesTotal = totalDisbToday + totalChecks;
-      
-      doc.setFont("helvetica", "normal");
-      doc.text(`Description`, LEFT_MARGIN, y);
-      doc.text(`MAIN OFFICE`, LEFT_MARGIN + 50, y);
-      doc.text(`PARTS`, LEFT_MARGIN + 90, y);
-      doc.text(`TOTAL`, LEFT_MARGIN + 130, y, { align: "right" });
-      y += 6;
-      
-      doc.text(`Total Disb. for Today`, LEFT_MARGIN, y);
-      doc.text(formatCurrency(payables.main_office?.disbursements_today || 0), LEFT_MARGIN + 50, y);
-      doc.text(formatCurrency(payables.parts?.disbursements_today || 0), LEFT_MARGIN + 90, y);
-      doc.text(formatCurrency(totalDisbToday), LEFT_MARGIN + 130, y, { align: "right" });
-      y += 6;
-      
-      doc.text(`Outstanding Checks Due`, LEFT_MARGIN, y);
-      doc.text(formatCurrency(payables.main_office?.outstanding_checks || 0), LEFT_MARGIN + 50, y);
-      doc.text(formatCurrency(payables.parts?.outstanding_checks || 0), LEFT_MARGIN + 90, y);
-      doc.text(formatCurrency(totalChecks), LEFT_MARGIN + 130, y, { align: "right" });
-      y += 6;
-      
-      doc.setFont("helvetica", "bold");
-      doc.text(`GRAND TOTAL`, LEFT_MARGIN, y);
-      doc.text(formatCurrency(totalDisbToday + totalChecks), LEFT_MARGIN + 130, y, { align: "right" });
-      y += 10;
-    }
-    
+    // NET BALANCE
     if (cashSummary && cashSummary.net_balance) {
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
       const netBalance = cashSummary.net_balance.total || cashSummary.grand_total || 0;
-      doc.text(`NET BALANCE: ${formatCurrency(netBalance)}`, LEFT_MARGIN + 130, y, { align: "right" });
-      y += 15;
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(`NET BALANCE: ${formatCurrency(netBalance)}`, LEFT_MARGIN, y);
     }
     
-    if (y > 250) { doc.addPage(); y = 20; }
-    
-    // Section 9: ANALYSIS
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("9. ANALYSIS", CENTER_X, y, { align: "center" });
-    y += 10;
-    
-    const netBank = totalCollection - totalDisbursement + totalAdjustments;
-    const grandTotal = netBank + (pcfTotalRep - pcfTotalDisb);
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("SUMMARY:", LEFT_MARGIN, y);
-    y += 7;
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Collections:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(totalCollection), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 6;
-    
-    doc.text(`Total Disbursements:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(totalDisbursement), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 6;
-    
-    doc.text(`Total Adjustments:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(totalAdjustments), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 6;
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(`Net Bank:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(netBank), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 8;
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(`PCF Disbursements:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(pcfTotalDisb), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 6;
-    
-    doc.text(`PCF Replenishments:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(pcfTotalRep), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 6;
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(`PCF Net:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(pcfTotalRep - pcfTotalDisb), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 8;
-    
-    doc.setFontSize(11);
-    doc.text(`GRAND TOTAL:`, LEFT_MARGIN, y);
-    doc.text(formatCurrency(grandTotal), LEFT_MARGIN + 130, y, { align: "right" });
-    y += 15;
-    
-    // Footer
-    doc.setLineWidth(0.3);
-    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
-    y += 10;
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Prepared by:`, LEFT_MARGIN, y);
-    y += 6;
-    doc.text(`Approved by:`, LEFT_MARGIN, y);
-    y += 8;
-    
-    doc.text(`Generated: ${formatDateTime(new Date().toISOString())}`, CENTER_X, y, { align: "center" });
-    
+    // Save the PDF
     const fileName = `jopca-report-${dateStr}.pdf`;
     doc.save(fileName);
     
