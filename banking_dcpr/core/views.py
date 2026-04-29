@@ -1761,6 +1761,17 @@ def pdc_alerts(request):
     
     for pdc in upcoming_pdcs:
         days_until = (pdc.maturity_date - today).days
+        
+        # Dynamic warning label based on days until maturity
+        if days_until == 3:
+            warning_label = "3 days warning"
+        elif days_until == 2:
+            warning_label = "2 days warning"
+        elif days_until == 1:
+            warning_label = "1 day warning"
+        else:
+            warning_label = f"{days_until} days warning"
+            
         alerts.append({
             'id': f'pdc_{pdc.id}_maturing',
             'pdc_id': pdc.id,
@@ -1768,8 +1779,8 @@ def pdc_alerts(request):
             'maturity_date': pdc.maturity_date.strftime('%Y-%m-%d'),
             'days_until': days_until,
             'type': 'pdc_maturing_soon',
-            'severity': 'warning' if days_until > 0 else 'error',
-            'message': f'PDC {pdc.check_no} matures in {days_until} day(s) ({pdc.maturity_date.strftime("%b %d, %Y")})',
+            'severity': 'warning' if days_until > 1 else ('warning' if days_until == 1 else 'error'),
+            'message': f'PDC {pdc.check_no} matures in {days_until} day(s) ({pdc.maturity_date.strftime("%b %d, %Y")}) - {warning_label}',
         })
     
     # Also get overdue PDCs (past maturity but still outstanding) - exclude already matured

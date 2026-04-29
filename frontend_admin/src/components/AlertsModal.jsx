@@ -124,7 +124,10 @@ const AlertsModal = ({ open, onClose }) => {
                       />
                     </ListItem>
                   ))}
-                  {pdcMaturing.map((alert, idx) => (
+                  {pdcMaturing.map((alert, idx) => {
+                    const daysUntil = alert.days_until || 0;
+                    const warningColor = daysUntil <= 1 ? '#d32f2f' : daysUntil <= 2 ? '#ed6c02' : '#ff9800';
+                    return (
                     <ListItem key={`pm-${idx}`} sx={{ bgcolor: '#fff3e0', borderRadius: 1, mb: 1 }}>
                       <ListItemIcon>
                         <EventNoteIcon sx={{ color: '#ed6c02' }} />
@@ -134,12 +137,17 @@ const AlertsModal = ({ open, onClose }) => {
                         secondary={
                           <Box component="span">
                             {alert.message}
-                            <Chip label="3 days warning" size="small" sx={{ ml: 1, bgcolor: '#ff9800', color: 'white', fontSize: '0.65rem' }} />
+                            <Chip 
+                              label={daysUntil === 1 ? "1 day warning" : `${daysUntil} days warning`} 
+                              size="small" 
+                              sx={{ ml: 1, bgcolor: warningColor, color: 'white', fontSize: '0.65rem' }} 
+                            />
                           </Box>
                         }
                       />
                     </ListItem>
-                  ))}
+                    );
+                  })}
                   {pdcOverdue.map((alert, idx) => (
                     <ListItem key={`po-${idx}`} sx={{ bgcolor: '#ffebee', borderRadius: 1, mb: 1 }}>
                       <ListItemIcon>
