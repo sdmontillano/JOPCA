@@ -33,7 +33,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       api.get("/transactions/", { params: { date: dateStr } }),
       api.get("/pcf-transactions/", { params: { date: dateStr } }),
       api.get(`/summary/detailed-daily/`, { params: { date: dateStr } }),
-      api.get(`/api/summary/cash-summary/`, { params: { date: dateStr } })
+      api.get(`/summary/cash-summary/`, { params: { date: dateStr } })
     ]);
     
     const bankTxns = bankRes.data?.results || bankRes.data || [];
