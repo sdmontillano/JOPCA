@@ -32,6 +32,8 @@ import AddTransaction from "./AddTransaction";
 import AddBankAccount from "./AddBankAccount";
 import PdcCreateModal from "./PdcCreateModal";
 import AddPcfModal from "./AddPcfModal";
+import PdfReportModal from "./PdfReportModal";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -65,6 +67,7 @@ export default function Transactions() {
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
 
   // Recent tab state
   const [recentTab, setRecentTab] = useState(false);
@@ -763,6 +766,7 @@ export default function Transactions() {
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true), color: "primary.main" },
           { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true), color: "info.main" },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true), color: "secondary.main" },
+          { label: "Generate Report", icon: <PictureAsPdfIcon />, onClick: () => setPdfReportOpen(true), color: "#DC2626" },
         ]}
       />
 
@@ -792,6 +796,12 @@ export default function Transactions() {
         open={addPcfOpen}
         onClose={() => setAddPcfOpen(false)}
         onCreated={() => { setAddPcfOpen(false); }}
+      />
+
+      {/* PDF Report Modal */}
+      <PdfReportModal
+        open={pdfReportOpen}
+        onClose={() => setPdfReportOpen(false)}
       />
     </Box>
   );
