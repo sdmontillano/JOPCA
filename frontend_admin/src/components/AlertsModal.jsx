@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, List, ListItem, ListItemIcon, ListItemText,
@@ -21,10 +22,16 @@ const safeFormatCurrency = (value) => {
 };
 
 const AlertsModal = ({ open, onClose }) => {
+  const navigate = useNavigate();
   const [pcfAlerts, setPcfAlerts] = useState([]);
   const [pdcAlerts, setPdcAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const handlePdcClick = (pdcId) => {
+    onClose();
+    navigate(`/pdc/${pdcId}`);
+  };
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -114,7 +121,11 @@ const AlertsModal = ({ open, onClose }) => {
                 </Box>
                 <List dense>
                   {pdcMatured.map((alert, idx) => (
-                    <ListItem key={`pm-${idx}`} sx={{ bgcolor: '#e8f5e9', borderRadius: 1, mb: 1 }}>
+                    <ListItem 
+                      key={`pm-${idx}`} 
+                      sx={{ bgcolor: '#e8f5e9', borderRadius: 1, mb: 1, cursor: 'pointer' }}
+                      onClick={() => handlePdcClick(alert.pdc_id)}
+                    >
                       <ListItemIcon>
                         <CheckIcon sx={{ color: '#2e7d32' }} />
                       </ListItemIcon>
@@ -128,7 +139,11 @@ const AlertsModal = ({ open, onClose }) => {
                     const daysUntil = alert.days_until || 0;
                     const warningColor = daysUntil <= 1 ? '#d32f2f' : daysUntil <= 2 ? '#ed6c02' : '#ff9800';
                     return (
-                    <ListItem key={`pm-${idx}`} sx={{ bgcolor: '#fff3e0', borderRadius: 1, mb: 1 }}>
+                    <ListItem 
+                      key={`pm-${idx}`} 
+                      sx={{ bgcolor: '#fff3e0', borderRadius: 1, mb: 1, cursor: 'pointer' }}
+                      onClick={() => handlePdcClick(alert.pdc_id)}
+                    >
                       <ListItemIcon>
                         <EventNoteIcon sx={{ color: '#ed6c02' }} />
                       </ListItemIcon>
@@ -149,7 +164,11 @@ const AlertsModal = ({ open, onClose }) => {
                     );
                   })}
                   {pdcOverdue.map((alert, idx) => (
-                    <ListItem key={`po-${idx}`} sx={{ bgcolor: '#ffebee', borderRadius: 1, mb: 1 }}>
+                    <ListItem 
+                      key={`po-${idx}`} 
+                      sx={{ bgcolor: '#ffebee', borderRadius: 1, mb: 1, cursor: 'pointer' }}
+                      onClick={() => handlePdcClick(alert.pdc_id)}
+                    >
                       <ListItemIcon>
                         <ErrorIcon color="error" />
                       </ListItemIcon>
