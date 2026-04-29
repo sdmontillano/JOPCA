@@ -29,15 +29,17 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const dateStr = selectedDate;
     const formattedDate = formatDate(dateStr);
     
-    const [bankRes, pcfRes, dailyRes] = await Promise.all([
+    const [bankRes, pcfRes, dailyRes, cashSummaryRes] = await Promise.all([
       api.get("/transactions/", { params: { date: dateStr } }),
       api.get("/pcf-transactions/", { params: { date: dateStr } }),
-      api.get(`/summary/detailed-daily/`, { params: { date: dateStr } })
+      api.get(`/summary/detailed-daily/`, { params: { date: dateStr } }),
+      api.get(`/api/summary/cash-summary/`, { params: { date: dateStr } })
     ]);
     
     const bankTxns = bankRes.data?.results || bankRes.data || [];
     const pcfTxns = pcfRes.data?.results || pcfRes.data || [];
     const dailyData = dailyRes.data;
+    const cashSummary = cashSummaryRes.data;
     
     const collections = bankTxns.filter(t => 
       t.type === 'collection' || t.type === 'collections' || t.type === 'deposit'
@@ -298,6 +300,99 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.setFont("helvetica", "bold");
     doc.text(`Grand Total: ${formatCurrency(grandTotal)}`, 20, y);
     y += 15;
+    
+    if (y > 200) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    // 7. CASH POSITION SUMMARY
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("7. CASH POSITION SUMMARY", 20, y);
+    y += 8;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("JOPCA CORPORATION", 20, y);
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.text("CASH POSITION SUMMARY", 20, y);
+    y += 5;
+    doc.text(`As of: ${formattedDate}`, 20, y);
+    y += 15;
+    
+    // Area table
+    if (cashSummary && cashSummary.areas) {
+      const areaData = [];
+      let mainOfficeTotal = 0;
+      let partsTotal = 0;
+      
+      for (const [areaCode, areaDataObj] of Object.entries(cashSummary.areas)) {
+        if (areaDataObj.banks && areaDataObj.banks.length > 0) {
+          const areaName = areaDataObj.display_name || areaCode;
+          const areaTotalVal = areaDataObj.total || 0;
+          areaData.push([areaName, formatCurrency(areaTotalVal)]);
+          
+          if (areaDataObj.is_part) {
+            partsTotal += areaTotalVal;
+          } else {
+            mainOfficeTotal += areaTotalVal;
+          }
+        }
+      }
+      
+      const grandTotalVal = cashSummary.grand_total || 0;
+      areaData.push(["GRAND TOTAL", formatCurrency(grandTotalVal)]);
+      
+      autoTable(doc, {
+        startY: y,
+        head: [["AREA", "TOTAL"]],
+        body: areaData,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59] },
+        margin: { left: 20, right: 120 },
+        styles: { fontSize: 10 }
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+    
+    // Payables section
+    if (cashSummary && cashSummary.payables) {
+      const payables = cashSummary.payables;
+      const mainDisb = payables.main_office?.disbursements_today || 0;
+      const mainChecks = payables.main_office?.outstanding_checks || 0;
+      const partsDisb = payables.parts?.disbursements_today || 0;
+      const partsChecks = payables.parts?.outstanding_checks || 0;
+      
+      const totalDisbToday = mainDisb + partsDisb;
+      const totalChecks = mainChecks + partsChecks;
+      
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("PAYABLES:", 20, y);
+      y += 7;
+      
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total Disb. for Today:  ${formatCurrency(totalDisbToday)}`, 25, y);
+      y += 6;
+      doc.text(`Outstanding Checks Due:  ${formatCurrency(totalChecks)}`, 25, y);
+      y += 10;
+      
+      const payablesTotal = totalDisbToday + totalChecks;
+      doc.setFont("helvetica", "bold");
+      doc.text(`PAYABLES TOTAL: ${formatCurrency(payablesTotal)}`, 20, y);
+      y += 10;
+    }
+    
+    // Net Balance
+    if (cashSummary && cashSummary.net_balance) {
+      const netBalance = cashSummary.net_balance.total || cashSummary.grand_total || 0;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`NET BALANCE: ${formatCurrency(netBalance)}`, 20, y);
+      y += 15;
+    }
     
     doc.setLineWidth(0.5);
     doc.line(20, y, pageWidth - 20, y);
