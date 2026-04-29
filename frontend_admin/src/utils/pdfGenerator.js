@@ -66,7 +66,10 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const cashSummary = cashSummaryRes.data;
     
     const collections = bankTxns.filter(t => 
-      t.type === 'collection' || t.type === 'collections' || t.type === 'deposit'
+      t.type === 'collection' || t.type === 'collections'
+    );
+    const deposits = bankTxns.filter(t => 
+      t.type === 'deposit'
     );
     const disbursements = bankTxns.filter(t => 
       t.type === 'disbursement' || t.type === 'withdrawal'
@@ -76,6 +79,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     );
     
     const totalCollection = collections.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalDeposits = deposits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalDisbursement = disbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalAdjustments = adjustments.reduce((sum, t) => {
       if (t.type === 'adjustment_out') return sum - Number(t.amount || 0);
@@ -141,6 +145,46 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       y = doc.lastAutoTable.finalY + 8;
     } else {
       doc.text("(No collection transactions)", CENTER_X, y, { align: "center" });
+      y += 10;
+    }
+    
+    if (y > 250) { doc.addPage(); y = 20; }
+    
+    // Section 1B: TOTAL DEPOSIT
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("1B. TOTAL DEPOSIT", CENTER_X, y, { align: "center" });
+    y += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total: ${formatCurrency(totalDeposits)}  (${deposits.length} transactions)`, CENTER_X, y, { align: "center" });
+    y += 5;
+    
+    if (deposits.length > 0) {
+      y = checkAndAddPage(doc, y, deposits.length);
+      
+      const depositTable = deposits.map(t => [
+        t.date ? formatDate(t.date) : "-",
+        t.bank_name || "-",
+        t.type?.replace("_", " ") || "-",
+        t.description || "-",
+        formatCurrency(t.amount)
+      ]);
+      
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Type", "Description", "Amount"]],
+        body: depositTable,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
+        styles: { fontSize: 8, hAlign: "center" },
+        columnStyles: { 4: { hAlign: "right" } },
+        margin: { left: LEFT_MARGIN, right: LEFT_MARGIN }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    } else {
+      doc.text("(No deposit transactions)", CENTER_X, y, { align: "center" });
       y += 10;
     }
     
