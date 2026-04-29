@@ -34,6 +34,8 @@ import AddTransaction from "./AddTransaction";
 import AddBankAccount from "./AddBankAccount";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import PdfReportModal from "./PdfReportModal";
 
 export default function PcfPage() {
   const [pcfs, setPcfs] = useState([]);
@@ -43,6 +45,7 @@ export default function PcfPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addTransactionOpen, setAddTransactionOpen] = useState(false);
   const [addBankOpen, setAddBankOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
   const [recentTxns, setRecentTxns] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
 
@@ -242,11 +245,13 @@ export default function PcfPage() {
           { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setShowAddModal(true) },
+          { label: "Generate PDF Report", icon: <PictureAsPdfIcon />, onClick: () => setPdfReportOpen(true), color: "#DC2626" },
         ]}
       />
 
       <AddTransaction open={addTransactionOpen} onClose={() => setAddTransactionOpen(false)} refreshData={fetchPcfs} />
       <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchPcfs} />
+      <PdfReportModal open={pdfReportOpen} onClose={() => setPdfReportOpen(false)} />
     </Box>
   );
 }

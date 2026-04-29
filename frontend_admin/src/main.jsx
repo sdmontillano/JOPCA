@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import { AppThemeProvider } from "./ThemeContext.jsx";
 import { ToastProvider } from "./ToastContext.jsx";
 import ErrorBoundary from "./ErrorBoundary.jsx";
+import "./styles/dashboardAnimations.css";
 
 // Global error handler for uncaught errors (production safe)
 window.addEventListener('error', (event) => {

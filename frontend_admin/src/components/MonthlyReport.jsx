@@ -36,7 +36,9 @@ import AddTransaction from "./AddTransaction";
 import AddBankAccount from "./AddBankAccount";
 import PdcCreateModal from "./PdcCreateModal";
 import AddPcfModal from "./AddPcfModal";
+import PdfReportModal from "./PdfReportModal";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
 function formatCurrency(value) {
   return `₱${Number(value ?? 0).toLocaleString("en-PH", {
@@ -153,6 +155,7 @@ export default function MonthlyReport() {
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -1051,6 +1054,7 @@ export default function MonthlyReport() {
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
           { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+          { label: "Generate PDF Report", icon: <PictureAsPdfIcon />, onClick: () => setPdfReportOpen(true), color: "#DC2626" },
         ]}
       />
 
@@ -1058,6 +1062,7 @@ export default function MonthlyReport() {
       <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchReport} />
       <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchReport} />
       <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchReport} />
+      <PdfReportModal open={pdfReportOpen} onClose={() => setPdfReportOpen(false)} />
     </Box>
   );
 }

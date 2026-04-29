@@ -58,6 +58,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import PaidIcon from "@mui/icons-material/Paid";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
 import api, { unwrapResponse, getResponseCount, clearTokens } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
@@ -71,6 +72,7 @@ import PcfTable from "./PcfTable";
 import CashOnHandCollections from "./CashOnHandCollections";
 import AddPcfModal from "./AddPcfModal";
 import AlertsModal from "./AlertsModal";
+import PdfReportModal from "./PdfReportModal";
 
 import logo from "../assets/jopca-logo.png";
 
@@ -526,6 +528,7 @@ function DashboardInner() {
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [pcfModalOpen, setPcfModalOpen] = useState(false);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
   const [adminRestrictedOpen, setAdminRestrictedOpen] = useState(false);
 
   // UI states
@@ -996,6 +999,20 @@ function DashboardInner() {
               Excel
             </Button>
             <Button
+              variant="contained"
+              size="small"
+              startIcon={<PictureAsPdfIcon />}
+              onClick={() => setPdfReportOpen(true)}
+              disabled={loading}
+              sx={{ 
+                bgcolor: "#DC2626", 
+                textTransform: "none",
+                "&:hover": { bgcolor: "#B91C1C" }
+              }}
+            >
+              PDF
+            </Button>
+            <Button
               variant="outlined"
               size="small"
               onClick={() => {
@@ -1456,6 +1473,10 @@ function DashboardInner() {
             <WalletIcon sx={{ mr: 1.5, color: "secondary.main" }} />
             <Typography variant="body2" fontWeight={500}>Add PCF</Typography>
           </MenuItem>
+          <MenuItem onClick={() => { setPdfReportOpen(true); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
+            <PictureAsPdfIcon sx={{ mr: 1.5, color: "#DC2626" }} />
+            <Typography variant="body2" fontWeight={500}>Generate PDF Report</Typography>
+          </MenuItem>
         </Paper>
       </Zoom>
 
@@ -1518,6 +1539,11 @@ function DashboardInner() {
       <AlertsModal
         open={alertsModalOpen}
         onClose={() => setAlertsModalOpen(false)}
+      />
+
+      <PdfReportModal
+        open={pdfReportOpen}
+        onClose={() => setPdfReportOpen(false)}
       />
     </Box>
     </>

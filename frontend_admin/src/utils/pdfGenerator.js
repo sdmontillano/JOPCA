@@ -308,93 +308,196 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     }
     
     // =============================================
-    // PAGE 4: CASH SUMMARY
+    // PAGE 4: CASH POSITION SUMMARY (Landscape Format)
     // =============================================
-    doc.addPage();
-    y = 20;
+    doc.addPage("landscape");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const marginLeft = 14;
+    const marginRight = 14;
+    const tableWidth = pageWidth - marginLeft - marginRight;
+    y = 15;
+
+    // Header
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("JOPCA CASH SUMMARY", CENTER_X, y, { align: "center" });
-    y += 8;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
-    y += 15;
-    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
-    y += 10;
-    
-    if (cashSummary && cashSummary.areas) {
-      let mainOfficeTotal = 0;
-      let partsTotal = 0;
-      const areaData = [];
-      
-      for (const [areaCode, areaDataObj] of Object.entries(cashSummary.areas)) {
-        if (areaDataObj.banks && areaDataObj.banks.length > 0) {
-          const areaTotalVal = areaDataObj.total || 0;
-          const mainOfficeVal = areaDataObj.is_part ? "-" : formatCurrency(areaTotalVal);
-          const partsVal = areaDataObj.is_part ? formatCurrency(areaTotalVal) : "-";
-          
-          if (!areaDataObj.is_part) mainOfficeTotal += areaTotalVal;
-          if (areaDataObj.is_part) partsTotal += areaTotalVal;
-          
-          areaData.push([areaDataObj.display_name || areaCode, mainOfficeVal, partsVal, formatCurrency(areaTotalVal)]);
-        }
-      }
-      
-      const grandTotalVal = mainOfficeTotal + partsTotal;
-      areaData.push(["GRAND TOTAL", formatCurrency(mainOfficeTotal), formatCurrency(partsTotal), formatCurrency(grandTotalVal)]);
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["AREA", "MAIN OFFICE", "PARTS", "TOTAL"]],
-        body: areaData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], hAlign: "center" },
-        styles: { fontSize: 10, hAlign: "center" },
-        columnStyles: { 1: { hAlign: "right" }, 2: { hAlign: "right" }, 3: { hAlign: "right" } },
-        margin: { left: 40, right: 40 }
-      });
-      y = doc.lastAutoTable.finalY + 15;
-    }
-    
-    // PAYABLES
+    doc.text("JOPCA CORPORATION", pageWidth / 2, y, { align: "center" });
+    y += 7;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("PAYABLES:", LEFT_MARGIN, y);
-    y += 8;
-    
-    if (cashSummary && cashSummary.payables) {
-      const payables = cashSummary.payables;
-      const mainDisb = payables.main_office?.disbursements_today || 0;
-      const mainChecks = payables.main_office?.outstanding_checks || 0;
-      const partsDisb = payables.parts?.disbursements_today || 0;
-      const partsChecks = payables.parts?.outstanding_checks || 0;
-      
-      const payablesData = [
-        ["Total Disb. for Today", formatCurrency(mainDisb + partsDisb)],
-        ["Outstanding Checks Due", formatCurrency(mainChecks + partsChecks)],
-        ["GRAND TOTAL", formatCurrency(mainDisb + partsDisb + mainChecks + partsChecks)]
-      ];
-      
-      autoTable(doc, {
-        startY: y,
-        head: [["Description", "Total"]],
-        body: payablesData,
-        theme: "striped",
-        headStyles: { fillColor: [180, 83, 9], hAlign: "center" },
-        styles: { fontSize: 10 },
-        margin: { left: LEFT_MARGIN, right: 100 }
-      });
-      y = doc.lastAutoTable.finalY + 10;
+    doc.text("CASH POSITION SUMMARY", pageWidth / 2, y, { align: "center" });
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`As of: ${formattedDate}`, pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    // AREA Table
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    const colArea = marginLeft;
+    const colMain = marginLeft + 65;
+    const colParts = marginLeft + 125;
+    const colTotal = marginLeft + 175;
+    doc.text("AREA", colArea, y);
+    doc.text("MAIN OFFICE", colMain, y);
+    doc.text("PARTS", colParts, y);
+    doc.text("TOTAL", colTotal, y);
+    y += 2;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 6;
+
+    let mainOfficeTotal = 0;
+    let partsTotal = 0;
+    const areasData = [];
+
+    if (cashSummary && cashSummary.areas) {
+      for (const [areaCode, areaDataObj] of Object.entries(cashSummary.areas)) {
+        if (areaDataObj.banks && areaDataObj.banks.length > 0) {
+          const areaTotalVal = Number(areaDataObj.total || 0);
+          
+          if (areaDataObj.is_part) {
+            partsTotal += areaTotalVal;
+            for (const bank of areaDataObj.banks) {
+              areasData.push([
+                bank.account_number || "",
+                "-",
+                formatCurrency(bank.balance),
+                formatCurrency(bank.balance)
+              ]);
+            }
+          } else {
+            mainOfficeTotal += areaTotalVal;
+            for (const bank of areaDataObj.banks) {
+              areasData.push([
+                bank.account_number || "",
+                formatCurrency(bank.balance),
+                "-",
+                formatCurrency(bank.balance)
+              ]);
+            }
+          }
+        }
+      }
     }
-    
+
+    const cashGrandTotal = mainOfficeTotal + partsTotal;
+    areasData.push([
+      "GRAND TOTAL",
+      formatCurrency(mainOfficeTotal),
+      formatCurrency(partsTotal),
+      formatCurrency(cashGrandTotal)
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [["AREA", "MAIN OFFICE", "PARTS", "TOTAL"]],
+      body: areasData,
+      theme: "grid",
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      margin: { left: marginLeft, right: marginRight },
+      tableWidth,
+      columnStyles: {
+        0: { cellWidth: 55 },
+        1: { cellWidth: 35, hAlign: "right" },
+        2: { cellWidth: 35, hAlign: "right" },
+        3: { cellWidth: 35, hAlign: "right" },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+
+    // PAYABLES Section
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("PAYABLES:", marginLeft, y);
+    y += 6;
+
+    const mainDisb = cashSummary?.payables?.main_office?.disbursements_today || 0;
+    const mainChecks = cashSummary?.payables?.main_office?.outstanding_checks || 0;
+    const partsDisb = cashSummary?.payables?.parts?.disbursements_today || 0;
+    const partsChecks = cashSummary?.payables?.parts?.outstanding_checks || 0;
+
+    const payablesData = [
+      [
+        "Total Disb. for Today",
+        formatCurrency(mainDisb),
+        formatCurrency(partsDisb),
+        formatCurrency(mainDisb + partsDisb)
+      ],
+      [
+        "Outstanding Checks Due",
+        mainChecks > 0 ? formatCurrency(mainChecks) : "-",
+        partsChecks > 0 ? formatCurrency(partsChecks) : "-",
+        (mainChecks + partsChecks) > 0 ? formatCurrency(mainChecks + partsChecks) : "-"
+      ],
+      [
+        "GRAND TOTAL",
+        formatCurrency(mainDisb + mainChecks),
+        formatCurrency(partsDisb + partsChecks),
+        formatCurrency(mainDisb + mainChecks + partsDisb + partsChecks)
+      ],
+    ];
+
+    autoTable(doc, {
+      startY: y,
+      head: [["DESCRIPTION", "MAIN OFFICE", "PARTS", "TOTAL"]],
+      body: payablesData,
+      theme: "grid",
+      headStyles: { fillColor: [180, 83, 9], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      margin: { left: marginLeft, right: marginRight },
+      tableWidth,
+      columnStyles: {
+        0: { cellWidth: 55 },
+        1: { cellWidth: 35, hAlign: "right" },
+        2: { cellWidth: 35, hAlign: "right" },
+        3: { cellWidth: 35, hAlign: "right" },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+
     // NET BALANCE
-    if (cashSummary && cashSummary.net_balance) {
-      const netBalance = cashSummary.net_balance.total || cashSummary.grand_total || 0;
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(`NET BALANCE: ${formatCurrency(netBalance)}`, LEFT_MARGIN, y);
-    }
+    const netMainOffice = mainOfficeTotal - (mainDisb + mainChecks);
+    const netParts = partsTotal - (partsDisb + partsChecks);
+    const netBalanceTotal = netMainOffice + netParts;
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("NET BALANCE:", marginLeft, y);
+    y += 5;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["NET BALANCE", "", "", ""]],
+      body: [[
+        "",
+        formatCurrency(netMainOffice),
+        formatCurrency(netParts),
+        formatCurrency(netBalanceTotal)
+      ]],
+      theme: "grid",
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontSize: 10, hAlign: "left" },
+      bodyStyles: { fontSize: 10, fontStyle: "bold" },
+      margin: { left: marginLeft, right: marginRight },
+      tableWidth,
+      columnStyles: {
+        0: { cellWidth: 55 },
+        1: { cellWidth: 35, hAlign: "right" },
+        2: { cellWidth: 35, hAlign: "right" },
+        3: { cellWidth: 35, hAlign: "right" },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+
+    // Signatures
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    const userName = localStorage.getItem("userName") || "User";
+    doc.text(`Prepared by: ${userName}`, marginLeft, y);
+    doc.text("Approved by: JOHN P. CABAÑOG", marginLeft + 80, y);
     
     // =============================================
     // PAGE 5: ANALYSIS

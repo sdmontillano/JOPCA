@@ -25,6 +25,8 @@ import AddBankAccount from "./AddBankAccount";
 import AddTransaction from "./AddTransaction";
 import PdcCreateModal from "./PdcCreateModal";
 import AddPcfModal from "./AddPcfModal";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import PdfReportModal from "./PdfReportModal";
 
 export default function Banks() {
   const [accounts, setAccounts] = useState([]);
@@ -33,6 +35,7 @@ export default function Banks() {
   const [addTransactionOpen, setAddTransactionOpen] = useState(false);
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -208,6 +211,7 @@ export default function Banks() {
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true), color: "primary.main" },
           { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true), color: "info.main" },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true), color: "secondary.main" },
+          { label: "Generate PDF Report", icon: <PictureAsPdfIcon />, onClick: () => setPdfReportOpen(true), color: "#DC2626" },
         ]}
       />
 
@@ -238,6 +242,7 @@ export default function Banks() {
         onClose={() => setAddPcfOpen(false)}
         onCreated={() => { setAddPcfOpen(false); }}
       />
+      <PdfReportModal open={pdfReportOpen} onClose={() => setPdfReportOpen(false)} />
     </Box>
   );
 }

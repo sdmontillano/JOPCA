@@ -42,8 +42,10 @@ import PdcCreateModal from "./PdcCreateModal";
 import AddPcfModal from "./AddPcfModal";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import WalletIcon from "@mui/icons-material/Wallet";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import PdfReportModal from "./PdfReportModal";
 
 export default function CollectCash() {
   const navigate = useNavigate();
@@ -74,6 +76,7 @@ export default function CollectCash() {
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -622,6 +625,7 @@ export default function CollectCash() {
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
           { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+          { label: "Generate PDF Report", icon: <PictureAsPdfIcon />, onClick: () => setPdfReportOpen(true), color: "#DC2626" },
         ]}
       />
 
@@ -629,6 +633,7 @@ export default function CollectCash() {
       <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchCollections} />
       <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchCollections} />
       <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchCollections} />
+      <PdfReportModal open={pdfReportOpen} onClose={() => setPdfReportOpen(false)} />
     </Box>
   );
 }

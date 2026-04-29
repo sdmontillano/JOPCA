@@ -39,6 +39,8 @@ import AddPcfModal from "./AddPcfModal";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import WalletIcon from "@mui/icons-material/Wallet";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import PdfReportModal from "./PdfReportModal";
 
 function formatCurrency(value) {
   const num = Number(value ?? 0);
@@ -424,6 +426,7 @@ export default function CashOnHandCollections({
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPdcOpen, setAddPdcOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
+  const [pdfReportOpen, setPdfReportOpen] = useState(false);
 
   const fetchApiCollections = useCallback(async () => {
     setApiLoading(true);
@@ -641,6 +644,7 @@ export default function CashOnHandCollections({
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
           { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
+          { label: "Generate PDF Report", icon: <PictureAsPdfIcon />, onClick: () => setPdfReportOpen(true), color: "#DC2626" },
         ]}
       />
 
@@ -648,6 +652,7 @@ export default function CashOnHandCollections({
       <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchApiCollections} />
       <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchApiCollections} />
       <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchApiCollections} />
+      <PdfReportModal open={pdfReportOpen} onClose={() => setPdfReportOpen(false)} />
     </>
   );
 }

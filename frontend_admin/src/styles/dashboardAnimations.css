@@ -1,0 +1,168 @@
+/* Dashboard Animations - Smooth & Responsive */
+
+/* Card hover effects */
+.dashboard-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Button click feedback */
+.MuiButtonBase-root {
+  transition: transform 0.1s ease, background-color 0.2s ease !important;
+}
+
+.MuiButtonBase-root:active {
+  transform: scale(0.97);
+}
+
+/* Icon button click */
+.MuiIconButton-root {
+  transition: transform 0.1s ease, background-color 0.2s ease !important;
+}
+
+.MuiIconButton-root:active {
+  transform: scale(0.95);
+}
+
+/* Table row hover */
+.MuiTableRow-root {
+  transition: background-color 0.15s ease !important;
+}
+
+.MuiTableRow-root:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Paper/Card fade in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* Smooth transitions for all interactive elements */
+.MuiPaper-root {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* Menu animations */
+.MuiMenu-paper {
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+/* Modal animations */
+.MuiDialog-paper {
+  transition: transform 0.3s ease, opacity 0.3s ease !important;
+}
+
+/* Tab transitions */
+.MuiTab-root {
+  transition: background-color 0.2s ease, color 0.2s ease !important;
+}
+
+/* Chip animations */
+.MuiChip-root {
+  transition: transform 0.1s ease, box-shadow 0.2s ease !important;
+}
+
+.MuiChip-root:active {
+  transform: scale(0.95);
+}
+
+/* Input focus animations */
+.MuiOutlinedInput-root {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.MuiOutlinedInput-root.Mui-focused {
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+/* Tooltip animation */
+.MuiTooltip-tooltip {
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+/* Snackbar animation */
+.MuiSnackbar-root {
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+
+/* List item animations */
+.MuiListItemButton-root {
+  transition: background-color 0.15s ease, padding-left 0.2s ease !important;
+}
+
+.MuiListItemButton-root:hover {
+  padding-left: 20px;
+}
+
+/* Scrollbar styling for dashboard */
+.dashboard-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Smooth FAB */
+.MuiFab-root {
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.MuiFab-root:hover {
+  transform: scale(1.05);
+}
+
+.MuiFab-root:active {
+  transform: scale(0.95);
+}
+
+/* Alert/Banner animations */
+.MuiAlert-root {
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+
+/* Pagination */
+.MuiPaginationItem-root {
+  transition: background-color 0.2s ease, transform 0.1s ease !important;
+}
+
+.MuiPaginationItem-root:active {
+  transform: scale(0.9);
+}
