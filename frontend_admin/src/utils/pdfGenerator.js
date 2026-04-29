@@ -396,6 +396,76 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       doc.text(`NET BALANCE: ${formatCurrency(netBalance)}`, LEFT_MARGIN, y);
     }
     
+    // =============================================
+    // PAGE 5: ANALYSIS
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("JOPCA ANALYSIS", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+    y += 15;
+    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
+    y += 10;
+    
+    const netBank = totalCollection - totalDisbursement + totalAdjustments - totalBankCharges;
+    const pcfNet = pcfTotalRep - pcfTotalDisb;
+    const grandTotal = netBank + pcfNet;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("SUMMARY", LEFT_MARGIN, y);
+    y += 10;
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    
+    // Bank Transactions
+    doc.text("Bank Transactions:", LEFT_MARGIN, y);
+    y += 8;
+    doc.text(`Total Collections:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(totalCollection), 150, y, { align: "right" });
+    y += 7;
+    doc.text(`Total Disbursements:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(totalDisbursement), 150, y, { align: "right" });
+    y += 7;
+    doc.text(`Total Adjustments:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(totalAdjustments), 150, y, { align: "right" });
+    y += 7;
+    doc.text(`Total Bank Charges:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(totalBankCharges), 150, y, { align: "right" });
+    y += 7;
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(`Net Bank:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(netBank), 150, y, { align: "right" });
+    y += 10;
+    
+    // PCF Transactions
+    doc.setFont("helvetica", "normal");
+    doc.text("PCF Transactions:", LEFT_MARGIN, y);
+    y += 8;
+    doc.text(`Total Disbursements:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(pcfTotalDisb), 150, y, { align: "right" });
+    y += 7;
+    doc.text(`Total Replenishments:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(pcfTotalRep), 150, y, { align: "right" });
+    y += 7;
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(`PCF Net:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(pcfNet), 150, y, { align: "right" });
+    y += 12;
+    
+    // Grand Total
+    doc.setFontSize(14);
+    doc.text(`GRAND TOTAL:`, LEFT_MARGIN + 10, y);
+    doc.text(formatCurrency(grandTotal), 150, y, { align: "right" });
+    
     // Save the PDF
     const fileName = `jopca-report-${dateStr}.pdf`;
     doc.save(fileName);
