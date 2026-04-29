@@ -1,15 +1,8 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const formatCurrency = (value, showSign = false) => {
+export const formatCurrency = (value) => {
   const num = Number(value ?? 0);
-  if (showSign) {
-    const sign = num >= 0 ? "+" : "-";
-    return `${sign}₱${Math.abs(num).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
   return `₱${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
