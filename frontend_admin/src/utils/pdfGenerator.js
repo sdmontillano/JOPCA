@@ -79,8 +79,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const pcfTotalDisb = pcfDisbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const pcfTotalRep = pcfReplenishments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
-    const doc = new jsPDF();
-    let y = 20;
+    const doc = new jsPDF(); let y = 20; const marginL = 20; const marginRightL = 190;
     
     // =============================================
     // PAGE 1: CASH IN BANK
@@ -313,11 +312,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // PAGE 4: CASH POSITION SUMMARY (Landscape Format)
     // =============================================
     doc.addPage("landscape");
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginL = 15;
-    const tableWidthL = pageWidth - marginL * 2;
-    y = 18;
+    const pageWidth = doc.internal.pageSize.getWidth();    const pageHeight = doc.internal.pageSize.getHeight();    const marginLP4 = 15;    const tableWidthL = pageWidth - marginLP4 * 2;    y = 18;
+    const tableWidth = tableWidthL;
 
     // Header - centered properly
     doc.setFontSize(16);
