@@ -1,6 +1,5 @@
 ﻿import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import "./../fonts/arial-normal.js";
 
 export const formatCurrency = (value) => {
   let num = 0;
@@ -16,7 +15,7 @@ export const formatCurrency = (value) => {
     num = Number(value) || 0;
   }
   num = Math.abs(num);
-  return `\u20B1${num.toLocaleString("en-PH", {
+  return `PHP ${num.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -82,25 +81,15 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     
     const doc = new jsPDF(); let y = 20; const marginL = 20; const marginRightL = 190; const textOpts = { baseline: 'top', lineHeightFactor: 1.2 };
     
-    // Register Unicode font for peso sign and special characters
-    try {
-      doc.addFileToVFS("arial.ttf", arialBase64);
-      doc.addFont("arial.ttf", "Arial", "normal");
-      doc.setFont("Arial");
-      console.log('Arial font set successfully');
-    } catch (e) {
-      console.error('Error setting Arial font:', e);
-    }
-    
     // =============================================
     // PAGE 1: CASH IN BANK
     // =============================================
     doc.setFontSize(16);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("JOPCA CASH IN BANK", CENTER_X, y, { align: "center" });
     y += 7;
     doc.setFontSize(11);
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
     y += 8;
     doc.setLineWidth(0.3);
@@ -141,11 +130,11 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.addPage();
     y = 20;
     doc.setFontSize(16);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("JOPCA MONTHLY REPORT", CENTER_X, y, { align: "center" });
     y += 7;
     doc.setFontSize(11);
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`Date: ${formattedDate}`, CENTER_X, y, { align: "center" });
     y += 8;
     doc.line(marginL, y, marginRightL, y);
@@ -153,7 +142,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     
     // COLLECTION Section
     doc.setFontSize(12);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("COLLECTION", marginL, y);
     doc.text(`Total: ${formatCurrency(totalCollection)}`, marginRightL, y, { align: "right" });
     y += 6;
@@ -176,7 +165,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
-      doc.setFont("Arial", "normal");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text("(No collection)", marginL, y);
       y += 6;
@@ -185,7 +174,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // DISBURSEMENT Section
     y += 4;
     doc.setFontSize(12);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("DISBURSEMENT", marginL, y);
     doc.text(`Total: ${formatCurrency(totalDisbursement)}`, marginRightL, y, { align: "right" });
     y += 6;
@@ -208,7 +197,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
-      doc.setFont("Arial", "normal");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text("(No disbursement)", marginL, y);
       y += 6;
@@ -217,7 +206,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // PCF TRANSACTIONS Section
     y += 4;
     doc.setFontSize(12);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("PCF TRANSACTIONS", marginL, y);
     doc.text(`Disb: ${formatCurrency(pcfTotalDisb)} | Rep: ${formatCurrency(pcfTotalRep)}`, marginRightL, y, { align: "right" });
     y += 6;
@@ -241,7 +230,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
-      doc.setFont("Arial", "normal");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text("(No PCF transactions)", marginL, y);
       y += 6;
@@ -250,7 +239,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // ADJUSTMENTS Section
     y += 4;
     doc.setFontSize(12);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("ADJUSTMENTS", marginL, y);
     doc.text(`Total: ${formatCurrency(totalAdjustments)}`, marginRightL, y, { align: "right" });
     y += 6;
@@ -274,7 +263,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
-      doc.setFont("Arial", "normal");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text("(No adjustments)", marginL, y);
       y += 6;
@@ -283,7 +272,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // BANK CHARGES Section
     y += 4;
     doc.setFontSize(12);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("BANK CHARGES", marginL, y);
     doc.text(`Total: ${formatCurrency(totalBankCharges)}`, marginRightL, y, { align: "right" });
     y += 6;
@@ -306,7 +295,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
-      doc.setFont("Arial", "normal");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text("(No bank charges)", marginL, y);
       y += 6;
@@ -318,11 +307,11 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.addPage();
     y = 20;
     doc.setFontSize(16);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("JOPCA PCF", CENTER_X, y, { align: "center" });
     y += 7;
     doc.setFontSize(11);
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
     y += 8;
     doc.line(marginL, y, marginRightL, y);
@@ -366,21 +355,21 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
 
     // Header - centered properly
     doc.setFontSize(16);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("JOPCA CORPORATION", pageWidth / 2, y, { align: "center" });
     y += 6;
     doc.setFontSize(13);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("CASH POSITION SUMMARY", pageWidth / 2, y, { align: "center" });
     y += 5;
     doc.setFontSize(9);
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`As of: ${formattedDate}`, pageWidth / 2, y, { align: "center" });
     y += 8;
     
     // Section header - AREA table
     doc.setFontSize(10);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
     doc.text("AREA", marginL, y);
     doc.text("MAIN OFFICE", marginL + 55, y);
@@ -461,7 +450,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
 
     // PAYABLES Section
     doc.setFontSize(10);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
     doc.text("PAYABLES:", marginL, y);
     y += 6;
@@ -523,7 +512,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const netBalanceTotal = netMainOffice + netParts;
 
     doc.setFontSize(10);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
     doc.text("NET BALANCE:", marginL, y);
     y += 5;
@@ -554,7 +543,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
 
     // Signatures section
     doc.setFontSize(9);
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
     const userName = localStorage.getItem("userName") || "User";
     doc.text(`Prepared by: ${userName}`, marginL, y);
@@ -566,11 +555,11 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.addPage();
     y = 20;
     doc.setFontSize(16);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("JOPCA ANALYSIS", CENTER_X, y, { align: "center" });
     y += 7;
     doc.setFontSize(11);
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
     y += 8;
     doc.line(marginL, y, marginRightL, y);
@@ -581,29 +570,29 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const grandTotal = netBank + pcfNet;
     
     doc.setFontSize(11);
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("SUMMARY", marginL, y);
     y += 6;
     
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     
     // Bank Transactions
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("Bank Transactions:", marginL, y);
     y += 6;
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`Total Collections:`, marginL + 8, y);
     doc.text(formatCurrency(totalCollection), marginRightL + 40, y, { align: "right" });
     y += 5;
     
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text(`Net Bank:`, marginL + 8, y);
     doc.text(formatCurrency(netBank), marginRightL + 40, y, { align: "right" });
     y += 8;
     
     // PCF Transactions
-    doc.setFont("Arial", "normal");
+    doc.setFont("helvetica", "normal");
     doc.text("PCF Transactions:", marginL, y);
     y += 6;
     doc.text(`Total Disbursements:`, marginL + 8, y);
@@ -613,7 +602,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(formatCurrency(pcfTotalRep), marginRightL + 40, y, { align: "right" });
     y += 5;
     
-    doc.setFont("Arial", "bold");
+    doc.setFont("helvetica", "bold");
     doc.text(`PCF Net:`, marginL + 8, y);
     doc.text(formatCurrency(pcfNet), marginRightL + 40, y, { align: "right" });
     y += 8;
@@ -635,4 +624,5 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     return false;
   }
 };
+
 
