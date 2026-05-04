@@ -552,10 +552,337 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
      showToast("Report generated successfully!", "success");
      return true;
    } catch (error) {
-     console.error("Error generating PDF report:", error);
-     showToast("Failed to generate report. Please try again.", "error");
-     return false;
-   }
- };
+      console.error("Error generating PDF report:", error);
+      showToast("Failed to generate report. Please try again.", "error");
+      return false;
+    }
+  };
+
+export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) => {
+  try {
+    showToast("Generating monthly PDF report...", "info");
+
+    const doc = new jsPDF();
+    let y = 20;
+    const marginL = 20;
+    const marginRightL = 190;
+    const CENTER_X = 105;
+
+    const formattedMonth = new Date(selectedMonth + "-01").toLocaleDateString("en-PH", {
+      month: "long",
+      year: "numeric"
+    });
+
+    // =============================================
+    // PAGE 1: MONTHLY REPORT - HEADER + SUMMARY
+    // =============================================
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("JOPCA MONTHLY REPORT", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
+    y += 12;
+
+    // Summary KPIs
+    const summary = data.summary || {};
+    const kpis = [
+      ["Collections", summary.monthly_collections || 0, [22, 101, 52]],
+      ["Undeposited Cash", summary.undeposited_total || 0, [180, 83, 9]],
+      ["Bank Inflows", summary.bank_inflows || 0, [22, 101, 52]],
+      ["Bank Outflows", summary.bank_outflows || 0, [153, 27, 27]],
+      ["Bank Net", summary.bank_net || 0, [30, 41, 59]],
+      ["PCF Disbursements", summary.pcf_total_disbursements || 0, [124, 58, 237]],
+      ["PCF Replenishments", summary.pcf_total_replenishments || 0, [124, 58, 237]],
+    ];
+
+    // Draw KPI cards
+    kpis.forEach(([label, value, color]) => {
+      doc.setFillColor(...color);
+      doc.rect(marginL, y, 170, 12, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.text(label, marginL + 3, y + 4);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatCurrency(value), marginRightL, y + 4, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      y += 14;
+    });
+
+    doc.setTextColor(0, 0, 0);
+
+    // =============================================
+    // PAGE 2: BANK BALANCE SUMMARY
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("BANK BALANCE SUMMARY", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
+    y += 10;
+
+    const balanceSummary = data.bank_balance_summary || [];
+    if (balanceSummary.length > 0) {
+      const tableData = balanceSummary.map(b => [
+        b.bank_name || "-",
+        b.account_number || "-",
+        b.location || "-",
+        formatCurrency(b.beginning_balance || 0),
+        formatCurrency(b.collections || 0),
+        formatCurrency(b.local_deposits || 0),
+        formatCurrency(b.inflows || 0),
+        formatCurrency(b.outflows || 0),
+        formatCurrency(b.net_change || 0),
+        formatCurrency(b.ending_balance || 0),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Bank", "Account #", "Location", "Beginning", "Collections", "Deposits", "Inflows", "Outflows", "Net Change", "Ending"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59], hAlign: "center", fontSize: 8 },
+        bodyStyles: { fontSize: 7, hAlign: "center" },
+        columnStyles: {
+          0: { cellWidth: 25, hAlign: "left" },
+          1: { cellWidth: 22, hAlign: "center" },
+          2: { cellWidth: 20, hAlign: "center" },
+          3: { cellWidth: 20, hAlign: "right" },
+          4: { cellWidth: 22, hAlign: "right" },
+          5: { cellWidth: 20, hAlign: "right" },
+          6: { cellWidth: 20, hAlign: "right" },
+          7: { cellWidth: 20, hAlign: "right" },
+          8: { cellWidth: 20, hAlign: "right" },
+          9: { cellWidth: 22, hAlign: "right" },
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+    }
+
+    // =============================================
+    // PAGE 3: BANK TRANSACTIONS
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("BANK TRANSACTIONS", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
+    y += 10;
+
+    const bankTxns = data.bank_transactions || [];
+    if (bankTxns.length > 0) {
+      const tableData = bankTxns.map(t => [
+        formatDate(t.date),
+        t.bank_name || "-",
+        t.account_number || "-",
+        t.type?.replace("_", " ") || "-",
+        t.description || "-",
+        formatCurrency(t.amount),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Account #", "Type", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59], hAlign: "center", fontSize: 9 },
+        bodyStyles: { fontSize: 8, hAlign: "center" },
+        columnStyles: {
+          0: { cellWidth: 22, hAlign: "center" },
+          1: { cellWidth: 28, hAlign: "left" },
+          2: { cellWidth: 25, hAlign: "center" },
+          3: { cellWidth: 25, hAlign: "center" },
+          4: { cellWidth: 55, hAlign: "left" },
+          5: { cellWidth: 25, hAlign: "right" },
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+    }
+
+    // =============================================
+    // PAGE 4: PCF TRANSACTIONS
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("PCF TRANSACTIONS", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
+    y += 10;
+
+    const pcfTxns = data.pcf_transactions || [];
+    if (pcfTxns.length > 0) {
+      const tableData = pcfTxns.map(t => [
+        formatDate(t.date),
+        t.pcf_name || "-",
+        t.location || "-",
+        t.type?.replace("_", " ") || "-",
+        t.description || "-",
+        formatCurrency(t.amount),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "PCF Name", "Location", "Type", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [124, 58, 237], hAlign: "center", fontSize: 9 },
+        bodyStyles: { fontSize: 8, hAlign: "center" },
+        columnStyles: {
+          0: { cellWidth: 22, hAlign: "center" },
+          1: { cellWidth: 28, hAlign: "left" },
+          2: { cellWidth: 25, hAlign: "center" },
+          3: { cellWidth: 25, hAlign: "center" },
+          4: { cellWidth: 55, hAlign: "left" },
+          5: { cellWidth: 25, hAlign: "right" },
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+    }
+
+    // =============================================
+    // PAGE 5: PDCs THIS MONTH
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("PDCs MATURING THIS MONTH", CENTER_X, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
+    y += 10;
+
+    const pdcs = data.pdc_this_month || [];
+    if (pdcs.length > 0) {
+      const tableData = pdcs.map(p => [
+        p.check_no || "-",
+        p.bank_name || "-",
+        formatCurrency(p.amount),
+        p.status || "-",
+        formatDate(p.maturity_date),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Check #", "Bank", "Amount", "Status", "Maturity Date"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [180, 83, 9], hAlign: "center", fontSize: 9 },
+        bodyStyles: { fontSize: 8, hAlign: "center" },
+        columnStyles: {
+          0: { cellWidth: 25, hAlign: "center" },
+          1: { cellWidth: 35, hAlign: "left" },
+          2: { cellWidth: 30, hAlign: "right" },
+          3: { cellWidth: 30, hAlign: "center" },
+          4: { cellWidth: 30, hAlign: "center" },
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+    }
+
+    // =============================================
+    // PAGE 6: GROUPED SUMMARIES
+    // =============================================
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("GROUPED SUMMARIES", CENTER_X, y, { align: "center" });
+    y += 10;
+
+    // By Account
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("By Account", marginL, y);
+    y += 6;
+
+    const byAccount = data.grouped_by_account || [];
+    if (byAccount.length > 0) {
+      const tableData = byAccount.map(a => [
+        a.bank_account__name || "-",
+        a.bank_account__account_number || "-",
+        a.count || 0,
+        formatCurrency(a.total),
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Account", "Account #", "Count", "Total"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59], hAlign: "center", fontSize: 9 },
+        bodyStyles: { fontSize: 8, hAlign: "center" },
+        columnStyles: {
+          0: { cellWidth: 40, hAlign: "left" },
+          1: { cellWidth: 35, hAlign: "center" },
+          2: { cellWidth: 25, hAlign: "right" },
+          3: { cellWidth: 30, hAlign: "right" },
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // By Type
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("By Type", marginL, y);
+    y += 6;
+
+    const byType = data.grouped_by_type || [];
+    if (byType.length > 0) {
+      const tableData = byType.map(t => {
+        const isNeg = (t.total || 0) < 0;
+        return [
+          t.type?.replace("_", " ") || "-",
+          t.count || 0,
+          (isNeg ? "-" : "") + formatCurrency(Math.abs(t.total || 0)),
+        ];
+      });
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Type", "Count", "Total"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59], hAlign: "center", fontSize: 9 },
+        bodyStyles: { fontSize: 8, hAlign: "center" },
+        columnStyles: {
+          0: { cellWidth: 40, hAlign: "center" },
+          1: { cellWidth: 25, hAlign: "right" },
+          2: { cellWidth: 30, hAlign: "right" },
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+    }
+
+    // Save PDF
+    const fileName = `jopca-monthly-${selectedMonth}.pdf`;
+    doc.save(fileName);
+
+    showToast("Monthly report generated successfully!", "success");
+    return true;
+  } catch (error) {
+    console.error("Error generating monthly PDF report:", error);
+    showToast("Failed to generate monthly report.", "error");
+    return false;
+  }
+};
+
 
 

@@ -827,8 +827,6 @@ def monthly_full_report(request):
         elif t.type.lower() in OUTFLOW_TYPES:
             outflows += t.amount
     
-    bank_net = inflows - outflows
-    
     pcf_total_disb = PettyCashTransaction.objects.filter(
         date__year=month_date.year,
         date__month=month_date.month,
@@ -863,6 +861,7 @@ def monthly_full_report(request):
         date__month=month_date.month
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     monthly_collections = bank_collection_txns + monthly_collections_from_model
+    bank_net = inflows - outflows + monthly_collections
     monthly_deposits = bank_transactions.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     
     # 8. BANK BALANCE SUMMARY BY BANK (like daily reports)

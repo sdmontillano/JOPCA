@@ -37,6 +37,7 @@ import AddBankAccount from "./AddBankAccount";
 import PdcCreateModal from "./PdcCreateModal";
 import AddPcfModal from "./AddPcfModal";
 import PdfReportModal from "./PdfReportModal";
+import { generateMonthlyPdfReport } from "../utils/pdfGenerator";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
@@ -220,50 +221,19 @@ export default function MonthlyReport() {
   });
 
   const handleExport = () => {
-    const rows = [
-      ["MONTHLY REPORT", selectedMonth],
-      [],
-      ["BANK TRANSACTIONS"],
-      ["Date", "Bank", "Account #", "Type", "Description", "Amount"],
-      ...(report?.bank_transactions || []).map((t) => [
-        t.date,
-        t.bank_name,
-        t.account_number,
-        t.type,
-        t.description,
-        t.amount,
-      ]),
-      [],
-      ["PCF TRANSACTIONS"],
-      ["Date", "PCF Name", "Location", "Type", "Description", "Amount"],
-      ...(report?.pcf_transactions || []).map((t) => [
-        t.date,
-        t.pcf_name,
-        t.location,
-        t.type,
-        t.description,
-        t.amount,
-      ]),
-      [],
-      ["PDC THIS MONTH"],
-      ["Check #", "Bank", "Amount", "Status", "Maturity Date"],
-      ...(report?.pdc_this_month || []).map((p) => [
-        p.check_no,
-        p.bank_name,
-        p.amount,
-        p.status,
-        p.maturity_date,
-      ]),
-    ];
-
-    const csvContent = rows.map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `monthly-report-${selectedMonth}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    if (!report) {
+      alert("Please wait for the report to load first.");
+      return;
+    }
+    generateMonthlyPdfReport(report, selectedMonth, (msg, type) => {
+      // Use browser alert for notifications since MonthlyReport doesn't have ToastContext
+      if (type === "error") {
+        alert("Error: " + msg);
+      } else if (type === "info") {
+        // Info messages can be logged or shown as needed
+        console.log("Info: " + msg);
+      }
+    });
   };
 
   if (loading && !report) {
