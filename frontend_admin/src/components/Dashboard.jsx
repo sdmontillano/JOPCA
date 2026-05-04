@@ -63,7 +63,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import api, { unwrapResponse, getResponseCount, clearTokens } from "../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import { mapDailyResponse, mapMonthlyResponse } from "../utils/dataMappers";
-import { exportDashboardPDF, exportDashboardExcel } from "../utils/exportUtils";
+import {} from "../utils/exportUtils";
 
 import AddBankAccount from "./AddBankAccount";
 import AddTransaction from "./AddTransaction";
@@ -537,57 +537,12 @@ function DashboardInner() {
   const [actionAlert, setActionAlert] = useState(null);
   const [pcfData, setPcfData] = useState([]);
   const [collectionsData, setCollectionsData] = useState([]);
-  const [alertCount, setAlertCount] = useState(0);
-  const [exporting, setExporting] = useState(false);
-  
-  // FAB Menu State
-  const [fabOpen, setFabOpen] = useState(false);
+   const [alertCount, setAlertCount] = useState(0);
+   
+   // FAB Menu State
+   const [fabOpen, setFabOpen] = useState(false);
 
-  const handleExportPDF = () => {
-    setExporting(true);
-    const data = {
-      totalCollections,
-      undepositedCash,
-      cashInBank: totalEndingAllBanks,
-      pcfBalance: totalPcfBalance,
-      pdcThisMonth: effectivePdcSummary.this_month ?? 0,
-      pdcTotal: effectivePdcSummary.total ?? 0,
-      pcfData,
-      collectionsData,
-      cashInBankData: cashInBank,
-    };
-    try {
-      exportDashboardPDF(data, selectedDate, dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE");
-    } catch (err) {
-      console.error('PDF export failed:', err);
-      setActionAlert({ severity: 'error', text: 'Failed to export PDF' });
-    }
-    setExporting(false);
-  };
-
-  const handleExportExcel = () => {
-    setExporting(true);
-    const data = {
-      totalCollections,
-      undepositedCash,
-      cashInBank: totalEndingAllBanks,
-      pcfBalance: totalPcfBalance,
-      pdcThisMonth: effectivePdcSummary.this_month ?? 0,
-      pdcTotal: effectivePdcSummary.total ?? 0,
-      pcfData,
-      collectionsData,
-      cashInBankData: cashInBank,
-    };
-    try {
-      exportDashboardExcel(data, selectedDate, dailyReport?.office || "CAGAYAN DE ORO MAIN OFFICE");
-    } catch (err) {
-      console.error('Excel export failed:', err);
-      setActionAlert({ severity: 'error', text: 'Failed to export Excel' });
-    }
-    setExporting(false);
-  };
-
-  // PDC fallback hook
+   // PDC fallback hook
   const reportMonth = manualMonth || monthString();
   const {
     totals: pdcFallbackTotals,
@@ -984,20 +939,6 @@ function DashboardInner() {
 
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<DownloadIcon />}
-              onClick={handleExportExcel}
-              disabled={exporting || loading}
-              sx={{ 
-                bgcolor: "#16A34A", 
-                textTransform: "none",
-                "&:hover": { bgcolor: "#15803D" }
-              }}
-            >
-              Excel
-            </Button>
             <Button
               variant="contained"
               size="small"

@@ -1540,8 +1540,13 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         pcf_id = self.request.query_params.get('pcf_id')
+        date = self.request.query_params.get('date')
+        
         if pcf_id:
             qs = qs.filter(pcf_id=pcf_id)
+        if date:
+            qs = qs.filter(date=date)
+            
         return qs
 
 

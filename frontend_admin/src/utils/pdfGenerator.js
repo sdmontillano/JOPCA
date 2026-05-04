@@ -8,14 +8,14 @@ export const formatCurrency = (value) => {
   } else if (typeof value === 'number') {
     num = value;
   } else if (typeof value === 'string') {
-    const cleaned = value.replace(/^[±\+\-]+/, '').trim();
+     const cleaned = value.replace(/^[±+-]+/, '').trim();
     const withoutCommas = cleaned.replace(/,/g, '');
     num = Number(withoutCommas) || 0;
   } else {
     num = Number(value) || 0;
   }
-  num = Math.abs(num);
-  return `PHP ${num.toLocaleString("en-PH", {
+  const sign = num < 0 ? "-" : "";
+  return `${sign}PHP ${Math.abs(num).toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -45,29 +45,25 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const dateStr = selectedDate;
     const formattedDate = formatDate(dateStr);
     
-    const [bankRes, pcfRes, pdcRes, dailyRes, cashSummaryRes] = await Promise.all([
-      api.get("/transactions/", { params: { date: dateStr, page_size: 500 } }),
-      api.get("/pcf-transactions/", { params: { date: dateStr, page_size: 500 } }),
-      api.get("/pdc/", { params: { date: dateStr, page_size: 500 } }),
-      api.get(`/summary/detailed-daily/`, { params: { date: dateStr } }),
-      api.get(`/summary/cash-summary/`, { params: { date: dateStr } })
-    ]);
+     const [bankRes, pcfRes, dailyRes, cashSummaryRes] = await Promise.all([
+       api.get("/transactions/", { params: { date: dateStr, page_size: 500 } }),
+       api.get("/pcf-transactions/", { params: { date: dateStr, page_size: 500 } }),
+       api.get(`/summary/detailed-daily/`, { params: { date: dateStr } }),
+       api.get(`/summary/cash-summary/`, { params: { date: dateStr } })
+     ]);
     
-    const bankTxns = bankRes.data?.results || bankRes.data || [];
-    const pcfTxns = pcfRes.data?.results || pcfRes.data || [];
-    const pdcTxns = pdcRes.data?.results || pdcRes.data || [];
-    const dailyData = dailyRes.data;
-    const cashSummary = cashSummaryRes.data;
+     const bankTxns = bankRes.data?.results || bankRes.data || [];
+     const pcfTxns = pcfRes.data?.results || pcfRes.data || [];
+     const dailyData = dailyRes.data;
+     const cashSummary = cashSummaryRes.data;
     
-    const collections = bankTxns.filter(t => t.type === 'collection' || t.type === 'collections');
-    const deposits = bankTxns.filter(t => t.type === 'deposit');
-    const disbursements = bankTxns.filter(t => t.type === 'disbursement' || t.type === 'withdrawal');
+     const collections = bankTxns.filter(t => t.type === 'collection' || t.type === 'collections');
+     const disbursements = bankTxns.filter(t => t.type === 'disbursement' || t.type === 'withdrawal');
     const adjustments = bankTxns.filter(t => t.type === 'adjustments' || t.type === 'adjustment_in' || t.type === 'adjustment_out');
     const bankCharges = bankTxns.filter(t => t.type === 'bank_charges');
     
-    const totalCollection = collections.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const totalDeposits = deposits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const totalDisbursement = disbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+     const totalCollection = collections.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+     const totalDisbursement = disbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalAdjustments = adjustments.reduce((sum, t) => {
       if (t.type === 'adjustment_out') return sum - Number(t.amount || 0);
       return sum + Number(t.amount || 0);
@@ -79,7 +75,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const pcfTotalDisb = pcfDisbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const pcfTotalRep = pcfReplenishments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
-    const doc = new jsPDF(); let y = 20; const marginL = 20; const marginRightL = 190; const textOpts = { baseline: 'top', lineHeightFactor: 1.2 };
+     const doc = new jsPDF(); let y = 20; const marginL = 20; const marginRightL = 190;
     
     // =============================================
     // PAGE 1: CASH IN BANK
@@ -147,7 +143,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(`Total: ${formatCurrency(totalCollection)}`, marginRightL, y, { align: "right" });
     y += 6;
     if (collections.length > 0) {
-      const tableData = collections.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.description || "-", formatCurrency(t.amount)]);
+       const tableData = collections.map(t => [t.date ? formatDate(t.date) : "-", t.bank_account?.name || "-", t.description || "-", formatCurrency(t.amount)]);
       autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Description", "Amount"]],
@@ -179,7 +175,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(`Total: ${formatCurrency(totalDisbursement)}`, marginRightL, y, { align: "right" });
     y += 6;
     if (disbursements.length > 0) {
-      const tableData = disbursements.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.description || "-", formatCurrency(t.amount)]);
+       const tableData = disbursements.map(t => [t.date ? formatDate(t.date) : "-", t.bank_account?.name || "-", t.description || "-", formatCurrency(t.amount)]);
       autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Description", "Amount"]],
@@ -244,7 +240,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(`Total: ${formatCurrency(totalAdjustments)}`, marginRightL, y, { align: "right" });
     y += 6;
     if (adjustments.length > 0) {
-      const tableData = adjustments.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.type?.replace("_", " ") || "-", t.description || "-", formatCurrency(t.amount)]);
+       const tableData = adjustments.map(t => [t.date ? formatDate(t.date) : "-", t.bank_account?.name || "-", t.type?.replace("_", " ") || "-", t.description || "-", formatCurrency(t.amount)]);
       autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Type", "Description", "Amount"]],
@@ -277,7 +273,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(`Total: ${formatCurrency(totalBankCharges)}`, marginRightL, y, { align: "right" });
     y += 6;
     if (bankCharges.length > 0) {
-      const tableData = bankCharges.map(t => [t.date ? formatDate(t.date) : "-", t.bank_name || "-", t.description || "-", formatCurrency(t.amount)]);
+       const tableData = bankCharges.map(t => [t.date ? formatDate(t.date) : "-", t.bank_account?.name || "-", t.description || "-", formatCurrency(t.amount)]);
       autoTable(doc, {
         startY: y,
         head: [["Date", "Bank", "Description", "Amount"]],
@@ -317,15 +313,15 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.line(marginL, y, marginRightL, y);
     y += 8;
     
-    const pcfs = dailyData?.cash_on_hand || [];
-    if (pcfs.length > 0) {
-      let pcfTotal = 0;
-      const pcfTable = pcfs.map(p => {
-        const endBal = Number(p.ending_balance || 0);
-        pcfTotal += endBal;
-        return [p.pcf_name || "-", p.location || "-", formatCurrency(p.beginning_balance || 0), formatCurrency(p.disbursements || 0), formatCurrency(p.replenishments || 0), formatCurrency(endBal)];
-      });
-      pcfTable.push(["GRAND TOTAL", "", "", "", "", formatCurrency(pcfTotal)]);
+     const pcfs = dailyData?.cash_on_hand || [];
+     if (pcfs.length > 0) {
+       let pcfTotal = 0;
+       const pcfTable = pcfs.map(p => {
+         const endBal = Number(p.ending || 0);
+         pcfTotal += endBal;
+         return [p.name || "-", p.location || "-", formatCurrency(p.beginning || 0), formatCurrency(p.disbursements || 0), formatCurrency(p.replenishments || 0), formatCurrency(endBal)];
+       });
+       pcfTable.push(["GRAND TOTAL", "", "", "", "", formatCurrency(pcfTotal)]);
       
       autoTable(doc, {
         startY: y,
@@ -386,7 +382,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const areasData = [];
 
     if (cashSummary && cashSummary.areas) {
-      for (const [areaCode, areaDataObj] of Object.entries(cashSummary.areas)) {
+       for (const [, areaDataObj] of Object.entries(cashSummary.areas)) {
         if (areaDataObj.banks && areaDataObj.banks.length > 0) {
           const areaTotalVal = Number(areaDataObj.total || 0);
           
@@ -549,80 +545,17 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(`Prepared by: ${userName}`, marginL, y);
     doc.text("Approved by: JOHN P. CABA\u00D1OG", marginL + 85, y);
     
-    // =============================================
-    // PAGE 5: ANALYSIS
-    // =============================================
-    doc.addPage();
-    y = 20;
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("JOPCA ANALYSIS", CENTER_X, y, { align: "center" });
-    y += 7;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
-    y += 8;
-    doc.line(marginL, y, marginRightL, y);
-    y += 8;
-    
-    const netBank = totalCollection - totalDisbursement + totalAdjustments - totalBankCharges;
-    const pcfNet = pcfTotalRep - pcfTotalDisb;
-    const grandTotal = netBank + pcfNet;
-    
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("SUMMARY", marginL, y);
-    y += 6;
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    
-    // Bank Transactions
-    doc.setFont("helvetica", "bold");
-    doc.text("Bank Transactions:", marginL, y);
-    y += 6;
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Collections:`, marginL + 8, y);
-    doc.text(formatCurrency(totalCollection), marginRightL + 40, y, { align: "right" });
-    y += 5;
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(`Net Bank:`, marginL + 8, y);
-    doc.text(formatCurrency(netBank), marginRightL + 40, y, { align: "right" });
-    y += 8;
-    
-    // PCF Transactions
-    doc.setFont("helvetica", "normal");
-    doc.text("PCF Transactions:", marginL, y);
-    y += 6;
-    doc.text(`Total Disbursements:`, marginL + 8, y);
-    doc.text(formatCurrency(pcfTotalDisb), marginRightL + 40, y, { align: "right" });
-    y += 5;
-    doc.text(`Total Replenishments:`, marginL + 8, y);
-    doc.text(formatCurrency(pcfTotalRep), marginRightL + 40, y, { align: "right" });
-    y += 5;
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(`PCF Net:`, marginL + 8, y);
-    doc.text(formatCurrency(pcfNet), marginRightL + 40, y, { align: "right" });
-    y += 8;
-    
-    // Grand Total
-    doc.setFontSize(12);
-    doc.text(`GRAND TOTAL:`, marginL + 8, y);
-    doc.text(formatCurrency(grandTotal), marginRightL + 40, y, { align: "right" });
-    
-    // Save the PDF
-    const fileName = `jopca-report-${dateStr}.pdf`;
-    doc.save(fileName);
-    
-    showToast("Report generated successfully!", "success");
-    return true;
-  } catch (error) {
-    console.error("Error generating PDF report:", error);
-    showToast("Failed to generate report. Please try again.", "error");
-    return false;
-  }
-};
+     // Save the PDF
+     const fileName = `jopca-report-${dateStr}.pdf`;
+     doc.save(fileName);
+     
+     showToast("Report generated successfully!", "success");
+     return true;
+   } catch (error) {
+     console.error("Error generating PDF report:", error);
+     showToast("Failed to generate report. Please try again.", "error");
+     return false;
+   }
+ };
 
 
