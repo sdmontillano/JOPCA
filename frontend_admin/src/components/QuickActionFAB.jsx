@@ -14,6 +14,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import WalletIcon from "@mui/icons-material/Wallet";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 export default function QuickActionFAB({
   actions = [
@@ -23,6 +24,7 @@ export default function QuickActionFAB({
     { label: "Add PCF", icon: <WalletIcon />, onClick: null, color: "secondary.main" },
   ],
   customActions = null,
+  onSettingsClick = null,
 }) {
   const [fabOpen, setFabOpen] = useState(false);
 
@@ -88,23 +90,44 @@ export default function QuickActionFAB({
           </Typography>
           <Divider sx={{ mb: 1 }} />
           
-          {menuItems.map((action, index) => (
-            <MenuItem 
-              key={index}
-              onClick={() => { 
-                if (action.onClick) action.onClick();
-                setFabOpen(false);
-              }} 
-              sx={{ borderRadius: 1, py: 1.5 }}
-            >
-              <Box sx={{ mr: 1.5, color: action.color || "primary.main", display: "flex" }}>
-                {action.icon}
-              </Box>
-              <Typography variant="body2" fontWeight={500}>
-                {action.label}
-              </Typography>
-            </MenuItem>
-          ))}
+           {menuItems.map((action, index) => (
+             <MenuItem 
+               key={index}
+               onClick={() => { 
+                 if (action.onClick) action.onClick();
+                 setFabOpen(false);
+               }} 
+               sx={{ borderRadius: 1, py: 1.5 }}
+             >
+               <Box sx={{ mr: 1.5, color: action.color || "primary.main", display: "flex" }}>
+                 {action.icon}
+               </Box>
+               <Typography variant="body2" fontWeight={500}>
+                 {action.label}
+               </Typography>
+             </MenuItem>
+           ))}
+           
+           {/* Settings option - only show in Electron */}
+           {typeof window !== "undefined" && window.electronAPI && (
+             <>
+               <Divider sx={{ my: 1 }} />
+               <MenuItem 
+                 onClick={() => { 
+                   if (onSettingsClick) onSettingsClick();
+                   setFabOpen(false);
+                 }} 
+                 sx={{ borderRadius: 1, py: 1.5 }}
+               >
+                 <Box sx={{ mr: 1.5, color: "#6B7280", display: "flex" }}>
+                   <SettingsIcon />
+                 </Box>
+                 <Typography variant="body2" fontWeight={500}>
+                   Settings
+                 </Typography>
+               </MenuItem>
+             </>
+           )}
         </Paper>
       </Zoom>
 

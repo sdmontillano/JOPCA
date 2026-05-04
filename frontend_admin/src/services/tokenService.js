@@ -1,7 +1,24 @@
 // src/services/tokenService.js
 import axios from "axios";
 
-export const API_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || "http://localhost:8000";
+// Get API URL - handles both browser and Electron environments
+const getApiUrl = () => {
+  // In Electron: check if backend config is available
+  if (typeof window !== 'undefined' && window.electronAPI?.getBackendConfig) {
+    try {
+      const config = window.electronAPI.getBackendConfig();
+      if (config && config.apiUrl) {
+        return config.apiUrl;
+      }
+    } catch (e) {
+      console.warn('[TokenService] Failed to get Electron config:', e);
+    }
+  }
+  // Browser mode - use environment variable
+  return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || "http://localhost:8000";
+};
+
+export const API_URL = getApiUrl();
 const STORAGE_KEY = "token";
 
 // Track when token was last set - don't clear token immediately after setting

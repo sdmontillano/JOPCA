@@ -277,3 +277,228 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[JOPCA] Unhandled rejection at:', promise, 'reason:', reason);
 });
+
+// ===== Missing IPC Handlers =====
+
+ipcMain.handle('minimize-window', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
+  }
+});
+
+ipcMain.handle('close-window', () => {
+  mainWindow?.close();
+});
+
+// Database handlers (optional - for future use)
+ipcMain.handle('export-database', (event, data) => {
+  console.log('[JOPCA] Export database requested');
+  const { dialog } = require('electron');
+  const fs = require('fs');
+  try {
+    const dbPath = path.join(BACKEND_DIR, 'db.sqlite3');
+    if (fs.existsSync(dbPath)) {
+      const savePath = dialog.showSaveDialogSync(mainWindow, {
+        title: 'Export Database',
+        defaultPath: 'jopca-backup.sqlite3',
+        filters: [{ name: 'SQLite Database', extensions: ['sqlite3', 'db'] }]
+      });
+      if (savePath) {
+        fs.copyFileSync(dbPath, savePath);
+        return { success: true, path: savePath };
+      }
+    }
+    return { success: false, error: 'Database not found' };
+  } catch (err) {
+    console.error('[JOPCA] Export failed:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('import-database', (event) => {
+  console.log('[JOPCA] Import database requested');
+  const { dialog } = require('electron');
+  const fs = require('fs');
+  try {
+    const result = dialog.showOpenDialogSync(mainWindow, {
+      title: 'Import Database',
+      filters: [{ name: 'SQLite Database', extensions: ['sqlite3', 'db'] }],
+      properties: ['openFile']
+    });
+    if (result && result[0]) {
+      const dbPath = path.join(BACKEND_DIR, 'db.sqlite3');
+      fs.copyFileSync(result[0], dbPath);
+      return { success: true, path: result[0] };
+    }
+    return { success: false, error: 'No file selected' };
+  } catch (err) {
+    console.error('[JOPCA] Import failed:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('backup-database', () => {
+  console.log('[JOPCA] Backup database requested');
+  const fs = require('fs');
+  try {
+    const dbPath = path.join(BACKEND_DIR, 'db.sqlite3');
+    if (fs.existsSync(dbPath)) {
+      const backupDir = path.join(app.getPath('userData'), 'backups');
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(backupDir, `backup-${timestamp}.sqlite3`);
+      fs.copyFileSync(dbPath, backupPath);
+      return { success: true, path: backupPath };
+    }
+    return { success: false, error: 'Database not found' };
+  } catch (err) {
+    console.error('[JOPCA] Backup failed:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// ===== Backend Configuration =====
+
+const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
+
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    }
+  } catch (e) {
+    console.error('[JOPCA] Failed to load config:', e);
+  }
+  return { backendMode: 'local', apiUrl: 'http://localhost:8000' };
+}
+
+function saveConfig(config) {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  } catch (e) {
+    console.error('[JOPCA] Failed to save config:', e);
+  }
+}
+
+// Make config available globally
+global.sharedConfig = loadConfig();
+
+ipcMain.handle('set-backend-config', (event, mode, url) => {
+  global.sharedConfig.backendMode = mode;
+  if (url) global.sharedConfig.apiUrl = url;
+  saveConfig(global.sharedConfig);
+  return true;
+});
+
+ipcMain.handle('get-backend-config', () => {
+  return global.sharedConfig;
+});
+
+// Modify startDjangoServer to check config
+function startDjangoServer() {
+  if (global.sharedConfig.backendMode === 'remote') {
+    console.log('[JOPCA] Using remote backend:', global.sharedConfig.apiUrl);
+    return null;
+  }
+  
+  console.log('[JOPCA] Starting Django backend...');
+  console.log('[JOPCA] Looking for backend at:', BACKEND_DIR);
+  
+  // Check if backend directory exists
+  if (!fs.existsSync(BACKEND_DIR)) {
+    const errorMsg = 'Backend directory not found at:\n' + BACKEND_DIR + '\n\nThe banking_dcpr folder must be in the same location as the app.';
+    console.error('[JOPCA] ERROR:', errorMsg);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA Startup Error', errorMsg);
+    return null;
+  }
+  
+  const dbPath = path.join(BACKEND_DIR, 'db.sqlite3');
+  const managePyPath = path.join(BACKEND_DIR, 'manage.py');
+  
+  if (!fs.existsSync(managePyPath)) {
+    const errorMsg = 'manage.py not found at:\n' + managePyPath + '\n\nPlease ensure banking_dcpr is properly set up.';
+    console.error('[JOPCA] ERROR:', errorMsg);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA Startup Error', errorMsg);
+    return null;
+  }
+  
+  if (!fs.existsSync(dbPath)) {
+    console.log('[JOPCA] Database not found, running migrations...');
+    
+    const migrateProcess = spawn('python', ['manage.py', 'migrate'], {
+      cwd: BACKEND_DIR,
+      shell: true,
+      windowsHide: true,
+    });
+    
+    migrateProcess.stdout.on('data', (data) => {
+      console.log('[Django migrate]:', data.toString().trim());
+    });
+    
+    migrateProcess.stderr.on('data', (data) => {
+      console.error('[Django migrate error]:', data.toString().trim());
+    });
+    
+    migrateProcess.on('close', (code) => {
+      if (code === 0) {
+        console.log('[JOPCA] Migrations completed successfully');
+        startDjangoRunServer();
+      } else {
+        console.error('[JOPCA] Migration failed with code:', code);
+      }
+    });
+  } else {
+    startDjangoRunServer();
+  }
+  return null;
+}
+
+function startDjangoRunServer() {
+  console.log('[JOPCA] Starting Django runserver...');
+  
+  djangoServer = spawn('python', ['manage.py', 'runserver', '8000', '--noreload'], {
+    cwd: BACKEND_DIR,
+    shell: true,
+    windowsHide: false,
+    env: { ...process.env, DJANGO_SETTINGS_MODULE: 'banking_dcpr.settings' }
+  });
+  
+  djangoServer.stdout.on('data', (data) => {
+    const output = data.toString().trim();
+    console.log('[Django]:', output);
+    if (output.includes('Starting development server') || 
+        output.includes('Quit the server with') ||
+        output.includes('Starting')) {
+      console.log('[JOPCA] Django server started successfully!');
+    }
+  });
+  
+  djangoServer.stderr.on('data', (data) => {
+    const error = data.toString().trim();
+    console.error('[Django error]:', error);
+    if (error.includes('Error') || error.includes('Exception')) {
+      const { dialog } = require('electron');
+      dialog.showErrorBox('Django Error', 'Backend Error:\n' + error);
+    }
+  });
+  
+  djangoServer.on('error', (err) => {
+    console.error('[JOPCA] Django server error:', err);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA Error', 'Failed to start Django server:\n' + err.message);
+  });
+  
+  djangoServer.on('close', (code) => {
+    console.log('[JOPCA] Django server closed with code:', code);
+  });
+}

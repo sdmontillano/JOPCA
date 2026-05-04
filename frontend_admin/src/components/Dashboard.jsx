@@ -73,6 +73,7 @@ import CashOnHandCollections from "./CashOnHandCollections";
 import AddPcfModal from "./AddPcfModal";
 import AlertsModal from "./AlertsModal";
 import PdfReportModal from "./PdfReportModal";
+import SettingsModal from "./SettingsModal";
 
 import logo from "../assets/jopca-logo.png";
 
@@ -528,6 +529,7 @@ function DashboardInner() {
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [pcfModalOpen, setPcfModalOpen] = useState(false);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [pdfReportOpen, setPdfReportOpen] = useState(false);
   const [adminRestrictedOpen, setAdminRestrictedOpen] = useState(false);
 
@@ -1410,10 +1412,35 @@ function DashboardInner() {
             <ReceiptLongIcon sx={{ mr: 1.5, color: "info.main" }} />
             <Typography variant="body2" fontWeight={500}>Add PDC</Typography>
           </MenuItem>
-          <MenuItem onClick={() => { handleOpenAddPcf(); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
-            <WalletIcon sx={{ mr: 1.5, color: "secondary.main" }} />
-            <Typography variant="body2" fontWeight={500}>Add PCF</Typography>
-          </MenuItem>
+            <MenuItem onClick={() => { handleOpenAddPcf(); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
+              <Box sx={{ mr: 1.5, color: "secondary.main", display: "flex" }}>
+                <WalletIcon />
+              </Box>
+              <Typography variant="body2" fontWeight={500}>
+                Add PCF
+              </Typography>
+            </MenuItem>
+            
+            {/* Settings option - only show in Electron */}
+            {typeof window !== "undefined" && window.electronAPI && (
+              <>
+                <Divider sx={{ my: 1 }} />
+                <MenuItem 
+                  onClick={() => { 
+                    if (setSettingsModalOpen) setSettingsModalOpen(true);
+                    setFabOpen(false);
+                  }} 
+                  sx={{ borderRadius: 1, py: 1.5 }}
+                >
+                  <Box sx={{ mr: 1.5, color: "#6B7280", display: "flex" }}>
+                    <SettingsIcon />
+                  </Box>
+                  <Typography variant="body2" fontWeight={500}>
+                    Settings
+                  </Typography>
+                </MenuItem>
+              </>
+            )}
           <MenuItem onClick={() => { setPdfReportOpen(true); setFabOpen(false); }} sx={{ borderRadius: 1, py: 1.5 }}>
             <PictureAsPdfIcon sx={{ mr: 1.5, color: "#DC2626" }} />
             <Typography variant="body2" fontWeight={500}>Generate PDF Report</Typography>
@@ -1480,6 +1507,11 @@ function DashboardInner() {
       <AlertsModal
         open={alertsModalOpen}
         onClose={() => setAlertsModalOpen(false)}
+      />
+
+      <SettingsModal
+        open={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
       />
 
       <PdfReportModal

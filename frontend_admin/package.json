@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "electron .",
-    "electron:build": "vite build && electron-builder --win --publish never",
+    "electron:build": "vite build && electron-packager . JOPCA --platform=win32 --arch=x64 --overwrite --out=release --electron-version=33.4.11 --extra-resource=../banking_dcpr",
     "electron:start": "electron ."
   },
   "dependencies": {
@@ -36,67 +36,11 @@
     "@vitejs/plugin-react": "^5.1.1",
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8",
+    "electron-packager": "^17.1.2",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "vite": "^7.3.1"
-  },
-  "build": {
-    "appId": "com.jopca.banking",
-    "productName": "JOPCA",
-    "copyright": "Copyright © 2024 JOPCA Corporation",
-    "directories": {
-      "output": "release",
-      "buildResources": "build"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "public/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "../banking_dcpr",
-        "to": "banking_dcpr",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": true,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "JOPCA"
-    },
-    "portable": {
-      "artifactName": "${productName}-Portable.${ext}"
-    },
-    "asar": true,
-    "asarUnpack": [
-      "**/node_modules/**/node_modules/**/*.node"
-    ]
   }
 }
