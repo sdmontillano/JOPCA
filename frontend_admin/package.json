@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "electron .",
-    "electron:build": "vite build && electron-packager . JOPCA --platform=win32 --arch=x64 --overwrite --out=release --electron-version=33.4.11 --extra-resource=../banking_dcpr",
+    "electron:build": "vite build && electron-builder --win --publish never",
     "electron:start": "electron ."
   },
   "dependencies": {
