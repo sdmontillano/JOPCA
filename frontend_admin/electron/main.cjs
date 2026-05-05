@@ -15,15 +15,47 @@ const isDev = !app.isPackaged;
 const APP_DIR = app.getAppPath();
 let BACKEND_DIR;
 let FRONTEND_DIR;
+const USER_DATA_BACKEND = path.join(app.getPath('userData'), 'banking_dcpr');
 
 if (isDev) {
   // Development: frontend_admin is at the same level as banking_dcpr
   BACKEND_DIR = path.join(APP_DIR, '..', 'banking_dcpr');
   FRONTEND_DIR = APP_DIR;
 } else {
-  // Production: in packaged app, backend is in resources folder
-  BACKEND_DIR = path.join(process.resourcesPath, 'banking_dcpr');
+  // Production: copy backend from resources to userData (writable location)
   FRONTEND_DIR = APP_DIR;
+  
+  const RESOURCES_BACKEND = path.join(process.resourcesPath, 'banking_dcpr');
+  
+  // Copy backend to userData if not already there or if resources are newer
+  if (fs.existsSync(RESOURCES_BACKEND)) {
+    if (!fs.existsSync(USER_DATA_BACKEND)) {
+      console.log('[JOPCA] Copying backend to writable location:', USER_DATA_BACKEND);
+      copyDirRecursive(RESOURCES_BACKEND, USER_DATA_BACKEND);
+    }
+  }
+  
+  BACKEND_DIR = USER_DATA_BACKEND;
+}
+
+// Helper function to recursively copy directory
+function copyDirRecursive(src, dest) {
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+  
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  
+  for (let entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 console.log('[JOPCA] Starting application...');
@@ -72,11 +104,25 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     console.log('[JOPCA] Loading production build...');
-    const indexPath = path.join(FRONTEND_DIR, 'dist', 'index.html');
+    
+    // In production with asar, the app path is the asar file
+    // We need to construct the path to index.html inside the asar
+    let indexPath;
+    
+    if (APP_DIR.endsWith('.asar')) {
+      // Running from asar archive
+      indexPath = path.join(APP_DIR, 'dist', 'index.html');
+    } else {
+      // Running from unpacked directory
+      indexPath = path.join(APP_DIR, 'dist', 'index.html');
+    }
+    
     console.log('[JOPCA] Looking for index.html at:', indexPath);
     
     if (!fs.existsSync(indexPath)) {
-      const errorMsg = 'Frontend build not found at:\n' + indexPath;
+      const errorMsg = 'Frontend build not found at:\n' + indexPath +
+        '\n\nApp path: ' + APP_DIR +
+        '\n\nPlease reinstall JOPCA.';
       console.error('[JOPCA] ERROR:', errorMsg);
       const { dialog } = require('electron');
       dialog.showErrorBox('JOPCA Error', errorMsg);
@@ -92,100 +138,6 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-  });
-}
-
-function startDjangoServer() {
-  console.log('[JOPCA] Starting Django backend...');
-  console.log('[JOPCA] Looking for backend at:', BACKEND_DIR);
-  
-  // Check if backend directory exists
-  if (!fs.existsSync(BACKEND_DIR)) {
-    const errorMsg = 'Backend directory not found at:\n' + BACKEND_DIR + '\n\nThe banking_dcpr folder must be in the same location as the app.';
-    console.error('[JOPCA] ERROR:', errorMsg);
-    const { dialog } = require('electron');
-    dialog.showErrorBox('JOPCA Startup Error', errorMsg);
-    return;
-  }
-  
-  const dbPath = path.join(BACKEND_DIR, 'db.sqlite3');
-  const managePyPath = path.join(BACKEND_DIR, 'manage.py');
-  
-  if (!fs.existsSync(managePyPath)) {
-    const errorMsg = 'manage.py not found at:\n' + managePyPath + '\n\nPlease ensure banking_dcpr is properly set up.';
-    console.error('[JOPCA] ERROR:', errorMsg);
-    const { dialog } = require('electron');
-    dialog.showErrorBox('JOPCA Startup Error', errorMsg);
-    return;
-  }
-  
-  if (!fs.existsSync(dbPath)) {
-    console.log('[JOPCA] Database not found, running migrations...');
-    
-    const migrateProcess = spawn('python', ['manage.py', 'migrate'], {
-      cwd: BACKEND_DIR,
-      shell: true,
-      windowsHide: true,
-    });
-    
-    migrateProcess.stdout.on('data', (data) => {
-      console.log('[Django migrate]:', data.toString().trim());
-    });
-    
-    migrateProcess.stderr.on('data', (data) => {
-      console.error('[Django migrate error]:', data.toString().trim());
-    });
-    
-    migrateProcess.on('close', (code) => {
-      if (code === 0) {
-        console.log('[JOPCA] Migrations completed successfully');
-        startDjangoRunServer();
-      } else {
-        console.error('[JOPCA] Migration failed with code:', code);
-      }
-    });
-  } else {
-    startDjangoRunServer();
-  }
-}
-
-function startDjangoRunServer() {
-  console.log('[JOPCA] Starting Django runserver...');
-  
-  djangoServer = spawn('python', ['manage.py', 'runserver', '8000', '--noreload'], {
-    cwd: BACKEND_DIR,
-    shell: true,
-    windowsHide: false,
-    env: { ...process.env, DJANGO_SETTINGS_MODULE: 'banking_dcpr.settings' }
-  });
-  
-  djangoServer.stdout.on('data', (data) => {
-    const output = data.toString().trim();
-    console.log('[Django]:', output);
-    if (output.includes('Starting development server') || 
-        output.includes('Quit the server with') ||
-        output.includes('Starting')) {
-      console.log('[JOPCA] Django server started successfully!');
-    }
-  });
-  
-  djangoServer.stderr.on('data', (data) => {
-    const error = data.toString().trim();
-    console.error('[Django error]:', error);
-    if (error.includes('Error') || error.includes('Exception')) {
-      const { dialog } = require('electron');
-      dialog.showErrorBox('Django Error', 'Backend Error:\n' + error);
-    }
-  });
-  
-  djangoServer.on('error', (err) => {
-    console.error('[JOPCA] Django server error:', err);
-    const { dialog } = require('electron');
-    dialog.showErrorBox('JOPCA Error', 'Failed to start Django server:\n' + err.message);
-  });
-  
-  djangoServer.on('close', (code) => {
-    console.log('[JOPCA] Django server closed with code:', code);
   });
 }
 
@@ -402,7 +354,7 @@ ipcMain.handle('get-backend-config', () => {
   return global.sharedConfig;
 });
 
-// Modify startDjangoServer to check config
+// Update startDjangoServer to use config and proper path handling
 function startDjangoServer() {
   if (global.sharedConfig.backendMode === 'remote') {
     console.log('[JOPCA] Using remote backend:', global.sharedConfig.apiUrl);
@@ -414,7 +366,8 @@ function startDjangoServer() {
   
   // Check if backend directory exists
   if (!fs.existsSync(BACKEND_DIR)) {
-    const errorMsg = 'Backend directory not found at:\n' + BACKEND_DIR + '\n\nThe banking_dcpr folder must be in the same location as the app.';
+    const errorMsg = 'Backend directory not found at:\n' + BACKEND_DIR + 
+      '\n\nPlease ensure JOPCA was installed correctly.';
     console.error('[JOPCA] ERROR:', errorMsg);
     const { dialog } = require('electron');
     dialog.showErrorBox('JOPCA Startup Error', errorMsg);
@@ -425,12 +378,27 @@ function startDjangoServer() {
   const managePyPath = path.join(BACKEND_DIR, 'manage.py');
   
   if (!fs.existsSync(managePyPath)) {
-    const errorMsg = 'manage.py not found at:\n' + managePyPath + '\n\nPlease ensure banking_dcpr is properly set up.';
+    const errorMsg = 'manage.py not found at:\n' + managePyPath + 
+      '\n\nPlease ensure JOPCA was installed correctly.';
     console.error('[JOPCA] ERROR:', errorMsg);
     const { dialog } = require('electron');
     dialog.showErrorBox('JOPCA Startup Error', errorMsg);
     return null;
   }
+  
+  // Check if Python is available
+  const pythonCheck = spawn('python', ['--version'], {
+    shell: true,
+    windowsHide: true,
+  });
+  
+  pythonCheck.on('error', (err) => {
+    const errorMsg = 'Python is not installed or not found in PATH.\n' +
+      'Please install Python 3.13 or later from https://python.org';
+    console.error('[JOPCA] Python not found:', err);
+    const { dialog } = require('electron');
+    dialog.showErrorBox('JOPCA - Python Required', errorMsg);
+  });
   
   if (!fs.existsSync(dbPath)) {
     console.log('[JOPCA] Database not found, running migrations...');

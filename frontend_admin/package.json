@@ -15,6 +15,44 @@
     "electron:build": "vite build && electron-builder --win --publish never",
     "electron:start": "electron ."
   },
+  "build": {
+    "appId": "com.jopca.app",
+    "productName": "JOPCA",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": false,
+    "files": [
+      "**/*",
+      "!node_modules/**",
+      "dist/**",
+      "electron/**",
+      "public/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../banking_dcpr",
+        "to": "banking_dcpr",
+        "filter": [
+          "**/*",
+          "!venv/**",
+          "!.env",
+          "!__pycache__/**",
+          "!.git/**"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/jopca-logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "JOPCA"
+    }
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

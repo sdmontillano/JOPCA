@@ -1,0 +1,20 @@
+# Include dist folder (frontend build) - this overrides .gitignore
+!dist
+
+# Ignore node_modules
+node_modules
+
+# Ignore source files that aren't needed in production
+src
+electron
+public
+
+# Ignore development files
+.git
+.gitignore
+*.md
+*.log
+.env
+.env.example
+eslint.config.js
+vite.config.js
