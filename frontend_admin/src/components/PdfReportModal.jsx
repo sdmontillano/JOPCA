@@ -84,15 +84,16 @@ export default function PdfReportModal({ open, onClose }) {
             Report Sections:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-           {[
-               { label: "1. Cash In Banks", color: "#1D4ED8" },
-               { label: "2. Total Collection", color: "#166534" },
-               { label: "3. Total Disbursement", color: "#991B1B" },
-               { label: "4. PCF Transactions", color: "#7C3AED" },
-               { label: "5. Total Adjustments", color: "#B45309" },
-               { label: "6. Bank Charges", color: "#6B7280" },
-               { label: "7. Cash Summary", color: "#10B981" },
-             ].map((section, idx) => (
+            {[
+                { label: "1. Cash In Banks", color: "#1D4ED8" },
+                { label: "2. Total Collection", color: "#166534" },
+                { label: "3. Total Disbursement", color: "#991B1B" },
+                { label: "4. PCF Transactions", color: "#7C3AED" },
+                { label: "5. Total Adjustments", color: "#B45309" },
+                { label: "6. Bank Charges", color: "#6B7280" },
+                { label: "7. Cash Summary", color: "#10B981" },
+                { label: "8. Analysis", color: "#1E293B" },
+              ].map((section, idx) => (
               <Typography
                 key={idx}
                 variant="body2"

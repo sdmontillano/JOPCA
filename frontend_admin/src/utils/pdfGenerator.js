@@ -535,9 +535,82 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       },
     });
 
-    y = doc.lastAutoTable.finalY + 12;
-
-    // Signatures section
+     y = doc.lastAutoTable.finalY + 12;
+    
+     // =============================================
+     // PAGE 5: ANALYSIS
+     // =============================================
+     doc.addPage();
+     y = 20;
+     doc.setFontSize(18);
+     doc.setFont("helvetica", "bold");
+     doc.text("JOPCA ANALYSIS", CENTER_X, y, { align: "center" });
+     y += 7;
+     doc.setFontSize(12);
+     doc.setFont("helvetica", "normal");
+     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+     y += 8;
+     doc.line(marginL, y, marginRightL, y);
+     y += 8;
+     
+     const netBank = totalCollection - totalDisbursement + totalAdjustments - totalBankCharges;
+     const pcfNet = pcfTotalRep - pcfTotalDisb;
+     const grandTotal = netBank + pcfNet;
+     
+     doc.setFontSize(11);
+     doc.setFont("helvetica", "bold");
+     doc.text("SUMMARY", marginL, y);
+     y += 6;
+     
+     doc.setFont("helvetica", "normal");
+     doc.setFontSize(10);
+     
+     // Bank Transactions
+     doc.setFont("helvetica", "bold");
+     doc.text("Bank Transactions:", marginL + 8, y);
+     y += 5;
+     doc.setFont("helvetica", "normal");
+     doc.text(`Total Collections:`, marginL + 8, y);
+     doc.text(formatCurrency(totalCollection), marginRightL + 40, y, { align: "right" });
+     y += 5;
+     
+     doc.text(`Total Disbursements:`, marginL + 8, y);
+     doc.text(formatCurrency(totalDisbursement), marginRightL + 40, y, { align: "right" });
+     y += 5;
+     
+     doc.text(`Total Adjustments:`, marginL + 8, y);
+     doc.text(formatCurrency(totalAdjustments), marginRightL + 40, y, { align: "right" });
+     y += 5;
+     
+     doc.text(`Total Bank Charges:`, marginL + 8, y);
+     doc.text(formatCurrency(totalBankCharges), marginRightL + 40, y, { align: "right" });
+     y += 5;
+     
+     doc.setFont("helvetica", "bold");
+     doc.text(`Net Bank:`, marginL + 8, y);
+     doc.text(formatCurrency(netBank), marginRightL + 40, y, { align: "right" });
+     y += 8;
+     
+     // PCF Transactions
+     doc.setFont("helvetica", "normal");
+     doc.text(`Total Disbursements:`, marginL + 8, y);
+     doc.text(formatCurrency(pcfTotalDisb), marginRightL + 40, y, { align: "right" });
+     y += 5;
+     doc.text(`Total Replenishments:`, marginL + 8, y);
+     doc.text(formatCurrency(pcfTotalRep), marginRightL + 40, y, { align: "right" });
+     y += 5;
+     
+     doc.setFont("helvetica", "bold");
+     doc.text(`PCF Net:`, marginL + 8, y);
+     doc.text(formatCurrency(pcfNet), marginRightL + 40, y, { align: "right" });
+     y += 8;
+     
+     // Grand Total
+     doc.setFontSize(12);
+     doc.text(`GRAND TOTAL:`, marginL + 8, y);
+     doc.text(formatCurrency(grandTotal), marginRightL + 40, y, { align: "right" });
+     
+     // Signatures section
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
