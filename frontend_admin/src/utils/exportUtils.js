@@ -528,168 +528,171 @@ export function exportCashSummaryExcel(data, date, user) {
 
 // ==========================================
 // ANALYSIS EXPORT
-// ==========================================
+// =========================================
 
 export function exportAnalysisPDF(data, date, user) {
   const doc = new jsPDF('landscape', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const marginLeft = 14;
   const marginRight = 14;
   const tableWidth = pageWidth - marginLeft - marginRight;
+  const CENTER_X = pageWidth / 2;
 
+  let y = 15;
+
+  // Header - match Analysis page
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('JOPCA CORPORATION', pageWidth / 2, 15, { align: 'center' });
+  doc.text('JOPCA CORPORATION', CENTER_X, y, { align: 'center' });
+  y += 6;
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('BANK RECONCILIATION ANALYSIS', pageWidth / 2, 22, { align: 'center' });
+  doc.text('BANK RECONCILIATION ANALYSIS', CENTER_X, y, { align: 'center' });
+  y += 7;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Daily bank reconciliation statement', CENTER_X, y, { align: 'center' });
+  y += 8;
 
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`As of: ${formatDate(date)}`, pageWidth / 2, 28, { align: 'center' });
-
-  let y = 36;
-
-  const areaLabels = {
-    main_office: 'Main Office',
-    tagoloan_parts: 'Tagoloan Parts',
-    midsayap_parts: 'Midsayap Parts',
-    valencia_parts: 'Valencia Parts',
-  };
+  doc.text(`As of: ${formatDate(date)}`, CENTER_X, y, { align: 'center' });
+  y += 12;
 
   const banks = data?.banks || [];
   
-  banks.forEach((bank) => {
-    if (y > pageWidth - 80) {
-      doc.addPage();
-      y = 15;
-    }
-
-    const areaLabel = areaLabels[bank.area] || bank.area || '';
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${areaLabel} - ${bank.name} (${bank.account_number})`, marginLeft, y);
-    y += 4;
-
-    const auto = bank.auto_computed || {};
-    const rec = bank.reconciliation || {};
-    const depositInTransit = rec.deposit_in_transit ?? auto.deposit_in_transit ?? 0;
-    const outstandingChecks = rec.outstanding_checks ?? auto.outstanding_checks ?? 0;
-    const returnedChecks = rec.returned_checks ?? auto.returned_checks ?? 0;
-    const bankCharges = rec.bank_charges ?? auto.bank_charges ?? 0;
-    const unbookedTransfers = rec.unbooked_transfers ?? auto.unbooked_transfers ?? 0;
-    const perBank = rec.per_bank ?? bank.per_dcpr ?? 0;
-
-    const isChecking = bank.account_number?.toLowerCase().includes('ca');
-    let bankReconciled = 0;
-
-    if (isChecking) {
-      bankReconciled = parseFloat(perBank) + parseFloat(depositInTransit) - parseFloat(outstandingChecks) - parseFloat(returnedChecks) - parseFloat(bankCharges);
-    } else {
-      bankReconciled = parseFloat(perBank) + parseFloat(depositInTransit) - parseFloat(unbookedTransfers) - parseFloat(returnedChecks) - parseFloat(bankCharges);
-    }
-
-    const bankData = [
-      ['Ending Balance', formatCurrency(bank.per_dcpr || 0), formatCurrency(perBank), ''],
-    ];
-
-    if (isChecking) {
-      bankData.push(['Outstanding Checks (deduct)', formatCurrency(outstandingChecks), '-', 'deduct to Bank']);
-      bankData.push(['Unbooked Fund Transfers (add)', formatCurrency(unbookedTransfers), '-', 'add to DCPR']);
-      bankData.push(['Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
-    } else {
-      bankData.push(['Deposit in Transit (add)', formatCurrency(depositInTransit), '-', 'add to Bank']);
-      bankData.push(['Remittance to Checking (deduct)', formatCurrency(unbookedTransfers), '-', 'deduct to DCPR']);
-      bankData.push(['Returned Check', formatCurrency(returnedChecks), '-', '-']);
-      bankData.push(['Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
-    }
-
-    bankData.push(['Reconciled Balance', formatCurrency(bankReconciled), formatCurrency(bankReconciled), '']);
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Description', 'Per DCPR', 'Per Bank', 'Remarks']],
-      body: bankData,
-      theme: 'striped',
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
-      bodyStyles: { fontSize: 8 },
-      margin: { left: marginLeft, right: marginRight },
-      tableWidth,
-      columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 30 },
-      },
-    });
-
-    y = doc.lastAutoTable.finalY + 10;
-  });
-
-  // Grand Totals
+  // Calculate grand totals
   let totalPerDcpr = 0;
   let totalPerBank = 0;
   let totalReconciled = 0;
 
   banks.forEach(bank => {
-    const auto = bank.auto_computed || {};
-    const rec = bank.reconciliation || {};
-    const depositInTransit = rec.deposit_in_transit ?? auto.deposit_in_transit ?? 0;
-    const outstandingChecks = rec.outstanding_checks ?? auto.outstanding_checks ?? 0;
-    const returnedChecks = rec.returned_checks ?? auto.returned_checks ?? 0;
-    const bankCharges = rec.bank_charges ?? auto.bank_charges ?? 0;
-    const unbookedTransfers = rec.unbooked_transfers ?? auto.unbooked_transfers ?? 0;
-    const perBank = rec.per_bank ?? bank.per_dcpr ?? 0;
-
-    totalPerDcpr += parseFloat(bank.per_dcpr) || 0;
-    totalPerBank += parseFloat(perBank) || 0;
+    if (y > pageHeight - 80) {
+      doc.addPage();
+      y = 15;
+    }
 
     const isChecking = bank.account_number?.toLowerCase().includes('ca');
+    const accountType = isChecking ? 'Checking Account' : 'Savings Account';
+    
+    // Bank header
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${bank.name} - ${accountType} (${bank.account_number})`, marginLeft, y);
+    y += 8;
+
+    const auto = bank.auto_computed || {};
+    const rec = bank.reconciliation || {};
+    const perDcpr = parseFloat(bank.per_dcpr || 0);
+    const perBank = parseFloat((rec?.per_bank ?? bank.per_dcpr) || 0);
+    
+    totalPerDcpr += perDcpr;
+    totalPerBank += perBank;
+
+    // Build table data
+    const tableData = [];
+    
+    // Ending Balance (Per DCPR)
+    tableData.push(['Ending Balance', formatCurrency(perDcpr), formatCurrency(perDcpr), 'auto-filled']);
+
+    // Reconciliation items
     if (isChecking) {
-      totalReconciled += parseFloat(perBank) + parseFloat(depositInTransit) - parseFloat(outstandingChecks) - parseFloat(returnedChecks) - parseFloat(bankCharges);
+      // Checking account
+      const outstandingChecks = parseFloat(auto.outstanding_checks || 0);
+      const unbookedTransfers = parseFloat(auto.unbooked_transfers || 0);
+      const bankCharges = parseFloat(rec.bank_charges ?? auto.bank_charges ?? 0);
+      
+      tableData.push(['a. Outstanding Checks', formatCurrency(outstandingChecks), '-', 'deduct to Bank']);
+      tableData.push(['b. Unbooked Fund Transfers', formatCurrency(unbookedTransfers), '-', 'add to DCPR']);
+      tableData.push(['c. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
+      
+      const reconciled = perBank + parseFloat(auto.deposit_in_transit || 0) - outstandingChecks - parseFloat(auto.returned_checks || 0) - bankCharges;
+      totalReconciled += reconciled;
+      tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
     } else {
-      totalReconciled += parseFloat(perBank) + parseFloat(depositInTransit) - parseFloat(unbookedTransfers) - parseFloat(returnedChecks) - parseFloat(bankCharges);
+      // Savings account
+      const depositInTransit = parseFloat(auto.deposit_in_transit || 0);
+      const unbookedTransfers = parseFloat(auto.unbooked_transfers || 0);
+      const returnedChecks = parseFloat(auto.returned_checks || 0);
+      const bankCharges = parseFloat(rec.bank_charges ?? auto.bank_charges ?? 0);
+      
+      tableData.push(['a. Deposit in Transit', formatCurrency(depositInTransit), '-', 'add to Bank']);
+      tableData.push(['b. Remittance to Checking', formatCurrency(unbookedTransfers), '-', 'deduct to DCPR']);
+      tableData.push(['c. Returned Check', formatCurrency(returnedChecks), '-', '-']);
+      tableData.push(['d. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
+      
+      const reconciled = perBank + depositInTransit - unbookedTransfers - returnedChecks - bankCharges;
+      totalReconciled += reconciled;
+      tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
     }
+
+    // Render table
+    autoTable(doc, {
+      startY: y,
+      head: [['Description', 'Per DCPR', 'Per Bank', 'Remarks']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      margin: { left: marginLeft, right: marginRight },
+      tableWidth,
+    });
+    y = doc.lastAutoTable.finalY + 10;
   });
 
-  if (y > pageWidth - 50) {
+  // Grand Total Section
+  if (y > pageHeight - 60) {
     doc.addPage();
     y = 15;
   }
 
-  const totalsData = [
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GRAND TOTAL - ALL ACCOUNTS', marginLeft, y);
+  y += 8;
+
+  const grandTable = [
     ['Total Per DCPR (Ending Balance)', formatCurrency(totalPerDcpr)],
     ['Total Per Bank (Manual Entry)', formatCurrency(totalPerBank)],
-    ['Total Reconciled Balance', formatCurrency(totalReconciled)],
+    ['Total Reconciled Balance', formatCurrency(totalReconciled)]
   ];
 
   autoTable(doc, {
     startY: y,
-    head: [['GRAND TOTAL - ALL ACCOUNTS', '']],
-    body: totalsData,
+    body: grandTable,
     theme: 'grid',
-    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10, halign: 'left' },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255 },
     bodyStyles: { fontSize: 10, fontStyle: 'bold' },
     margin: { left: marginLeft, right: marginRight },
     tableWidth,
-    columnStyles: {
-      0: { cellWidth: 70 },
-      1: { cellWidth: 30 },
-    },
   });
-
   y = doc.lastAutoTable.finalY + 10;
 
-  const preparedBy = user?.first_name && user?.last_name
-    ? `${user.first_name} ${user.last_name}`
-    : user?.username || 'User';
+  // Signature section - match Analysis page
+  if (y > pageHeight - 40) {
+    doc.addPage();
+    y = 15;
+  }
 
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Prepared by: ${preparedBy}`, marginLeft, y);
-  doc.text('Approved by: JOHN P. CABAÑOG', marginLeft + 80, y);
+
+  // Prepared by
+  doc.setFont('helvetica', 'bold');
+  doc.text('Prepared by:', marginLeft, y);
+  doc.setFont('helvetica', 'normal');
+  const preparedBy = user?.first_name && user?.last_name 
+    ? `${user.first_name} ${user.last_name}`.toUpperCase()
+    : (user?.username || 'User').toUpperCase();
+  doc.text(preparedBy, marginLeft + 30, y);
+
+  // Approved by
+  doc.setFont('helvetica', 'bold');
+  doc.text('Approved by:', marginLeft + 120, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text('JOHN P. CABAÑOG', marginLeft + 150, y);
 
   doc.save(`JOPCA-Analysis-${date}.pdf`);
 }

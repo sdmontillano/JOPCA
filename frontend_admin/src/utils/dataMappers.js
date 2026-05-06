@@ -280,11 +280,15 @@ export function mapMonthlyResponse(raw = {}) {
 
   return {
     month: data.month || data.period || null,
-    transactions,
+    summary: data.summary || {},
+    bank_balance_summary: data.bank_balance_summary || data.accounts || [],
+    bank_transactions: data.bank_transactions || data.transactions || [],
+    pcf_transactions: data.pcf_transactions || [],
     pdc_summary: pdcSummary,
     accounts: data.accounts || [],
     grand_total: data.grand_total ?? data.total ?? 0,
     line_items: lineItems,
     _raw: data,
+    transactions,
   };
 }

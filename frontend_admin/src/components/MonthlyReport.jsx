@@ -38,6 +38,7 @@ import PdcCreateModal from "./PdcCreateModal";
 import AddPcfModal from "./AddPcfModal";
 import PdfReportModal from "./PdfReportModal";
 import { generateMonthlyPdfReport } from "../utils/pdfGenerator";
+import { mapMonthlyResponse } from "../utils/dataMappers";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
@@ -169,7 +170,8 @@ export default function MonthlyReport() {
     api
       .get("/summary/monthly-full/", { params: { month: selectedMonth } })
       .then((res) => {
-        setReport(res.data || res);
+        const mappedData = mapMonthlyResponse(res.data || res);
+        setReport(mappedData);
         setLoading(false);
       })
       .catch((err) => {
