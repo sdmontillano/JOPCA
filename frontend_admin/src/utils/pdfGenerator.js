@@ -45,13 +45,13 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const dateStr = selectedDate;
     const formattedDate = formatDate(dateStr);
     
-    const [bankRes, pcfRes, dailyRes, cashSummaryRes, analysisRes] = await Promise.all([
-      api.get("/transactions/", { params: { date: dateStr, page_size: 500 } ),
-      api.get("/pcf-transactions/", { params: { date: dateStr, page_size: 500 } ),
-      api.get(`/summary/detailed-daily/`, { params: { date: dateStr } }),
-      api.get(`/summary/cash-summary/`, { params: { date: dateStr } }),
-      api.get(`/summary/bank-analysis/`, { params: { date: dateStr } })  // NEW: Add bank analysis data
-    ]);
+     const [bankRes, pcfRes, dailyRes, cashSummaryRes, analysisRes] = await Promise.all([
+       api.get("/transactions/", { params: { date: dateStr, page_size: 500 } }),
+       api.get("/pcf-transactions/", { params: { date: dateStr, page_size: 500 } }),
+       api.get(`/summary/detailed-daily/`, { params: { date: dateStr } }),
+       api.get(`/summary/cash-summary/`, { params: { date: dateStr } }),
+       api.get(`/summary/bank-analysis/`, { params: { date: dateStr } })  // NEW: Add bank analysis data
+     ]);
 
     const bankTxns = bankRes.data?.results || bankRes.data || [];
     const pcfTxns = pcfRes.data?.results || pcfRes.data || [];
@@ -362,9 +362,9 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // =============================================
     // PAGE 4: CASH POSITION SUMMARY (Landscape Format)
     // =============================================
-    doc.addPage("landscape");
-    const pageWidth = doc.internal.pageSize.getWidth();    const pageHeight = doc.internal.pageSize.getHeight();    const marginLP4 = 15;    const tableWidthL = pageWidth - marginLP4 * 2;    y = 18;
-    const tableWidth = tableWidthL;
+     doc.addPage("landscape");
+     const pageWidth = doc.internal.pageSize.getWidth();    let pageHeight = doc.internal.pageSize.getHeight();    const marginLP4 = 15;    const tableWidthL = pageWidth - marginLP4 * 2;    y = 18;
+     const tableWidth = tableWidthL;
 
     // Header - centered properly
     doc.setFontSize(16);
@@ -555,97 +555,175 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
      y = doc.lastAutoTable.finalY + 12;
     
      // =============================================
-     // PAGE 5: ANALYSIS
+     // PAGE 5: JOPCA ANALYSIS (BANK RECONCILIATION)
      // =============================================
      doc.addPage();
      y = 20;
+     
+     // Header matching Analysis PDF style
      doc.setFontSize(18);
      doc.setFont("helvetica", "bold");
-     doc.text("JOPCA ANALYSIS", CENTER_X, y, { align: "center" });
-     y += 7;
-     doc.setFontSize(12);
-     doc.setFont("helvetica", "normal");
-     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
-     y += 8;
-     doc.line(marginL, y, marginRightL, y);
-     y += 8;
-     
-     const netBank = totalCollection - totalDisbursement + totalAdjustments - totalBankCharges;
-     const pcfNet = pcfTotalRep - pcfTotalDisb;
-     const grandTotal = netBank + pcfNet;
-     
-     doc.setFontSize(11);
-     doc.setFont("helvetica", "bold");
-     doc.text("SUMMARY", marginL, y);
+     doc.text("JOPCA CORPORATION", CENTER_X, y, { align: "center" });
      y += 6;
-     
+     doc.setFontSize(14);
+     doc.setFont("helvetica", "bold");
+     doc.text("BANK RECONCILIATION ANALYSIS", CENTER_X, y, { align: "center" });
+     y += 7;
+     doc.setFontSize(11);
      doc.setFont("helvetica", "normal");
+     doc.text("Daily bank reconciliation statement", CENTER_X, y, { align: "center" });
+     y += 8;
      doc.setFontSize(10);
+     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+     y += 12;
      
-     // Bank Transactions
+     // Get banks data from analysisData (already fetched from /summary/bank-analysis/)
+     const analysisBanks = analysisData?.banks || [];
+     // Update pageHeight for portrait mode (Page 5 is portrait)
+     pageHeight = doc.internal.pageSize.getHeight();
+     
+     // Calculate grand totals
+     let totalPerDcpr = 0;
+     let totalPerBank = 0;
+     let totalReconciled = 0;
+     
+     analysisBanks.forEach(bank => {
+       // Check if we need a new page
+       if (y > pageHeight - 80) {
+         doc.addPage();
+         y = 20;
+       }
+       
+       const isChecking = bank.account_number?.toLowerCase().includes('ca');
+       const accountType = isChecking ? 'Checking Account' : 'Savings Account';
+       
+       // Bank header
+       doc.setFontSize(12);
+       doc.setFont("helvetica", "bold");
+       doc.text(`${bank.name || "Unknown"} - ${accountType} (${bank.account_number || ""})`, marginL, y);
+       y += 8;
+       
+       const auto = bank.auto_computed || {};
+       const rec = bank.reconciliation || {};
+       const perDcpr = parseFloat(bank.per_dcpr || 0);
+       const perBank = parseFloat((rec?.per_bank ?? bank.per_dcpr) || 0);
+       
+       totalPerDcpr += perDcpr;
+       totalPerBank += perBank;
+       
+       // Build table data
+       const tableData = [];
+       
+       // Ending Balance (Per DCPR)
+       tableData.push(['Ending Balance', formatCurrency(perDcpr), formatCurrency(perDcpr), 'auto-filled']);
+       
+       // Reconciliation items
+       if (isChecking) {
+         const outstandingChecks = parseFloat(auto.outstanding_checks || 0);
+         const unbookedTransfers = parseFloat(auto.unbooked_transfers || 0);
+         const bankCharges = parseFloat(rec.bank_charges ?? auto.bank_charges ?? 0);
+         
+         tableData.push(['a. Outstanding Checks', formatCurrency(outstandingChecks), '-', 'deduct to Bank']);
+         tableData.push(['b. Unbooked Fund Transfers', formatCurrency(unbookedTransfers), '-', 'add to DCPR']);
+         tableData.push(['c. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
+         
+         const reconciled = perBank + parseFloat(auto.deposit_in_transit || 0) - outstandingChecks - parseFloat(auto.returned_checks || 0) - bankCharges;
+         totalReconciled += reconciled;
+         tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
+       } else {
+         const depositInTransit = parseFloat(auto.deposit_in_transit || 0);
+         const unbookedTransfers = parseFloat(auto.unbooked_transfers || 0);
+         const returnedChecks = parseFloat(auto.returned_checks || 0);
+         const bankCharges = parseFloat(rec.bank_charges ?? auto.bank_charges ?? 0);
+         
+         tableData.push(['a. Deposit in Transit', formatCurrency(depositInTransit), '-', 'add to Bank']);
+         tableData.push(['b. Remittance to Checking', formatCurrency(unbookedTransfers), '-', 'deduct to DCPR']);
+         tableData.push(['c. Returned Check', formatCurrency(returnedChecks), '-', '-']);
+         tableData.push(['d. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
+         
+         const reconciled = perBank + depositInTransit - unbookedTransfers - returnedChecks - bankCharges;
+         totalReconciled += reconciled;
+         tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
+       }
+       
+        // Render table with fixed column widths (80/35/35/20 = 170pts total)
+        autoTable(doc, {
+          startY: y,
+          head: [['Description', 'Per DCPR', 'Per Bank', 'Remarks']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+          bodyStyles: { fontSize: 8 },
+          columnStyles: {
+            0: { cellWidth: 80 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 35 },
+            3: { cellWidth: 20 }
+          },
+          margin: { left: marginL, right: marginRightL }
+        });
+        y = doc.lastAutoTable.finalY + 10;
+      });
+      
+      // Grand Total Section
+     if (y > pageHeight - 60) {
+       doc.addPage();
+       y = 20;
+     }
+     
+     doc.setFontSize(14);
      doc.setFont("helvetica", "bold");
-     doc.text("Bank Transactions:", marginL + 8, y);
-     y += 5;
-     doc.setFont("helvetica", "normal");
-     doc.text(`Total Collections:`, marginL + 8, y);
-     doc.text(formatCurrency(totalCollection), marginRightL + 40, y, { align: "right" });
-     y += 5;
-     
-     doc.text(`Total Disbursements:`, marginL + 8, y);
-     doc.text(formatCurrency(totalDisbursement), marginRightL + 40, y, { align: "right" });
-     y += 5;
-     
-     doc.text(`Total Adjustments:`, marginL + 8, y);
-     doc.text(formatCurrency(totalAdjustments), marginRightL + 40, y, { align: "right" });
-     y += 5;
-     
-     doc.text(`Total Bank Charges:`, marginL + 8, y);
-     doc.text(formatCurrency(totalBankCharges), marginRightL + 40, y, { align: "right" });
-     y += 5;
-     
-     doc.setFont("helvetica", "bold");
-     doc.text(`Net Bank:`, marginL + 8, y);
-     doc.text(formatCurrency(netBank), marginRightL + 40, y, { align: "right" });
+     doc.text("GRAND TOTAL - ALL ACCOUNTS", marginL, y);
      y += 8;
      
-     // PCF Transactions
+      const grandTable = [
+        ['Total Per DCPR (Ending Balance)', formatCurrency(totalPerDcpr)],
+        ['Total Per Bank (Manual Entry)', formatCurrency(totalPerBank)],
+        ['Total Reconciled Balance', formatCurrency(totalReconciled)]
+      ];
+     
+      autoTable(doc, {
+        startY: y,
+        body: grandTable,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+        columnStyles: {
+          0: { cellWidth: 120, fontSize: 10, fontStyle: 'bold' },
+          1: { cellWidth: 50, fontSize: 10, fontStyle: 'bold', hAlign: 'right' }
+        },
+        margin: { left: marginL, right: marginRightL }
+      });
+      y = doc.lastAutoTable.finalY + 10;
+     
+     // Signature section with proper margins
+     if (y > pageHeight - 40) {
+       doc.addPage();
+       y = 20;
+     }
+     
+     doc.setFontSize(10);
      doc.setFont("helvetica", "normal");
-     doc.text(`Total Disbursements:`, marginL + 8, y);
-     doc.text(formatCurrency(pcfTotalDisb), marginRightL + 40, y, { align: "right" });
-     y += 5;
-     doc.text(`Total Replenishments:`, marginL + 8, y);
-     doc.text(formatCurrency(pcfTotalRep), marginRightL + 40, y, { align: "right" });
-     y += 5;
+     const userName = localStorage.getItem("userName") || "User";
+     doc.text(`Prepared by: ${userName}`, marginL, y);
+     doc.text("Approved by: JOHN P. CABAÑOG", marginRightL, y, { align: "right" });
      
-     doc.setFont("helvetica", "bold");
-     doc.text(`PCF Net:`, marginL + 8, y);
-     doc.text(formatCurrency(pcfNet), marginRightL + 40, y, { align: "right" });
-     y += 8;
-     
-     // Grand Total
-     doc.setFontSize(12);
-     doc.text(`GRAND TOTAL:`, marginL + 8, y);
-     doc.text(formatCurrency(grandTotal), marginRightL + 40, y, { align: "right" });
-     
-     // Signatures section
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-    const userName = localStorage.getItem("userName") || "User";
-    doc.text(`Prepared by: ${userName}`, marginL, y);
-    doc.text("Approved by: JOHN P. CABA\u00D1OG", marginL + 85, y);
-    
      // Save the PDF
      const fileName = `jopca-report-${dateStr}.pdf`;
      doc.save(fileName);
      
      showToast("Report generated successfully!", "success");
      return true;
-   } catch (error) {
-      console.error("Error generating PDF report:", error);
-      showToast("Failed to generate report. Please try again.", "error");
-      return false;
-    }
+    } catch (error) {
+       console.error("Error generating PDF report:", {
+         message: error.message,
+         response: error.response?.data,
+         status: error.response?.status,
+         url: error.config?.url
+       });
+       const errorMsg = error.response?.data?.detail || error.message || "Unknown error";
+       showToast(`Error: ${errorMsg}`, "error");
+       return false;
+     }
   };
 
 export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) => {
@@ -755,7 +833,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
       const auto = bank.auto_computed || {};
       const rec = bank.reconciliation || {};
       const perDcpr = parseFloat(bank.per_dcpr || 0);
-      const perBank = parseFloat(rec?.per_bank ?? bank.per_dcpr || 0);
+       const perBank = parseFloat((rec?.per_bank ?? bank.per_dcpr) || 0);
 
       totalPerDcpr += perDcpr;
       totalPerBank += perBank;
@@ -817,28 +895,6 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
       y = 20;
     }
 
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("GRAND TOTAL - ALL ACCOUNTS", marginL, y);
-    y += 8;
-
-    const grandTable = [
-      ['Total Per DCPR (Ending Balance)', formatCurrency(totalPerDcpr)],
-      ['Total Per Bank (Manual Entry)', formatCurrency(totalPerBank)],
-      ['Total Reconciled Balance', formatCurrency(totalReconciled)]
-    ];
-
-    autoTable(doc, {
-      startY: y,
-      body: grandTable,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], textColor: 255 },
-      bodyStyles: { fontSize: 10, fontStyle: 'bold' },
-      margin: { left: marginL, right: marginRightL },
-      tableWidth,
-    });
-    y = doc.lastAutoTable.finalY + 10;
-
     // Signature section
     if (y > pageHeight - 40) {
       doc.addPage();
@@ -879,15 +935,15 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
     y += 12;
 
-    // Get banks data from the already-fetched dailyData
-    const analysisBanks = dailyData?.accounts || [];
-
-    // Calculate grand totals
-    let totalPerDcpr = 0;
-    let totalPerBank = 0;
-    let totalReconciled = 0;
-
-    analysisBanks.forEach(bank => {
+     // Get banks data from the already-fetched dailyData
+     const monthlyAnalysisBanks = dailyData?.accounts || [];
+     
+     // Calculate grand totals
+     let monthlyTotalPerDcpr = 0;
+     let monthlyTotalPerBank = 0;
+     let monthlyTotalReconciled = 0;
+     
+     monthlyAnalysisBanks.forEach(bank => {
       if (y > pageHeight - 80) {
         doc.addPage();
         y = 20;
@@ -902,8 +958,8 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
       doc.text(`${bank.name || "Unknown"} - ${accountType} (${bank.account_number || ""})`, marginL, y);
       y += 8;
 
-      const perDcpr = parseFloat(bank.balance || 0);
-      totalPerDcpr += perDcpr;
+       const perDcpr = parseFloat(bank.balance || 0);
+       monthlyTotalPerDcpr += perDcpr;
 
       // Build table data
       const tableData = [];
@@ -929,25 +985,30 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
         tableData.push(['d. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
       }
 
-      // Reconciled Balance (placeholder)
-      const reconciled = perDcpr; // Simplified - should be calculated properly
-      totalReconciled += reconciled;
+       // Reconciled Balance (placeholder)
+       const reconciled = perDcpr; // Simplified - should be calculated properly
+       monthlyTotalReconciled += reconciled;
       tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
-
-      // Render table
-      autoTable(doc, {
-        startY: y,
-        head: [['Description', 'Per DCPR', 'Per Bank', 'Remarks']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
-        bodyStyles: { fontSize: 8 },
-        margin: { left: marginL, right: marginRightL },
-        tableWidth,
-      });
+      
+       // Render table with fixed column widths (80/35/35/20 = 170pts total)
+       autoTable(doc, {
+         startY: y,
+         head: [['Description', 'Per DCPR', 'Per Bank', 'Remarks']],
+         body: tableData,
+         theme: 'striped',
+         headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+         bodyStyles: { fontSize: 8 },
+         columnStyles: {
+           0: { cellWidth: 80 },
+           1: { cellWidth: 35 },
+           2: { cellWidth: 35 },
+           3: { cellWidth: 20 }
+         },
+         margin: { left: marginL, right: marginRightL }
+       });
       y = doc.lastAutoTable.finalY + 10;
     });
-
+    
     // Grand Total Section
     if (y > pageHeight - 60) {
       doc.addPage();
@@ -959,46 +1020,45 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     doc.text("GRAND TOTAL - ALL ACCOUNTS", marginL, y);
     y += 8;
 
-    const grandTable = [
-      ['Total Per DCPR (Ending Balance)', formatCurrency(totalPerDcpr)],
-      ['Total Per Bank (Manual Entry)', formatCurrency(totalPerDcpr)],
-      ['Total Reconciled Balance', formatCurrency(totalReconciled)]
-    ];
+     const monthlyGrandTable = [
+       ['Total Per DCPR (Ending Balance)', formatCurrency(monthlyTotalPerDcpr)],
+       ['Total Per Bank (Manual Entry)', formatCurrency(monthlyTotalPerDcpr)],
+       ['Total Reconciled Balance', formatCurrency(monthlyTotalReconciled)]
+     ];
 
     autoTable(doc, {
       startY: y,
-      body: grandTable,
+      body: monthlyGrandTable,
       theme: 'grid',
       headStyles: { fillColor: [30, 41, 59], textColor: 255 },
-      bodyStyles: { fontSize: 10, fontStyle: 'bold' },
-      margin: { left: marginL, right: marginRightL },
-      tableWidth,
+      columnStyles: {
+        0: { cellWidth: 120, fontSize: 10, fontStyle: 'bold' },
+        1: { cellWidth: 50, fontSize: 10, fontStyle: 'bold', hAlign: 'right' }
+      },
+      margin: { left: marginL, right: marginRightL }
     });
     y = doc.lastAutoTable.finalY + 10;
 
-    // Signature section
-    if (y > pageHeight - 40) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-
-    // Prepared by
-    doc.setFont("helvetica", "bold");
-    doc.text("Prepared by:", marginL, y);
-    doc.setFont("helvetica", "normal");
-    const preparedByUser = user?.first_name && user?.last_name
-      ? `${user.first_name} ${user.last_name}`.toUpperCase()
-      : (user?.username || "User").toUpperCase();
-    doc.text(preparedByUser, marginL + 30, y);
-
-    // Approved by
-    doc.setFont("helvetica", "bold");
-    doc.text("Approved by:", marginL + 120, y);
-    doc.setFont("helvetica", "normal");
-    doc.text("JOHN P. CABAÑOG", marginL + 150, y);
+     // Signature section
+     if (y > pageHeight - 40) {
+       doc.addPage();
+       y = 20;
+     }
+     
+     doc.setFontSize(10);
+     doc.setFont("helvetica", "normal");
+     
+     // Prepared by
+     doc.setFont("helvetica", "bold");
+     doc.text("Prepared by:", marginL, y);
+     doc.setFont("helvetica", "normal");
+     doc.text(preparedByUser, marginL + 30, y);
+     
+     // Approved by
+     doc.setFont("helvetica", "bold");
+     doc.text("Approved by:", marginL + 120, y);
+     doc.setFont("helvetica", "normal");
+     doc.text("JOHN P. CABAÑOG", marginL + 150, y);
 
     // =============================================
     // PAGE 6: BANK BALANCE SUMMARY
