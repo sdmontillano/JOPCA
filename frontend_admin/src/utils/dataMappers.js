@@ -285,6 +285,7 @@ export function mapMonthlyResponse(raw = {}) {
     bank_transactions: data.bank_transactions || data.transactions || [],
     pcf_transactions: data.pcf_transactions || [],
     pdc_summary: pdcSummary,
+    pdc_this_month: data.pdc_this_month || [],
     accounts: data.accounts || [],
     grand_total: data.grand_total ?? data.total ?? 0,
     line_items: lineItems,

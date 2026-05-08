@@ -1,5 +1,6 @@
 ﻿import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import api from "../services/tokenService";
 
 export const formatCurrency = (value) => {
   let num = 0;
@@ -363,8 +364,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     // PAGE 4: CASH POSITION SUMMARY (Landscape Format)
     // =============================================
      doc.addPage("landscape");
-     const pageWidth = doc.internal.pageSize.getWidth();    let pageHeight = doc.internal.pageSize.getHeight();    const marginLP4 = 15;    const tableWidthL = pageWidth - marginLP4 * 2;    y = 18;
-     const tableWidth = tableWidthL;
+      const pageWidth = doc.internal.pageSize.getWidth();    let pageHeight = doc.internal.pageSize.getHeight();    const marginLP4 = 15;    y = 18;
 
     // Header - centered properly
     doc.setFontSize(16);
@@ -380,19 +380,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.text(`As of: ${formattedDate}`, pageWidth / 2, y, { align: "center" });
     y += 8;
     
-    // Section header - AREA table
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("AREA", marginL, y);
-    doc.text("MAIN OFFICE", marginL + 55, y);
-    doc.text("PARTS", marginL + 105, y);
-    doc.text("TOTAL", marginL + 160, y);
-    y += 2;
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.line(marginL, y, marginL + 180, y);
-    y += 5;
+
 
     let mainOfficeTotal = 0;
     let partsTotal = 0;
@@ -407,6 +395,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
             partsTotal += areaTotalVal;
             for (const bank of areaDataObj.banks) {
               areasData.push([
+                areaDataObj.display_name || "",
+                bank.name || "",
                 bank.account_number || "",
                 "-",
                 formatCurrency(bank.balance),
@@ -417,6 +407,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
             mainOfficeTotal += areaTotalVal;
             for (const bank of areaDataObj.banks) {
               areasData.push([
+                areaDataObj.display_name || "",
+                bank.name || "",
                 bank.account_number || "",
                 formatCurrency(bank.balance),
                 "-",
@@ -431,6 +423,8 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     const cashGrandTotal = mainOfficeTotal + partsTotal;
     areasData.push([
       "GRAND TOTAL",
+      "",
+      "",
       formatCurrency(mainOfficeTotal),
       formatCurrency(partsTotal),
       formatCurrency(cashGrandTotal)
@@ -438,18 +432,19 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
 
     autoTable(doc, {
       startY: y,
-      head: [["AREA", "MAIN OFFICE", "PARTS", "TOTAL"]],
+      head: [["AREA", "BANK NAME", "ACCT #", "MAIN OFFICE", "PARTS", "TOTAL"]],
       body: areasData,
       theme: "grid",
       headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9, hAlign: "center" },
-      bodyStyles: { fontSize: 8, hAlign: "center", minCellWidth: 20 },
-      margin: { left: marginL, right: marginRightL },
-      tableWidth,
+      bodyStyles: { fontSize: 8, hAlign: "center" },
+      margin: { left: marginLP4, right: marginLP4 },
       columnStyles: {
-        0: { cellWidth: 65, hAlign: "left" },
-        1: { cellWidth: 65, hAlign: "right" },
-        2: { cellWidth: 65, hAlign: "right" },
-        3: { cellWidth: 65, hAlign: "right" },
+        0: { cellWidth: 48, hAlign: "left" },
+        1: { cellWidth: 40, hAlign: "left" },
+        2: { cellWidth: 37, hAlign: "left" },
+        3: { cellWidth: 47, hAlign: "right" },
+        4: { cellWidth: 47, hAlign: "right" },
+        5: { cellWidth: 47, hAlign: "right" },
       },
     });
 
@@ -465,7 +460,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("PAYABLES:", marginL, y);
+    doc.text("PAYABLES:", marginLP4, y);
     y += 6;
 
     const mainDisb = cashSummary?.payables?.main_office?.disbursements_today || 0;
@@ -501,13 +496,12 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       theme: "grid",
       headStyles: { fillColor: [180, 83, 9], textColor: 255, fontSize: 9, hAlign: "center" },
       bodyStyles: { fontSize: 8, hAlign: "center" },
-      margin: { left: marginL, right: marginRightL },
-      tableWidth,
+      margin: { left: marginLP4, right: marginLP4 },
       columnStyles: {
-        0: { cellWidth: 50, hAlign: "left" },
-        1: { cellWidth: 40, hAlign: "right" },
-        2: { cellWidth: 40, hAlign: "right" },
-        3: { cellWidth: 40, hAlign: "right" },
+        0: { cellWidth: 120, hAlign: "left" },
+        1: { cellWidth: 50, hAlign: "right" },
+        2: { cellWidth: 50, hAlign: "right" },
+        3: { cellWidth: 47, hAlign: "right" },
       },
     });
 
@@ -527,7 +521,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("NET BALANCE:", marginL, y);
+    doc.text("NET BALANCE:", marginLP4, y);
     y += 5;
 
     autoTable(doc, {
@@ -542,13 +536,12 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       theme: "grid",
       headStyles: { fillColor: [16, 185, 129], textColor: 255, fontSize: 10, hAlign: "left" },
       bodyStyles: { fontSize: 10, fontStyle: "bold", hAlign: "center" },
-      margin: { left: marginL, right: marginRightL },
-      tableWidth,
+      margin: { left: marginLP4, right: marginLP4 },
       columnStyles: {
-        0: { cellWidth: 50, hAlign: "left" },
-        1: { cellWidth: 40, hAlign: "right" },
-        2: { cellWidth: 40, hAlign: "right" },
-        3: { cellWidth: 40, hAlign: "right" },
+        0: { cellWidth: 120, hAlign: "left" },
+        1: { cellWidth: 50, hAlign: "right" },
+        2: { cellWidth: 50, hAlign: "right" },
+        3: { cellWidth: 47, hAlign: "right" },
       },
     });
 
@@ -574,10 +567,10 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
      doc.text("Daily bank reconciliation statement", CENTER_X, y, { align: "center" });
      y += 8;
      doc.setFontSize(10);
-     doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
-     y += 12;
-     
-     // Get banks data from analysisData (already fetched from /summary/bank-analysis/)
+      doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+      y += 12;
+      
+      // Get banks data from analysisData (already fetched from /summary/bank-analysis/)
      const analysisBanks = analysisData?.banks || [];
      // Update pageHeight for portrait mode (Page 5 is portrait)
      pageHeight = doc.internal.pageSize.getHeight();
@@ -781,6 +774,29 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
 
     doc.setTextColor(0, 0, 0);
 
+    // Compute last day of selected month for API calls
+    const monthDate = new Date(selectedMonth + "-01");
+    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+    const formattedDate = lastDay.toISOString().split("T")[0];
+    const formattedDateDisplay = lastDay.toLocaleDateString("en-PH", {
+      month: "short", day: "numeric", year: "numeric"
+    });
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Fetch bank analysis data for the monthly report
+    let analysisData = null;
+    let dailyData = null;
+    try {
+      const [analysisRes, dailyRes] = await Promise.all([
+        api.get("/summary/bank-analysis/", { params: { date: formattedDate } }),
+        api.get("/summary/detailed-daily/", { params: { date: formattedDate } })
+      ]);
+      analysisData = analysisRes.data;
+      dailyData = dailyRes.data;
+    } catch (e) {
+      console.warn("Could not fetch analysis data for monthly report:", e);
+    }
+
     // =============================================
     // PAGE 5: JOPCA ANALYSIS
     // =============================================
@@ -804,7 +820,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     y += 8;
 
     doc.setFontSize(10);
-    doc.text(`As of: ${formattedDate}`, CENTER_X, y, { align: "center" });
+    doc.text(`As of: ${formattedDateDisplay}`, CENTER_X, y, { align: "center" });
     y += 12;
 
     // Get banks data from analysisData (contains auto_computed + reconciliation)
@@ -884,7 +900,6 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
         headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
         margin: { left: marginL, right: marginRightL },
-        tableWidth,
       });
       y = doc.lastAutoTable.finalY + 10;
     });
@@ -908,9 +923,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     doc.setFont("helvetica", "bold");
     doc.text("Prepared by:", marginL, y);
     doc.setFont("helvetica", "normal");
-    const preparedByUser = user?.first_name && user?.last_name
-      ? `${user.first_name} ${user.last_name}`.toUpperCase()
-      : (user?.username || "User").toUpperCase();
+    const preparedByUser = "User";
     doc.text(preparedByUser, marginL + 30, y);
 
     // Approved by
@@ -935,8 +948,8 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
     y += 12;
 
-     // Get banks data from the already-fetched dailyData
-     const monthlyAnalysisBanks = dailyData?.accounts || [];
+     // Get banks data from analysisData (contains auto_computed + reconciliation)
+     const monthlyAnalysisBanks = analysisData?.banks || [];
      
      // Calculate grand totals
      let monthlyTotalPerDcpr = 0;
@@ -958,8 +971,13 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
       doc.text(`${bank.name || "Unknown"} - ${accountType} (${bank.account_number || ""})`, marginL, y);
       y += 8;
 
-       const perDcpr = parseFloat(bank.balance || 0);
-       monthlyTotalPerDcpr += perDcpr;
+      const auto = bank.auto_computed || {};
+      const rec = bank.reconciliation || {};
+      const perDcpr = parseFloat(bank.per_dcpr || 0);
+      const perBank = parseFloat((rec?.per_bank ?? bank.per_dcpr) || 0);
+
+      monthlyTotalPerDcpr += perDcpr;
+      monthlyTotalPerBank += perBank;
 
       // Build table data
       const tableData = [];
@@ -967,30 +985,31 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
       // Ending Balance (Per DCPR)
       tableData.push(['Ending Balance', formatCurrency(perDcpr), formatCurrency(perDcpr), 'auto-filled']);
 
-      // For now, use placeholder data for reconciliation items
-      // In a real implementation, you'd fetch from /summary/bank-analysis/ endpoint
-      const depositInTransit = 0; // Placeholder
-      const unbookedTransfers = 0; // Placeholder
-      const returnedChecks = 0; // Placeholder
-      const bankCharges = 0; // Placeholder
+      const depositInTransit = parseFloat(auto.deposit_in_transit || 0);
+      const unbookedTransfers = parseFloat(auto.unbooked_transfers || 0);
+      const returnedChecks = parseFloat(auto.returned_checks || 0);
+      const outstandingChecks = parseFloat(auto.outstanding_checks || 0);
+      const bankCharges = parseFloat(rec.bank_charges ?? auto.bank_charges ?? 0);
 
       if (isChecking) {
-        tableData.push(['a. Outstanding Checks', formatCurrency(0), '-', 'deduct to Bank']);
+        tableData.push(['a. Outstanding Checks', formatCurrency(outstandingChecks), '-', 'deduct to Bank']);
         tableData.push(['b. Unbooked Fund Transfers', formatCurrency(unbookedTransfers), '-', 'add to DCPR']);
         tableData.push(['c. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
+
+        const reconciled = perBank + depositInTransit - outstandingChecks - returnedChecks - bankCharges;
+        monthlyTotalReconciled += reconciled;
+        tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
       } else {
         tableData.push(['a. Deposit in Transit', formatCurrency(depositInTransit), '-', 'add to Bank']);
         tableData.push(['b. Remittance to Checking', formatCurrency(unbookedTransfers), '-', 'deduct to DCPR']);
         tableData.push(['c. Returned Check', formatCurrency(returnedChecks), '-', '-']);
         tableData.push(['d. Bank Charges', formatCurrency(bankCharges), '-', 'add/deduct to DCPR']);
-      }
 
-       // Reconciled Balance (placeholder)
-       const reconciled = perDcpr; // Simplified - should be calculated properly
-       monthlyTotalReconciled += reconciled;
-      tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
+        const reconciled = perBank + depositInTransit - unbookedTransfers - returnedChecks - bankCharges;
+        monthlyTotalReconciled += reconciled;
+        tableData.push(['Reconciled Balance', formatCurrency(reconciled), formatCurrency(reconciled), '-']);
+      }
       
-       // Render table with fixed column widths (80/35/35/20 = 170pts total)
        autoTable(doc, {
          startY: y,
          head: [['Description', 'Per DCPR', 'Per Bank', 'Remarks']],
@@ -1060,57 +1079,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
      doc.setFont("helvetica", "normal");
      doc.text("JOHN P. CABAÑOG", marginL + 150, y);
 
-    // =============================================
-    // PAGE 6: BANK BALANCE SUMMARY
-    // =============================================
-    doc.addPage();
-    y = 20;
 
-    // Header - match Analysis style
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("BANK BALANCE SUMMARY", CENTER_X, y, { align: "center" });
-    y += 8;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
-    y += 12;
-    
-    // Header - match Analysis style
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("BANK BALANCE SUMMARY", CENTER_X, y, { align: "center" });
-    y += 8;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`For: ${formattedMonth}`, CENTER_X, y, { align: "center" });
-    y += 12;
-    
-    const balanceSummary = data.bank_balance_summary || [];
-    if (balanceSummary.length > 0) {
-      const tableData = balanceSummary.map(b => [
-        b.bank_name || "-",
-        b.account_number || "-",
-        b.location || "-",
-        formatCurrency(b.beginning_balance || 0),
-        formatCurrency(b.collections || 0),
-        formatCurrency(b.local_deposits || 0),
-        formatCurrency(b.inflows || 0),
-        formatCurrency(b.outflows || 0),
-        formatCurrency(b.net_change || 0),
-        formatCurrency(b.ending_balance || 0),
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        head: [["Bank", "Account #", "Location", "Beginning", "Collections", "Deposits", "Inflows", "Outflows", "Net Change", "Ending"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
-        bodyStyles: { fontSize: 8 },
-        margin: { left: marginL, right: marginRightL }
-      });
-    }
 
     // =============================================
     // PAGE 4: BANK TRANSACTIONS

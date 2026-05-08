@@ -1163,27 +1163,39 @@ def detailed_daily_summary(request):
     # Get individual collection records for Collections KPI
     individual_collections = []
     try:
-        # Try filtering by date, but also include collections with null dates
+        # Include Collection model records
         collections_qs = Collection.objects.filter(
             models.Q(date=target_date) | models.Q(date__isnull=True)
         )
-        print(f"DEBUG: Found {collections_qs.count()} collections for date {target_date}")
         
         for collection in collections_qs:
             collection_data = {
-                "id": collection.id,
+                "id": f"coll_{collection.id}",
                 "amount": float(collection.amount),
                 "description": collection.description or "",
                 "date": str(collection.date) if collection.date else None,
                 "status": collection.status,
             }
             individual_collections.append(collection_data)
-            print(f"DEBUG: Collection {collection.id}: amount={collection.amount}, date={collection.date}")
+            
+        # Also include Transaction records with type="collection" (e.g. PDC deposits)
+        collection_txns = Transaction.objects.filter(
+            date=target_date,
+            type="collection"
+        ).select_related("bank_account")
+        
+        for txn in collection_txns:
+            individual_collections.append({
+                "id": f"txn_{txn.id}",
+                "amount": float(txn.amount),
+                "description": txn.description or "",
+                "date": str(txn.date),
+                "status": "DEPOSITED",
+                "bank_account_name": txn.bank_account.name if txn.bank_account else "-",
+            })
             
     except Exception as e:
-        # Fallback if Collection model has different structure
         logger.warning(f"Could not fetch individual collections: {e}")
-        print(f"DEBUG: Error fetching collections: {e}")
         individual_collections = []
 
     return Response({
@@ -1396,14 +1408,13 @@ class PdcViewSet(viewsets.ModelViewSet):
     def record_returned(self, request, pk=None):
         """
         Mark a PDC as returned.
-        NOTE: Returned checks do NOT create transactions and do NOT affect bank balances.
-        They simply mark the PDC status as 'returned' for tracking purposes.
+        Creates a returned_check transaction for tracking and bank reconciliation.
         Expected payload:
           { "returned_date": "YYYY-MM-DD", "returned_reason": "Insufficient funds" }
         """
         pdc = get_object_or_404(Pdc, pk=pk)
         
-        if pdc.status in (Pdc.STATUS_DEPOSITED, Pdc.STATUS_RETURNED):
+        if pdc.status == Pdc.STATUS_RETURNED:
             return Response(
                 {"detail": f"Cannot mark as returned: PDC is already {pdc.status}"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1417,11 +1428,23 @@ class PdcViewSet(viewsets.ModelViewSet):
             returned_date_parsed = parse_date(returned_date)
             if returned_date_parsed is None:
                 return Response({"detail": "invalid returned_date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        effective_date = returned_date_parsed or now().date()
 
-        # Just update PDC status - NO transaction, NO balance impact
-        # Returned PDC is a failed payment attempt, not a financial transaction
+        # Create a returned_check transaction for reconciliation tracking
+        if pdc.deposit_bank:
+            Transaction.objects.create(
+                bank_account=pdc.deposit_bank,
+                date=effective_date,
+                type="returned_check",
+                amount=pdc.amount,
+                description=f"Returned PDC ref:{pdc.check_no or ''} pdc_id:{pdc.id} reason:{returned_reason[:50]}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
+        # Update PDC status
         pdc.status = Pdc.STATUS_RETURNED
-        pdc.returned_date = returned_date_parsed or now().date()
+        pdc.returned_date = effective_date
         pdc.returned_reason = returned_reason
         pdc.save(update_fields=["status", "returned_date", "returned_reason"])
 
@@ -2423,12 +2446,18 @@ def bank_analysis(request):
                 type__in=['collection', 'deposit', 'local_deposits']
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
-            # Returned Checks: returned_check transactions
-            returned_checks = Transaction.objects.filter(
+            # Returned Checks: returned_check transactions + Pdc records with returned status
+            returned_checks_txns = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
                 type='returned_check'
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            returned_checks_pdc = Pdc.objects.filter(
+                deposit_bank=bank,
+                status='returned',
+                returned_date__lte=target_date
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            returned_checks = returned_checks_txns + returned_checks_pdc
             
             # Bank Charges: bank_charges transactions
             bank_charges = Transaction.objects.filter(
