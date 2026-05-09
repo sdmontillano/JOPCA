@@ -182,7 +182,7 @@ def compute_bank_daily_summary(target_date):
             status=Pdc.STATUS_RETURNED,
             returned_date=target_date
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        returned_checks = _safe_decimal(transactions_returned) + _safe_decimal(pdcs_returned)
+        returned_checks = max(_safe_decimal(transactions_returned), _safe_decimal(pdcs_returned))
         
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
@@ -204,6 +204,8 @@ def compute_bank_daily_summary(target_date):
             "collections": _to_float(_safe_decimal(collections)),  # reporting only
             "local_deposits": _to_float(_safe_decimal(local_deposits)),  # reporting only
             "returned_checks": _to_float(_safe_decimal(returned_checks)),
+            "adjustment_in": _to_float(_safe_decimal(adjustment_in)),
+            "adjustment_out": _to_float(_safe_decimal(adjustment_out)),
             "adjustments": _to_float(net_adjustments),
             "pdc": _to_float(_safe_decimal(pdc)),
             "ending": _to_float(ending),
