@@ -212,11 +212,12 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
         acc.disbursements += displayTotalDisbursements;
         acc.fund_transfers_out += Number(r.fund_transfers_out ?? 0);
         acc.fund_transfers_in += Number(r.fund_transfers_in ?? 0);
-        acc.adjustments += Number(r.adjustments ?? 0);
+        acc.adjustment_in += Number(r.adjustment_in ?? 0);
+        acc.adjustment_out += Number(r.adjustment_out ?? 0);
         acc.ending += Number(r.ending ?? 0);
         return acc;
       },
-      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers_out: 0, fund_transfers_in: 0, adjustments: 0, ending: 0 }
+      { beginning: 0, collections: 0, local_deposits: 0, disbursements: 0, fund_transfers_out: 0, fund_transfers_in: 0, adjustment_in: 0, adjustment_out: 0, ending: 0 }
     );
   };
 
@@ -338,7 +339,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.disbursements ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#991B1B" }}>{formatCurrency(r.fund_transfers_out ?? 0)}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#166534" }}>{formatCurrency(r.fund_transfers_in ?? 0)}</TableCell>
-                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#B45309" }}>{formatCurrency(r.adjustments ?? 0)}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: "0.8rem", color: "#B45309" }}>{formatCurrency((r.adjustment_in ?? 0) + (r.adjustment_out ?? 0))}</TableCell>
                                 <TableCell align="right" sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#1E293B" }}>{formatCurrency(r.ending ?? 0)}</TableCell>
                               </TableRow>
                             ))
@@ -351,7 +352,7 @@ function CashInBank2DayInline({ initialCenterDate = null, collapsed = false, onT
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.disbursements)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#991B1B", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers_out)}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 600, color: "#166534", fontSize: "0.8rem" }}>{formatCurrency(totals.fund_transfers_in)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency(totals.adjustments)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#B45309", fontSize: "0.8rem" }}>{formatCurrency((totals.adjustment_in ?? 0) + (totals.adjustment_out ?? 0))}</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700, color: "#1E293B", fontSize: "0.9rem" }}>{formatCurrency(totals.ending)}</TableCell>
                           </TableRow>
                         </TableBody>
@@ -693,7 +694,8 @@ function DashboardInner() {
           fund_transfers_in: 0,
           fund_transfers_out: 0,
           returned_checks: 0,
-          adjustments: 0,
+          adjustment_in: 0,
+          adjustment_out: 0,
           ending: 0,
           raw_rows: [],
           account_number: t.account_number || null,
@@ -716,7 +718,9 @@ function DashboardInner() {
       else if (type === "fund_transfer_in") row.fund_transfers_in += total;
       else if (type === "fund_transfer_out") row.fund_transfers_out += total;
       else if (type === "returned_check") row.returned_checks += total;
-      else if (type === "adjustments" || type === "bank_charges") row.adjustments += total;
+      else if (type === "adjustment_in") row.adjustment_in += total;
+      else if (type === "adjustment_out") row.adjustment_out += total;
+      else if (type === "adjustments" || type === "bank_charges") row.adjustment_out += total;
       row.raw_rows.push(t.raw || t);
       // Cash in Bank Formula: Beginning + Deposits - Disbursements + Fund Transfers In - Fund Transfers Out
       // Note: Collections are NOT included (they go to Cash on Hand, not bank balance)
