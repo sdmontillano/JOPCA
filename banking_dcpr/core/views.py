@@ -2194,7 +2194,7 @@ def audit_log(request):
         limit = 50
     user_id = request.GET.get("user_id")
     
-    queryset = AuditLog.objects.select_related('user').order_by('-created_at')
+    queryset = AuditLog.objects.select_related('user').order_by('-timestamp')
     
     if user_id:
         queryset = queryset.filter(user_id=user_id)
@@ -2213,10 +2213,10 @@ def audit_log(request):
                 "user": entry.user.username if entry.user else "System",
                 "action": entry.action,
                 "details": entry.details,
-                "model_name": entry.model_name,
-                "object_id": entry.object_id,
+                "model_name": entry.entity,
+                "object_id": entry.entity_id,
                 "ip_address": entry.ip_address,
-                "created_at": entry.created_at.isoformat(),
+                "created_at": entry.timestamp.isoformat(),
             }
             for entry in entries
         ]

@@ -722,18 +722,19 @@ class AuditLog(models.Model):
 
 def log_audit(user, action, entity, entity_id=None, description='', ip_address=None, **details):
     """Helper function to create audit log entries"""
-    # TEMPORARILY DISABLED: Database has old schema that causes errors
-    # AuditLog.objects.create(
-    #     user=user,
-    #     username=user.username if user else 'anonymous',
-    #     action=action,
-    #     entity=entity,
-    #     entity_id=entity_id,
-    #     description=description,
-    #     ip_address=ip_address,
-    #     details=details
-#     )
-    pass
+    try:
+        AuditLog.objects.create(
+            user=user,
+            username=user.username if user else 'anonymous',
+            action=action,
+            entity=entity,
+            entity_id=entity_id,
+            description=description,
+            ip_address=ip_address,
+            details=details
+        )
+    except Exception:
+        pass  # Audit failure never breaks the calling function
 
 
 # ---------------------------------------------------------------------
