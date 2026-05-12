@@ -161,13 +161,13 @@ export default function AdminAuditLogs() {
           <TableContainer sx={{ maxHeight: "calc(100vh - 280px)" }}>
             <Table stickyHeader size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: "#1E293B" }}>
-                  <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Timestamp</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.75rem" }}>User</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Action</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Entity</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.75rem" }}>Description</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 700, fontSize: "0.75rem" }}>IP Address</TableCell>
+                <TableRow>
+                  <TableCell sx={{ color: "#000000", fontWeight: 700, fontSize: "0.75rem", bgcolor: "#e2e8f0" }}>Timestamp</TableCell>
+                  <TableCell sx={{ color: "#000000", fontWeight: 700, fontSize: "0.75rem", bgcolor: "#e2e8f0" }}>User</TableCell>
+                  <TableCell sx={{ color: "#000000", fontWeight: 700, fontSize: "0.75rem", bgcolor: "#e2e8f0" }}>Action</TableCell>
+                  <TableCell sx={{ color: "#000000", fontWeight: 700, fontSize: "0.75rem", bgcolor: "#e2e8f0" }}>Entity</TableCell>
+                  <TableCell sx={{ color: "#000000", fontWeight: 700, fontSize: "0.75rem", bgcolor: "#e2e8f0" }}>Description</TableCell>
+                  <TableCell sx={{ color: "#000000", fontWeight: 700, fontSize: "0.75rem", bgcolor: "#e2e8f0" }}>IP Address</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -182,10 +182,10 @@ export default function AdminAuditLogs() {
                     const color = getActionColor(log.action);
                     return (
                       <TableRow key={log.id} hover>
-                        <TableCell sx={{ fontSize: "0.8rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#000000", fontWeight: 600, whiteSpace: "nowrap" }}>
                           {formatDate(log.timestamp)}
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#000000", fontWeight: 600 }}>
                           {log.username || log.user?.username || "-"}
                         </TableCell>
                         <TableCell>
@@ -195,14 +195,14 @@ export default function AdminAuditLogs() {
                             sx={{ bgcolor: color.bg, color: color.color, fontWeight: 500, fontSize: "0.7rem" }}
                           />
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#000000", fontWeight: 600 }}>
                           {log.entity}
                           {log.entity_id && <Typography component="span" sx={{ color: "#9CA3AF", ml: 0.5 }}>#{log.entity_id}</Typography>}
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#000000", fontWeight: 600, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
                           {log.description || "-"}
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem", color: "#64748b" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#000000", fontWeight: 600 }}>
                           {log.ip_address || "-"}
                         </TableCell>
                       </TableRow>
