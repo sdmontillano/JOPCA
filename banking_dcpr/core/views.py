@@ -2505,7 +2505,7 @@ def create_user(request):
     is_staff_raw = request.data.get('is_staff', False)
     is_superuser_raw = request.data.get('is_superuser', False)
     
-    is_staff = str(is_staff_raw).lower() in ('true', '1', 'yes', 'on') if is_staff_raw else False
+    is_staff = True  # every registered user is a normal user
     is_superuser = str(is_superuser_raw).lower() in ('true', '1', 'yes', 'on') if is_superuser_raw else False
     
     # Enforce 3-admin limit for unauthenticated requests
