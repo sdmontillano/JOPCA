@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from ..models import BankAccount, Transaction, Collection, Pdc
 from ..constants import (
-    DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, TRANSFER_TYPES, RETURNED_TYPES, 
+    DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, TRANSFER_TYPES, RETURNED_TYPES, 
     ADJUSTMENT_TYPES, PDC_TYPES, LOCAL_DEPOSIT_TYPES,
     FUND_TRANSFER_IN, FUND_TRANSFER_OUT,
     COLLECTION_TYPE_CASH, COLLECTION_TYPE_BANK_TRANSFER, COLLECTION_TYPE_CHECK,
@@ -11,7 +11,7 @@ from ..constants import (
 )
 
 ALL_INFLOW_TYPES = INFLOW_TYPES
-ALL_OUTFLOW_TYPES = OUTFLOW_TYPES
+ALL_OUTFLOW_TYPES = BANK_BALANCE_OUTFLOW
 
 def _safe_decimal(value):
     return Decimal(value or 0)
@@ -79,7 +79,7 @@ def compute_bank_daily_summary(target_date):
     from decimal import Decimal
     from django.db.models import Sum
     from ..constants import (
-        DEPOSIT_TYPES, OUTFLOW_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, 
+        DEPOSIT_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, 
         LOCAL_DEPOSIT_TYPES, ADJUSTMENT_TYPES, RETURNED_TYPES, PDC_TYPES
     )
     
@@ -104,7 +104,7 @@ def compute_bank_daily_summary(target_date):
         prior_disbursements_qs = Transaction.objects.filter(
             bank_account=bank, 
             date__lt=target_date, 
-            type__in=OUTFLOW_TYPES
+            type__in=BANK_BALANCE_OUTFLOW
         )
         if effective_start:
             prior_disbursements_qs = prior_disbursements_qs.filter(date__gte=effective_start)
@@ -156,7 +156,7 @@ def compute_bank_daily_summary(target_date):
 
         # CORRECT DCPR FORMULA: Deposit only, Disbursement only
         deposits = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_qs.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_qs.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers_in = today_qs.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers_out = today_qs.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         

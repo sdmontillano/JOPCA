@@ -32,7 +32,7 @@ def _compute_beginning_for_bank(bank, target_date, TransactionModel):
         bank_account=bank, date__lt=target_date, type__in=INFLOW_TYPES
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     prior_outflows = TransactionModel.objects.filter(
-        bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES
+        bank_account=bank, date__lt=target_date, type__in=BANK_BALANCE_OUTFLOW
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     return _safe_decimal(bank.opening_balance) + _safe_decimal(prior_inflows) - _safe_decimal(prior_outflows)
 
@@ -201,14 +201,14 @@ class Transaction(models.Model):
             qs = qs.exclude(pk=self.pk)
 
         today_inflows = qs.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        today_outflows = qs.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        today_outflows = qs.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         today_adjustments = qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
         # determine sign of this transaction
         amt = _safe_decimal(self.amount)
         if _is_inflow(self.type):
             delta = amt
-        elif _is_outflow(self.type):
+        elif (self.type or "").strip().lower() in BANK_BALANCE_OUTFLOW:
             delta = -amt
         elif _is_adjustment(self.type):
             # Adjustments can be positive or negative - use the amount as-is
@@ -549,6 +549,7 @@ class Pdc(models.Model):
 
     customer_name = models.CharField(max_length=255, blank=True, null=True)
     check_no = models.CharField(max_length=128, blank=True, null=True)
+    date_received = models.DateField(blank=True, null=True)
     maturity_date = models.DateField(blank=True, null=True)
     amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 

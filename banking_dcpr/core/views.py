@@ -257,10 +257,10 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             bank_account = self.get_object()
             
             # Debug: Get transaction details
-            from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, ADJUSTMENT_TYPES
+            from ..constants import INFLOW_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, ADJUSTMENT_TYPES
             all_transactions = bank_account.transaction_set.all()
             inflow_transactions = bank_account.transaction_set.filter(type__in=INFLOW_TYPES)
-            outflow_transactions = bank_account.transaction_set.filter(type__in=OUTFLOW_TYPES)
+            outflow_transactions = bank_account.transaction_set.filter(type__in=BANK_BALANCE_OUTFLOW)
             
             debug_info = {
                 'bank_account': bank_account.name,
@@ -878,7 +878,7 @@ def monthly_full_report(request):
         
         # Monthly inflows and outflows for this bank
         bank_monthly_inflows = bank_monthly_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        bank_monthly_outflows = bank_monthly_txns.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        bank_monthly_outflows = bank_monthly_txns.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # Get monthly adjustments
         monthly_adjustment_in = bank_monthly_txns.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -938,7 +938,7 @@ def compute_collections_summary(target_date):
     (collection is tracking only, NOT in balance formula)
     """
     from django.db.models import Sum
-    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, OUTFLOW_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
+    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
     
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
@@ -950,7 +950,7 @@ def compute_collections_summary(target_date):
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_disbursements = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=OUTFLOW_TYPES)
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=BANK_BALANCE_OUTFLOW)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_transfers_in = (
@@ -972,7 +972,7 @@ def compute_collections_summary(target_date):
         
         # For balance formula
         deposits = today_txns.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_txns.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_txns.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers_in = today_txns.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers_out = today_txns.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
