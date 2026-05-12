@@ -1,8 +1,8 @@
 # core/views.py
 import logging
 from django.utils.timezone import now, timezone
-from django.db.models import Sum, Count, F
-from django.db import transaction
+from django.db import transaction, models
+from django.db.models import Sum, Count, F, Q
 from datetime import datetime
 from datetime import date as _date
 from datetime import timedelta
@@ -18,7 +18,6 @@ from rest_framework.pagination import PageNumberPagination
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
-from django.db import transaction, models
 from django.utils.dateparse import parse_date
 
 
@@ -116,7 +115,6 @@ class UserViewSet(viewsets.ModelViewSet):
 # -----------------------------
 # Auth Endpoints
 # -----------------------------
-@csrf_exempt
 @api_view(['POST'])
 @permission_classes([])
 def obtain_auth_token_with_role(request):
@@ -131,12 +129,12 @@ def obtain_auth_token_with_role(request):
     password = request.data.get('password')
     
     if not username or not password:
-        return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
     
     user = authenticate(username=username, password=password)
     
     if user is None:
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
     
     token, created = Token.objects.get_or_create(user=user)
     
@@ -174,7 +172,6 @@ def verify_token(request):
     })
 
 
-@csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
@@ -213,7 +210,7 @@ from .serializers import (
     CollectionSerializer,
 )
 from .models import Transaction, BankAccount, DailyCashPosition, MonthlyReport, Pdc, PettyCashFund, PettyCashTransaction, CashCount, AuditLog, Collection
-from .utils.summary import compute_bank_daily_summary
+from .utils.summary import compute_bank_daily_summary, compute_pcf_summary
 from .export_views import pcf_export_excel, pcf_export_pdf
 
 
@@ -347,20 +344,21 @@ class TransactionViewSet(viewsets.ModelViewSet):
         # Check if this is a deposit transaction - create both collection and deposit
         if serializer.validated_data.get('type') == 'deposit':
             try:
-                # Create collection transaction first
-                collection_data = serializer.validated_data.copy()
-                collection_data['type'] = 'collection'
-                # Handle bank_account field mapping
-                if 'bank_account' in collection_data:
-                    collection_data['bank_account_id'] = collection_data['bank_account'].id
-                collection_serializer = self.get_serializer(data=collection_data)
-                collection_serializer.is_valid(raise_exception=True)
-                collection_instance = collection_serializer.save()
-                self._log_audit('create', collection_instance, f"Created collection transaction: {collection_instance.type} - {collection_instance.amount}")
-                
-                # Create deposit transaction
-                deposit_instance = serializer.save()
-                self._log_audit('create', deposit_instance, f"Created deposit transaction: {deposit_instance.type} - {deposit_instance.amount}")
+                with transaction.atomic():
+                    # Create collection transaction first
+                    collection_data = serializer.validated_data.copy()
+                    collection_data['type'] = 'collection'
+                    # Handle bank_account field mapping
+                    if 'bank_account' in collection_data:
+                        collection_data['bank_account_id'] = collection_data['bank_account'].id
+                    collection_serializer = self.get_serializer(data=collection_data)
+                    collection_serializer.is_valid(raise_exception=True)
+                    collection_instance = collection_serializer.save()
+                    self._log_audit('create', collection_instance, f"Created collection transaction: {collection_instance.type} - {collection_instance.amount}")
+                    
+                    # Create deposit transaction
+                    deposit_instance = serializer.save()
+                    self._log_audit('create', deposit_instance, f"Created deposit transaction: {deposit_instance.type} - {deposit_instance.amount}")
                 
                 # Return both transactions
                 headers = self.get_success_headers(serializer.data)
@@ -615,78 +613,9 @@ def detailed_monthly_summary(request):
             "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
         })
 
-    # Get PCF data for the month - optimized with prefetch
-    cash_on_hand = []
+    # Get PCF data for the month - N+1 free via shared utility
     pcfs = list(PettyCashFund.objects.filter(is_active=True))
-    pcf_ids = [p.id for p in pcfs]
-    month_start = _date(month_date.year, month_date.month, 1)
-
-    # Bulk fetch all transactions for the month
-    monthly_txns_map = {}
-    for t in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__year=month_date.year, date__month=month_date.month):
-        if t.pcf_id not in monthly_txns_map:
-            monthly_txns_map[t.pcf_id] = []
-        monthly_txns_map[t.pcf_id].append(t)
-
-    # Bulk fetch cumulative totals up to target_date
-    disb_cumulative = {
-        r['pcf_id']: r['total'] or Decimal('0.00')
-        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='disbursement')
-        .values('pcf_id').annotate(total=Sum('amount'))
-    }
-    rep_cumulative = {
-        r['pcf_id']: r['total'] or Decimal('0.00')
-        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='replenishment')
-        .values('pcf_id').annotate(total=Sum('amount'))
-    }
-
-    for pcf in pcfs:
-        beginning = pcf.opening_balance
-        pcf_id = pcf.id
-
-        # Calculate beginning from transactions before month
-        prev_txns = PettyCashTransaction.objects.filter(pcf_id=pcf_id, date__lt=month_start)
-        for t in prev_txns:
-            if t.type == 'disbursement':
-                beginning -= t.amount
-            elif t.type == 'replenishment':
-                beginning += t.amount
-
-        monthly_txns = monthly_txns_map.get(pcf_id, [])
-        disbursements = sum(t.amount for t in monthly_txns if t.type == 'disbursement')
-        replenishments = sum(t.amount for t in monthly_txns if t.type == 'replenishment')
-
-        total_disb = disb_cumulative.get(pcf_id, Decimal('0.00'))
-        total_rep = rep_cumulative.get(pcf_id, Decimal('0.00'))
-        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
-        ending = beginning - disbursements + replenishments
-
-        transactions = [
-            {
-                "id": t.id,
-                "type": t.type,
-                "amount": float(t.amount),
-                "description": t.description or "",
-                "date": str(t.date)
-            }
-            for t in sorted(monthly_txns, key=lambda x: (x.date, x.id), reverse=True)
-        ]
-
-        cash_on_hand.append({
-            "id": pcf.id,
-            "name": pcf.name,
-            "location": pcf.location,
-            "location_display": pcf.get_location_display(),
-            "note": pcf.note or "",
-            "beginning": float(beginning),
-            "disbursements": float(disbursements),
-            "replenishments": float(replenishments),
-            "ending": float(ending),
-            "unreplenished": float(unreplenished),
-            "current_balance": float(pcf.current_balance),
-            "unreplenished_amount": float(pcf.unreplenished_amount),
-            "transactions": transactions,
-        })
+    cash_on_hand = compute_pcf_summary(pcfs, target_date, month_date=month_date)
 
     # PDC Summary for the month
     active_pdcs = Pdc.objects.exclude(status__in=['deposited', 'returned'])
@@ -735,12 +664,19 @@ def monthly_full_report(request):
     except ValueError:
         return Response({"detail": "Invalid month format."}, status=400)
     
-    # 1. BANK TRANSACTIONS
-    bank_transactions = Transaction.objects.filter(
+    # Define base monthly queryset once (avoids rebuilding filters)
+    base_month_qs = Transaction.objects.filter(
         date__year=month_date.year,
         date__month=month_date.month
-    ).select_related('bank_account').order_by('date', '-id')
-    
+    )
+    from .constants import (
+        INFLOW_TYPES, OUTFLOW_TYPES, BANK_BALANCE_INFLOW, BANK_BALANCE_OUTFLOW, DISBURSEMENT_TYPES,
+        DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES
+    )
+
+    # 1. BANK TRANSACTIONS
+    bank_transactions = base_month_qs.select_related('bank_account').order_by('date', '-id')
+
     bank_txn_list = [
         {
             "id": t.id,
@@ -753,13 +689,13 @@ def monthly_full_report(request):
         }
         for t in bank_transactions
     ]
-    
+
     # 2. PCF TRANSACTIONS
     pcf_transactions = PettyCashTransaction.objects.filter(
         date__year=month_date.year,
         date__month=month_date.month
     ).select_related('pcf').order_by('date', '-id')
-    
+
     pcf_txn_list = [
         {
             "id": t.id,
@@ -772,7 +708,7 @@ def monthly_full_report(request):
         }
         for t in pcf_transactions
     ]
-    
+
     # 3. PDC FOR MONTH
     pdc_this_month = Pdc.objects.filter(
         maturity_date__year=month_date.year,
@@ -780,127 +716,101 @@ def monthly_full_report(request):
     ).values(
         "id", "check_no", "amount", "status", "maturity_date"
     ).annotate(bank_name=F('deposit_bank__name'))
-    
+
     # 4. GROUPED SUMMARIES - BY ACCOUNT
-    bank_by_account = Transaction.objects.filter(
-        date__year=month_date.year,
-        date__month=month_date.month
-    ).values(
+    bank_by_account = base_month_qs.values(
         "bank_account__name", "bank_account__account_number"
     ).annotate(
         total=Sum('amount'),
         count=Count('id')
     )
-    
+
     # 5. GROUPED SUMMARIES - BY TYPE (with signed amounts)
-    bank_by_type_query = Transaction.objects.filter(
-        date__year=month_date.year,
-        date__month=month_date.month
-    ).values("type").annotate(
+    bank_by_type_query = base_month_qs.values("type").annotate(
         total=Sum('amount'),
         count=Count('id')
     )
-    
-    # Apply signed amounts based on transaction type - import from constants
-    from .constants import INFLOW_TYPES, OUTFLOW_TYPES, BANK_BALANCE_INFLOW, BANK_BALANCE_OUTFLOW, DISBURSEMENT_TYPES
-    
+
     bank_by_type = []
     for item in bank_by_type_query:
         item_type = item['type'].lower()
         if item_type in OUTFLOW_TYPES:
-            item['total'] = -abs(float(item['total']))  # Make negative
+            item['total'] = -abs(float(item['total']))
         else:
-            item['total'] = abs(float(item['total']))  # Keep positive
+            item['total'] = abs(float(item['total']))
         bank_by_type.append(item)
-    
-    # 6. TOTALS - Split inflows and outflows
-    bank_total_query = Transaction.objects.filter(
-        date__year=month_date.year,
-        date__month=month_date.month
-    )
-    
-    inflows = Decimal('0.00')
-    outflows = Decimal('0.00')
-    for t in bank_total_query:
-        if t.type.lower() in INFLOW_TYPES:
-            inflows += t.amount
-        elif t.type.lower() in OUTFLOW_TYPES:
-            outflows += t.amount
-    
+
+    # 6. TOTALS - Split inflows and outflows (aggregate, don't iterate rows)
+    inflow_agg = base_month_qs.filter(type__in=INFLOW_TYPES).aggregate(total=Sum('amount'))
+    outflow_agg = base_month_qs.filter(type__in=OUTFLOW_TYPES).aggregate(total=Sum('amount'))
+    inflows = inflow_agg['total'] or Decimal('0.00')
+    outflows = outflow_agg['total'] or Decimal('0.00')
+
     pcf_total_disb = PettyCashTransaction.objects.filter(
         date__year=month_date.year,
         date__month=month_date.month,
         type='disbursement'
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     pcf_total_rep = PettyCashTransaction.objects.filter(
         date__year=month_date.year,
         date__month=month_date.month,
         type='replenishment'
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     pdc_total = pdc_this_month.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
-    # 7. UNDEPOSITED CASH (from Collection model - only undeposited for THIS MONTH)
+
+    # 7. UNDEPOSITED CASH
     month_undeposited = Collection.objects.filter(
         status=Collection.STATUS_UNDEPOSITED,
         date__year=month_date.year,
         date__month=month_date.month
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    # Keep all-time undeposited for display (optional)
     undeposited_total = Collection.objects.filter(status=Collection.STATUS_UNDEPOSITED).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
-    # 8. COLLECTIONS VS DEPOSITS BREAKDOWN (like daily reports)
-    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES
-    
-    # Calculate collections and deposits separately for monthly report
-    # collections = bank transactions + THIS MONTH's collection records only
-    bank_collection_txns = bank_transactions.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+    # 8. COLLECTIONS VS DEPOSITS BREAKDOWN
+    bank_collection_txns = base_month_qs.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     monthly_collections_from_model = Collection.objects.filter(
         date__year=month_date.year,
         date__month=month_date.month
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     monthly_collections = bank_collection_txns + monthly_collections_from_model
     bank_net = inflows - outflows + monthly_collections
-    monthly_deposits = bank_transactions.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-    
-    # 8. BANK BALANCE SUMMARY BY BANK (like daily reports)
+    monthly_deposits = base_month_qs.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+    # 9. BANK BALANCE SUMMARY BY BANK (bulk aggregated, no N+1)
+    bank_monthly_agg = base_month_qs.values('bank_account').annotate(
+        collections=Sum('amount', filter=Q(type='collection') & ~Q(type__in=DEPOSIT_TYPES)),
+        local_deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES)),
+        inflows=Sum('amount', filter=Q(type__in=INFLOW_TYPES)),
+        outflows=Sum('amount', filter=Q(type__in=BANK_BALANCE_OUTFLOW)),
+        adj_in=Sum('amount', filter=Q(type='adjustment_in')),
+        adj_out=Sum('amount', filter=Q(type='adjustment_out')),
+        txn_count=Count('id'),
+    )
+    bank_agg_map = {r['bank_account']: r for r in bank_monthly_agg}
+
     bank_balance_summary = []
-    banks = BankAccount.objects.all().order_by("name", "account_number")
-    
-    for bank in banks:
-        # Monthly transactions for this bank
-        bank_monthly_txns = bank_transactions.filter(bank_account=bank)
-        
-        # Collections and deposits for this bank
-        bank_collections = bank_monthly_txns.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        bank_deposits = bank_monthly_txns.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Monthly inflows and outflows for this bank
-        bank_monthly_inflows = bank_monthly_txns.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        bank_monthly_outflows = bank_monthly_txns.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Get monthly adjustments
-        monthly_adjustment_in = bank_monthly_txns.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        monthly_adjustment_out = bank_monthly_txns.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Monthly net change (BANK_BALANCE_INFLOW/OUTFLOW already includes adjustments)
+    for bank in BankAccount.objects.all().order_by("name", "account_number"):
+        b = bank_agg_map.get(bank.id, {})
+        bank_monthly_inflows = b.get('inflows') or Decimal('0')
+        bank_monthly_outflows = b.get('outflows') or Decimal('0')
         bank_monthly_net = bank_monthly_inflows - bank_monthly_outflows
-        
+
         bank_balance_summary.append({
             "bank_name": bank.name,
             "account_number": bank.account_number,
             "location": bank.area or "",
             "beginning_balance": float(bank.balance - bank_monthly_net),
-            "collections": float(bank_collections),
-            "local_deposits": float(bank_deposits),
+            "collections": float(b.get('collections') or Decimal('0')),
+            "local_deposits": float(b.get('local_deposits') or Decimal('0')),
             "inflows": float(bank_monthly_inflows),
             "outflows": float(bank_monthly_outflows),
-            "adjustment_in": float(monthly_adjustment_in),
-            "adjustment_out": float(monthly_adjustment_out),
+            "adjustment_in": float(b.get('adj_in') or Decimal('0')),
+            "adjustment_out": float(b.get('adj_out') or Decimal('0')),
             "net_change": float(bank_monthly_net),
             "ending_balance": float(bank.balance),
-            "transaction_count": bank_monthly_txns.count()
+            "transaction_count": b.get('txn_count') or 0,
         })
     
     return Response({
@@ -931,70 +841,83 @@ def monthly_full_report(request):
 
 def compute_collections_summary(target_date):
     """
-    Compute collections summary grouped by bank, similar to PCF.
+    Compute collections summary grouped by bank, using bulk aggregation (no N+1).
     Returns list of dicts with: bank_name, location, beginning, collections, local_deposits, ending, transactions.
     
-    CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements
+    CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjIn - AdjOut - BankCharges
     (collection is tracking only, NOT in balance formula)
     """
-    from django.db.models import Sum
-    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, OUTFLOW_TYPES, DISBURSEMENT_TYPES, BANK_BALANCE_OUTFLOW, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
-    
+    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, DISBURSEMENT_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
+
+    # Bulk aggregate all prior transactions (date < target_date) by bank_account
+    prior_qs = Transaction.objects.filter(date__lt=target_date)
+    prior_agg = prior_qs.values('bank_account').annotate(
+        deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES)),
+        disbursements=Sum('amount', filter=Q(type__in=DISBURSEMENT_TYPES)),
+        ft_in=Sum('amount', filter=Q(type__in=FUND_TRANSFER_IN)),
+        ft_out=Sum('amount', filter=Q(type__in=FUND_TRANSFER_OUT)),
+        adj_in=Sum('amount', filter=Q(type='adjustment_in')),
+        adj_out=Sum('amount', filter=Q(type='adjustment_out')),
+        bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
+    )
+    prior_map = {r['bank_account']: r for r in prior_agg}
+
+    # Bulk aggregate today's transactions by bank_account
+    today_agg_qs = Transaction.objects.filter(date=target_date)
+    today_agg = today_agg_qs.values('bank_account').annotate(
+        deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES)),
+        disbursements=Sum('amount', filter=Q(type__in=DISBURSEMENT_TYPES)),
+        ft_in=Sum('amount', filter=Q(type__in=FUND_TRANSFER_IN)),
+        ft_out=Sum('amount', filter=Q(type__in=FUND_TRANSFER_OUT)),
+        adj_in=Sum('amount', filter=Q(type='adjustment_in')),
+        adj_out=Sum('amount', filter=Q(type='adjustment_out')),
+        bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
+        collections=Sum('amount', filter=Q(type='collection')),
+        local_deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES)),
+    )
+    today_map = {r['bank_account']: r for r in today_agg}
+
+    # Bulk fetch today's relevant transactions for detail listing
+    today_detail_txns = list(Transaction.objects.filter(
+        date=target_date,
+        type__in={'collection'}.union(DEPOSIT_TYPES).union(LOCAL_DEPOSIT_TYPES)
+    ).order_by('-date', '-id'))
+
+    def _safe_decimal(v):
+        return Decimal(v or 0)
+
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
 
     for bank in banks:
-        # Beginning: opening + prior deposits only (NOT collections)
-        prior_deposits = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=DEPOSIT_TYPES)
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_disbursements = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=DISBURSEMENT_TYPES)
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_transfers_in = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=FUND_TRANSFER_IN)
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_transfers_out = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=FUND_TRANSFER_OUT)
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_adjustment_in = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type="adjustment_in")
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_adjustment_out = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type="adjustment_out")
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        prior_bank_charges = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=["bank_charges", "bank_charge"])
-            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        )
-        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out + prior_adjustment_in - prior_adjustment_out - prior_bank_charges, Decimal("0"))
+        p = prior_map.get(bank.id, {})
+        t = today_map.get(bank.id, {})
 
-        # Today's transactions
-        today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
-        
-        # For report columns (tracking)
-        collections = today_txns.filter(type="collection").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = today_txns.filter(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # For balance formula
-        deposits = today_txns.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_txns.filter(type__in=DISBURSEMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        transfers_in = today_txns.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        transfers_out = today_txns.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        adjustment_in = today_txns.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        adjustment_out = today_txns.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        bank_charges = today_txns.filter(type__in=["bank_charges", "bank_charge"]).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        beginning = max(
+            bank.opening_balance
+            + _safe_decimal(p.get('deposits'))
+            - _safe_decimal(p.get('disbursements'))
+            + _safe_decimal(p.get('ft_in'))
+            - _safe_decimal(p.get('ft_out'))
+            + _safe_decimal(p.get('adj_in'))
+            - _safe_decimal(p.get('adj_out'))
+            - _safe_decimal(p.get('bank_charges')),
+            Decimal("0")
+        )
 
-        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges
+        collections = _safe_decimal(t.get('collections'))
+        local_deposits = _safe_decimal(t.get('local_deposits'))
+        deposits = _safe_decimal(t.get('deposits'))
+        disbursements = _safe_decimal(t.get('disbursements'))
+        transfers_in = _safe_decimal(t.get('ft_in'))
+        transfers_out = _safe_decimal(t.get('ft_out'))
+        adjustment_in = _safe_decimal(t.get('adj_in'))
+        adjustment_out = _safe_decimal(t.get('adj_out'))
+        bank_charges = _safe_decimal(t.get('bank_charges'))
+
         ending = beginning + deposits - disbursements + transfers_in - transfers_out + adjustment_in - adjustment_out - bank_charges
 
-        # Get today's transactions with descriptions (collections and deposits for reporting)
+        bank_txns = [txn for txn in today_detail_txns if txn.bank_account_id == bank.id]
         transactions = [
             {
                 "id": t.id,
@@ -1003,32 +926,8 @@ def compute_collections_summary(target_date):
                 "description": t.description or "",
                 "date": str(t.date)
             }
-            for t in today_txns.filter(type="collection").order_by("-date", "-id")
+            for t in bank_txns
         ]
-        # Also add deposit transactions
-        deposit_txns = [
-            {
-                "id": t.id,
-                "type": t.type,
-                "amount": float(t.amount),
-                "description": t.description or "",
-                "date": str(t.date)
-            }
-            for t in today_txns.filter(type__in=DEPOSIT_TYPES).order_by("-date", "-id")
-        ]
-        transactions.extend(deposit_txns)
-        # Local deposits
-        local_deposit_txns = [
-            {
-                "id": t.id,
-                "type": t.type,
-                "amount": float(t.amount),
-                "description": t.description or "",
-                "date": str(t.date)
-            }
-            for t in today_txns.filter(type__in=LOCAL_DEPOSIT_TYPES).order_by("-date", "-id")
-        ]
-        transactions.extend(local_deposit_txns)
 
         rows.append({
             "bank_id": bank.id,
@@ -1036,8 +935,8 @@ def compute_collections_summary(target_date):
             "account_number": bank.account_number,
             "location": "BANK",
             "beginning": float(beginning),
-            "collections": float(collections),  # tracking only
-            "local_deposits": float(local_deposits),  # tracking only
+            "collections": float(collections),
+            "local_deposits": float(local_deposits),
             "ending": float(ending),
             "transactions": transactions,
         })
@@ -1072,78 +971,9 @@ def detailed_daily_summary(request):
             "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
         })
 
-    cash_on_hand = []
+    # Get PCF data for the day - N+1 free via shared utility
     pcfs = list(PettyCashFund.objects.filter(is_active=True))
-    pcf_ids = [p.id for p in pcfs]
-
-    # Bulk fetch daily transactions
-    daily_txns_map = {}
-    for t in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date=target_date):
-        if t.pcf_id not in daily_txns_map:
-            daily_txns_map[t.pcf_id] = []
-        daily_txns_map[t.pcf_id].append(t)
-
-    # Bulk fetch cumulative totals
-    disb_cumulative = {
-        r['pcf_id']: r['total'] or Decimal('0.00')
-        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='disbursement')
-        .values('pcf_id').annotate(total=Sum('amount'))
-    }
-    rep_cumulative = {
-        r['pcf_id']: r['total'] or Decimal('0.00')
-        for r in PettyCashTransaction.objects.filter(pcf_id__in=pcf_ids, date__lte=target_date, type='replenishment')
-        .values('pcf_id').annotate(total=Sum('amount'))
-    }
-
-    for pcf in pcfs:
-        beginning = pcf.opening_balance
-        pcf_id = pcf.id
-
-        previous_txns = PettyCashTransaction.objects.filter(pcf_id=pcf_id, date__lt=target_date)
-        for t in previous_txns:
-            if t.type == 'disbursement':
-                beginning -= t.amount
-            elif t.type == 'replenishment':
-                beginning += t.amount
-
-        daily_txns = daily_txns_map.get(pcf_id, [])
-        disbursements = sum(t.amount for t in daily_txns if t.type == 'disbursement')
-        replenishments = sum(t.amount for t in daily_txns if t.type == 'replenishment')
-
-        total_disb = disb_cumulative.get(pcf_id, Decimal('0.00'))
-        total_rep = rep_cumulative.get(pcf_id, Decimal('0.00'))
-        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
-        ending = beginning - disbursements + replenishments
-
-        current_balance = pcf.current_balance or Decimal('0.00')
-        unreplenished_amount = pcf.unreplenished_amount or Decimal('0.00')
-
-        transactions = [
-            {
-                "id": t.id,
-                "type": t.type,
-                "amount": float(t.amount),
-                "description": t.description or "",
-                "date": str(t.date)
-            }
-            for t in sorted(daily_txns, key=lambda x: (x.date, x.id), reverse=True)
-        ]
-
-        cash_on_hand.append({
-            "id": pcf.id,
-            "name": pcf.name,
-            "location": pcf.location,
-            "location_display": pcf.get_location_display(),
-            "note": pcf.note or "",
-            "beginning": float(beginning),
-            "disbursements": float(disbursements),
-            "replenishments": float(replenishments),
-            "ending": float(ending),
-            "unreplenished": float(unreplenished),
-            "current_balance": float(pcf.current_balance),
-            "unreplenished_amount": float(pcf.unreplenished_amount),
-            "transactions": transactions,
-        })
+    cash_on_hand = compute_pcf_summary(pcfs, target_date)
 
     # PDC Summary - Calculate from Pdc model, excluding returned PDCs
     # "this_month" = Outstanding + Matured PDCs maturing this month
@@ -1255,21 +1085,21 @@ def detailed_daily_summary_range(request):
             status=400
         )
 
+    # Pre-fetch accounts (same for all dates)
+    accounts = [
+        {
+            "id": b.id,
+            "name": b.name or "",
+            "account_number": b.account_number,
+            "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
+        }
+        for b in BankAccount.objects.all().order_by("name", "account_number")
+    ]
+
     result = {}
     cur = start_date
     while cur <= end_date:
         bank_rows = compute_bank_daily_summary(cur)
-
-        accounts = []
-        for b in BankAccount.objects.all().order_by("name", "account_number"):
-            accounts.append({
-                "id": b.id,
-                "name": b.name or "",
-                "account_number": b.account_number,
-                "balance": float((b.balance or Decimal("0.00")).quantize(Decimal("0.01"))),
-            })
-
-        # Compute collections for this date
         cash_collections = compute_collections_summary(cur)
 
         result[cur.isoformat()] = {
@@ -2264,9 +2094,9 @@ def email_reports_config(request):
     if request.method == "GET":
         return Response(config)
     
-    # For now, just return success (actual email sending requires more setup)
+    # Email sending is not yet implemented
     return Response({
-        "detail": "Email report configuration updated (requires server restart to take effect)",
+        "detail": "Email report configuration is read-only. Configure SMTP in settings.py and restart the server.",
         "config": config
     })
 
@@ -2279,11 +2109,10 @@ def send_test_report(request):
     
     POST /api/reports/send-test/
     """
-    # This would send an actual email if configured
-    # For now, just return a mock response
+    # Email sending is not yet implemented
     return Response({
-        "detail": "Test report email would be sent to configured recipients",
-        "note": "Configure EMAIL settings in settings.py to enable actual email sending"
+        "detail": "Test report email would be sent. Configure EMAIL settings in settings.py to enable actual email sending.",
+        "note": "This endpoint is a placeholder - email sending requires SMTP configuration"
     })
 
 
@@ -2608,21 +2437,23 @@ def bank_analysis(request):
 
 # API endpoint to create default admin user
 @api_view(['GET'])
-@permission_classes([permissions.AllowAny])
 def create_default_admin(request):
     """
-    Simple endpoint to create a default admin user.
-    Usage: Visit /api/create-admin/ in browser or make GET request.
-    Runs migrations automatically if needed.
+    Create initial superuser. Open access only when no superuser exists (first-time setup).
+    If any superuser already exists, requires admin authentication.
     """
     from django.core.management import call_command
     from django.contrib.auth.models import User
     
+    if User.objects.filter(is_superuser=True).exists():
+        if not request.user.is_authenticated or not request.user.is_staff:
+            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+    
     # Run migrations first to ensure tables exist
     try:
         call_command('migrate', verbosity=0)
-    except Exception as e:
-        pass  # Ignore if migrations fail - might already be done
+    except Exception:
+        pass
     
     username = os.environ.get('ADMIN_USERNAME', 'admin')
     password = os.environ.get('ADMIN_PASSWORD', 'admin123')
@@ -2636,7 +2467,7 @@ def create_default_admin(request):
                 'username': username
             })
         
-        user = User.objects.create_superuser(
+        User.objects.create_superuser(
             username=username,
             email=email,
             password=password
@@ -2645,8 +2476,7 @@ def create_default_admin(request):
         return Response({
             'status': 'success',
             'message': f'Admin user "{username}" created successfully!',
-            'username': username,
-            'password': password
+            'username': username
         })
     except Exception as e:
         return Response({
@@ -2657,12 +2487,11 @@ def create_default_admin(request):
 
 
 # API endpoint to create regular user
-@csrf_exempt
 @api_view(['POST'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAdminUser])
 def create_user(request):
     """
-    Create a user via POST.
+    Create a user via POST. Admin only.
     Usage: POST /api/create-user/ with username, password, is_staff (optional), email (optional)
     """
     from django.contrib.auth.models import User
@@ -2680,12 +2509,12 @@ def create_user(request):
     
     if not username or not password:
         return Response({
-            'error': 'Username and password are required'
+            'detail': 'Username and password are required'
         }, status=status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(username=username).exists():
         return Response({
-            'error': f'User "{username}" already exists'
+            'detail': f'User "{username}" already exists'
         }, status=status.HTTP_400_BAD_REQUEST)
     
     user = User.objects.create_user(
@@ -2778,6 +2607,6 @@ def recalc_bank_balance(request, bank_id):
             "new_balance": float(bank.balance)
         })
     except BankAccount.DoesNotExist:
-        return Response({"error": "Bank account not found"}, status=404)
+        return Response({"detail": "Bank account not found"}, status=404)
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        return Response({"detail": str(e)}, status=500)

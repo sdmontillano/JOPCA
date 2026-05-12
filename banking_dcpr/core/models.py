@@ -178,49 +178,7 @@ class Transaction(models.Model):
     # Validation: ensure the prospective daily ending balance is not negative
     # -----------------------------------------------------------------
     def clean(self):
-        """
-        Validate that saving this Transaction will not make the daily ending balance negative.
-        Raises django.core.exceptions.ValidationError on failure.
-        """
-        # require bank_account and date to validate
-        if not getattr(self, "bank_account", None) or not getattr(self, "date", None):
-            return
-
-        # Use the Transaction class itself for queries
-        TransactionModel = Transaction
-
-        bank = self.bank_account
-        target_date = self.date
-
-        # compute beginning balance for the bank on target_date
-        beginning = _compute_beginning_for_bank(bank, target_date, TransactionModel)
-
-        # sum today's existing transactions (exclude this instance if updating)
-        qs = TransactionModel.objects.filter(bank_account=bank, date=target_date)
-        if getattr(self, "pk", None):
-            qs = qs.exclude(pk=self.pk)
-
-        today_inflows = qs.filter(type__in=INFLOW_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        today_outflows = qs.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        today_adjustments = qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-        # determine sign of this transaction
-        amt = _safe_decimal(self.amount)
-        if _is_inflow(self.type):
-            delta = amt
-        elif (self.type or "").strip().lower() in BANK_BALANCE_OUTFLOW:
-            delta = -amt
-        elif _is_adjustment(self.type):
-            # Adjustments can be positive or negative - use the amount as-is
-            delta = amt
-        else:
-            # default behavior for unknown types: treat as inflow
-            # change to `delta = -amt` if you prefer unknown types to be outflows
-            delta = amt
-
-        prospective_ending = beginning + _safe_decimal(today_inflows) - _safe_decimal(today_outflows) + _safe_decimal(today_adjustments) + delta
-
-        # Allow negative balances - removed validation that prevented negative
+        pass
 
     def save(self, *args, **kwargs):
         """
@@ -308,7 +266,7 @@ class DailyCashPosition(models.Model):
             - self.disbursements - returned_checks + self.adjustments
         )
         if self.ending_balance < 0:
-            raise ValidationError("Ending balance cannot be negative.")
+            self.ending_balance = Decimal('0.00')
         super().save(*args, **kwargs)
 
     def __str__(self):

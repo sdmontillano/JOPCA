@@ -1,7 +1,8 @@
 # core/utils/summary.py
 from decimal import Decimal
-from django.db.models import Sum
-from ..models import BankAccount, Transaction, Collection, Pdc
+from datetime import date as _date
+from django.db.models import Sum, Q
+from ..models import BankAccount, Transaction, Collection, Pdc, PettyCashFund, PettyCashTransaction
 from ..constants import (
     DEPOSIT_TYPES, INFLOW_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, TRANSFER_TYPES, RETURNED_TYPES, 
     ADJUSTMENT_TYPES, PDC_TYPES, LOCAL_DEPOSIT_TYPES,
@@ -39,7 +40,7 @@ def compute_cash_daily_summary(target_date):
     
     pcfs = PettyCashFund.objects.all()
     for pcf in pcfs:
-        pcf_beginning = pcf.balance or Decimal("0.00")
+        pcf_beginning = pcf.current_balance or Decimal("0.00")
         beginning += pcf_beginning
     
     today_qs = Transaction.objects.filter(date=target_date)
@@ -77,152 +78,207 @@ def compute_bank_daily_summary(target_date):
     Uses start_date to determine which transactions to include.
     """
     from decimal import Decimal
-    from django.db.models import Sum
+    from django.db.models import Sum, Q
     from ..constants import (
         DEPOSIT_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, DISBURSEMENT_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, 
         LOCAL_DEPOSIT_TYPES, ADJUSTMENT_TYPES, RETURNED_TYPES, PDC_TYPES
     )
     
+    # Bulk aggregate all prior transactions (date < target_date) grouped by bank_account
+    prior_qs = Transaction.objects.filter(date__lt=target_date)
+    prior_agg = prior_qs.values('bank_account').annotate(
+        deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES)),
+        disbursements=Sum('amount', filter=Q(type__in=DISBURSEMENT_TYPES)),
+        ft_in=Sum('amount', filter=Q(type__in=FUND_TRANSFER_IN)),
+        ft_out=Sum('amount', filter=Q(type__in=FUND_TRANSFER_OUT)),
+        adj_in=Sum('amount', filter=Q(type='adjustment_in')),
+        adj_out=Sum('amount', filter=Q(type='adjustment_out')),
+        bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
+    )
+    prior_map = {r['bank_account']: r for r in prior_agg}
+
+    # Bulk aggregate all today's transactions (date = target_date) grouped by bank_account
+    today_qs = Transaction.objects.filter(date=target_date)
+    today_agg = today_qs.values('bank_account').annotate(
+        deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES)),
+        disbursements=Sum('amount', filter=Q(type__in=DISBURSEMENT_TYPES)),
+        ft_in=Sum('amount', filter=Q(type__in=FUND_TRANSFER_IN)),
+        ft_out=Sum('amount', filter=Q(type__in=FUND_TRANSFER_OUT)),
+        adj_in=Sum('amount', filter=Q(type='adjustment_in')),
+        adj_out=Sum('amount', filter=Q(type='adjustment_out')),
+        collections=Sum('amount', filter=Q(type='collection') & ~Q(type__in=DEPOSIT_TYPES)),
+        bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
+        local_deposits_all=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES)),
+        adjustments=Sum('amount', filter=Q(type__in=ADJUSTMENT_TYPES)),
+        returned=Sum('amount', filter=Q(type__in=RETURNED_TYPES)),
+        pdc=Sum('amount', filter=Q(type__in=PDC_TYPES)),
+    )
+    today_map = {r['bank_account']: r for r in today_agg}
+    
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
     
     for bank in banks:
-        # Get the effective start date for this bank (default to very early date if not set)
-        effective_start = bank.start_date if bank.start_date else None
+        p = prior_map.get(bank.id, {})
+        t = today_map.get(bank.id, {})
         
-        # Beginning balance: prior deposits only (NOT collections)
-        # Only count transactions from start_date onwards
-        prior_deposits_qs = Transaction.objects.filter(
-            bank_account=bank, 
-            date__lt=target_date, 
-            type__in=DEPOSIT_TYPES
+        beginning = max(
+            bank.opening_balance
+            + _safe_decimal(p.get('deposits'))
+            - _safe_decimal(p.get('disbursements'))
+            + _safe_decimal(p.get('ft_in'))
+            - _safe_decimal(p.get('ft_out'))
+            + _safe_decimal(p.get('adj_in'))
+            - _safe_decimal(p.get('adj_out'))
+            - _safe_decimal(p.get('bank_charges')),
+            Decimal("0")
         )
-        if effective_start:
-            prior_deposits_qs = prior_deposits_qs.filter(date__gte=effective_start)
-        prior_deposits = prior_deposits_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
-        prior_disbursements_qs = Transaction.objects.filter(
-            bank_account=bank, 
-            date__lt=target_date, 
-            type__in=DISBURSEMENT_TYPES
+        deposits = _safe_decimal(t.get('deposits'))
+        disbursements = _safe_decimal(t.get('disbursements'))
+        fund_transfers_in = _safe_decimal(t.get('ft_in'))
+        fund_transfers_out = _safe_decimal(t.get('ft_out'))
+        adjustment_in = _safe_decimal(t.get('adj_in'))
+        adjustment_out = _safe_decimal(t.get('adj_out'))
+        collections = _safe_decimal(t.get('collections'))
+        bank_charges = _safe_decimal(t.get('bank_charges'))
+        local_deposits_all = _safe_decimal(t.get('local_deposits_all'))
+        adjustments = _safe_decimal(t.get('adjustments'))
+        transactions_returned = _safe_decimal(t.get('returned'))
+        
+        pdcs_returned = _safe_decimal(
+            Pdc.objects.filter(
+                deposit_bank=bank,
+                status=Pdc.STATUS_RETURNED,
+                returned_date=target_date
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        if effective_start:
-            prior_disbursements_qs = prior_disbursements_qs.filter(date__gte=effective_start)
-        prior_disbursements = prior_disbursements_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        returned_checks = max(transactions_returned, pdcs_returned)
         
-        prior_transfers_in_qs = Transaction.objects.filter(
-            bank_account=bank,
-            date__lt=target_date,
-            type__in=FUND_TRANSFER_IN
-        )
-        if effective_start:
-            prior_transfers_in_qs = prior_transfers_in_qs.filter(date__gte=effective_start)
-        prior_transfers_in = prior_transfers_in_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        pdc = _safe_decimal(t.get('pdc'))
         
-        prior_transfers_out_qs = Transaction.objects.filter(
-            bank_account=bank,
-            date__lt=target_date,
-            type__in=FUND_TRANSFER_OUT
-        )
-        if effective_start:
-            prior_transfers_out_qs = prior_transfers_out_qs.filter(date__gte=effective_start)
-        prior_transfers_out = prior_transfers_out_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        # CORRECT FORMULA: Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges
+        ending = beginning + deposits - disbursements + fund_transfers_in - fund_transfers_out + adjustment_in - adjustment_out - bank_charges
         
-        # Prior adjustments for beginning balance (default to 0 if none found)
-        prior_adjustment_in = Decimal("0")
-        prior_adjustment_out = Decimal("0")
+        net_adjustments = adjustment_in - adjustment_out
         
-        prior_adjustment_in_qs = Transaction.objects.filter(
-            bank_account=bank,
-            date__lt=target_date,
-            type="adjustment_in"
-        )
-        if effective_start:
-            prior_adjustment_in_qs = prior_adjustment_in_qs.filter(date__gte=effective_start)
-        prior_adjustment_in = prior_adjustment_in_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        prior_adjustment_out_qs = Transaction.objects.filter(
-            bank_account=bank,
-            date__lt=target_date,
-            type="adjustment_out"
-        )
-        if effective_start:
-            prior_adjustment_out_qs = prior_adjustment_out_qs.filter(date__gte=effective_start)
-        prior_adjustment_out = prior_adjustment_out_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-        # Prior bank charges
-        prior_bank_charges_qs = Transaction.objects.filter(
-            bank_account=bank,
-            date__lt=target_date,
-            type__in=["bank_charges", "bank_charge"]
-        )
-        if effective_start:
-            prior_bank_charges_qs = prior_bank_charges_qs.filter(date__gte=effective_start)
-        prior_bank_charges = prior_bank_charges_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out + prior_adjustment_in - prior_adjustment_out - prior_bank_charges, Decimal("0"))
-
-        today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
-
-        # CORRECT DCPR FORMULA: Deposit only, Disbursement only
-        deposits = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_qs.filter(type__in=DISBURSEMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        fund_transfers_in = today_qs.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        fund_transfers_out = today_qs.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Get adjustment_in and adjustment_out for today
-        adjustment_in = today_qs.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        adjustment_out = today_qs.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # For reporting only (not in balance formula)
-        collections = today_qs.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Bank charges (deducted from balance via BANK_BALANCE_OUTFLOW)
-        bank_charges = today_qs.filter(type__in=["bank_charges", "bank_charge"]).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Calculate local deposits (both deposit and local_deposit types)
-        deposit_total = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposit_total = today_qs.filter(type__in=LOCAL_DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        local_deposits = deposit_total + local_deposit_total
-        
-        adjustments = today_qs.filter(type__in=ADJUSTMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        
-        # Get returned from transactions (old data, if any)
-        transactions_returned = today_qs.filter(type__in=RETURNED_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        # ALSO get returned PDC amounts for this bank (new way - no transaction needed)
-        pdcs_returned = Pdc.objects.filter(
-            deposit_bank=bank,
-            status=Pdc.STATUS_RETURNED,
-            returned_date=target_date
-        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        returned_checks = max(_safe_decimal(transactions_returned), _safe_decimal(pdcs_returned))
-        
-        pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges
-        ending = beginning + _safe_decimal(deposits) - _safe_decimal(disbursements) + _safe_decimal(fund_transfers_in) - _safe_decimal(fund_transfers_out) + _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out) - _safe_decimal(bank_charges)
-
-        # Net adjustments for display: (adjustment_in - adjustment_out)
-        net_adjustments = _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out)
-
         rows.append({
             "bank_id": bank.id,
             "particulars": bank.name or "",
             "account_number": bank.account_number,
             "beginning": _to_float(beginning),
-            "deposits": _to_float(_safe_decimal(deposits)),
-            "disbursements": _to_float(_safe_decimal(disbursements)),
-            "fund_transfers_in": _to_float(_safe_decimal(fund_transfers_in)),
-            "fund_transfers_out": _to_float(_safe_decimal(fund_transfers_out)),
-            "collections": _to_float(_safe_decimal(collections)),  # reporting only
-            "local_deposits": _to_float(_safe_decimal(local_deposits)),  # reporting only
-            "returned_checks": _to_float(_safe_decimal(returned_checks)),
-            "adjustment_in": _to_float(_safe_decimal(adjustment_in)),
-            "adjustment_out": _to_float(_safe_decimal(adjustment_out)),
+            "deposits": _to_float(deposits),
+            "disbursements": _to_float(disbursements),
+            "fund_transfers_in": _to_float(fund_transfers_in),
+            "fund_transfers_out": _to_float(fund_transfers_out),
+            "collections": _to_float(collections),
+            "local_deposits": _to_float(local_deposits_all),
+            "returned_checks": _to_float(returned_checks),
+            "adjustment_in": _to_float(adjustment_in),
+            "adjustment_out": _to_float(adjustment_out),
             "adjustments": _to_float(net_adjustments),
-            "bank_charges": _to_float(_safe_decimal(bank_charges)),
-            "pdc": _to_float(_safe_decimal(pdc)),
+            "bank_charges": _to_float(bank_charges),
+            "pdc": _to_float(pdc),
             "ending": _to_float(ending),
         })
-
+    
     return rows
+
+
+def compute_pcf_summary(pcfs, target_date, month_date=None):
+    """
+    Compute PCF (Petty Cash Fund) summary with batch aggregation (no N+1).
+    
+    If month_date is provided, includes all transactions for that month.
+    Otherwise only includes transactions on target_date.
+    
+    Returns list of dicts with cash_on_hand data.
+    """
+    pcf_ids = [p.id for p in pcfs]
+
+    if month_date:
+        month_start = _date(month_date.year, month_date.month, 1)
+        period_txns = PettyCashTransaction.objects.filter(
+            pcf_id__in=pcf_ids,
+            date__year=month_date.year,
+            date__month=month_date.month
+        )
+        prior_cutoff = month_start
+    else:
+        period_txns = PettyCashTransaction.objects.filter(
+            pcf_id__in=pcf_ids, date=target_date
+        )
+        prior_cutoff = target_date
+
+    period_txns_map = {}
+    for t in period_txns:
+        period_txns_map.setdefault(t.pcf_id, []).append(t)
+
+    # Bulk aggregate prior transactions (before cutoff) - replaces per-PCF N+1 queries
+    disb_prior_qs = PettyCashTransaction.objects.filter(
+        pcf_id__in=pcf_ids, date__lt=prior_cutoff, type='disbursement'
+    ).values('pcf_id').annotate(total=Sum('amount'))
+    disb_prior = {r['pcf_id']: r['total'] or Decimal('0.00') for r in disb_prior_qs}
+
+    rep_prior_qs = PettyCashTransaction.objects.filter(
+        pcf_id__in=pcf_ids, date__lt=prior_cutoff, type='replenishment'
+    ).values('pcf_id').annotate(total=Sum('amount'))
+    rep_prior = {r['pcf_id']: r['total'] or Decimal('0.00') for r in rep_prior_qs}
+
+    # Bulk aggregate cumulative totals up to target_date
+    disb_cum_qs = PettyCashTransaction.objects.filter(
+        pcf_id__in=pcf_ids, date__lte=target_date, type='disbursement'
+    ).values('pcf_id').annotate(total=Sum('amount'))
+    disb_cumulative = {r['pcf_id']: r['total'] or Decimal('0.00') for r in disb_cum_qs}
+
+    rep_cum_qs = PettyCashTransaction.objects.filter(
+        pcf_id__in=pcf_ids, date__lte=target_date, type='replenishment'
+    ).values('pcf_id').annotate(total=Sum('amount'))
+    rep_cumulative = {r['pcf_id']: r['total'] or Decimal('0.00') for r in rep_cum_qs}
+
+    cash_on_hand = []
+    for pcf in pcfs:
+        pcf_id = pcf.id
+        beginning = (
+            pcf.opening_balance
+            - disb_prior.get(pcf_id, Decimal('0.00'))
+            + rep_prior.get(pcf_id, Decimal('0.00'))
+        )
+
+        txns = period_txns_map.get(pcf_id, [])
+        disbursements = sum(t.amount for t in txns if t.type == 'disbursement')
+        replenishments = sum(t.amount for t in txns if t.type == 'replenishment')
+
+        total_disb = disb_cumulative.get(pcf_id, Decimal('0.00'))
+        total_rep = rep_cumulative.get(pcf_id, Decimal('0.00'))
+        unreplenished = max(Decimal('0.00'), total_disb - total_rep)
+        ending = beginning - disbursements + replenishments
+
+        transactions = [
+            {
+                "id": t.id,
+                "type": t.type,
+                "amount": float(t.amount),
+                "description": t.description or "",
+                "date": str(t.date)
+            }
+            for t in sorted(txns, key=lambda x: (x.date, x.id), reverse=True)
+        ]
+
+        cash_on_hand.append({
+            "id": pcf.id,
+            "name": pcf.name,
+            "location": pcf.location,
+            "location_display": pcf.get_location_display(),
+            "note": pcf.note or "",
+            "beginning": float(beginning),
+            "disbursements": float(disbursements),
+            "replenishments": float(replenishments),
+            "ending": float(ending),
+            "unreplenished": float(unreplenished),
+            "current_balance": float(pcf.current_balance),
+            "unreplenished_amount": float(pcf.unreplenished_amount),
+            "transactions": transactions,
+        })
+
+    return cash_on_hand

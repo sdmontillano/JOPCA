@@ -183,9 +183,9 @@ class DailyCashPositionSerializer(serializers.ModelSerializer):
             "date",
             "beginning_balance",
             "collections",
+            "local_deposits",
             "disbursements",
-            "transfers",
-            "returned_checks",
+            "adjustments",
             "pdc",
             "ending_balance",
         ]

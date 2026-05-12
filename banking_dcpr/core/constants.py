@@ -11,9 +11,6 @@ DEPOSIT_TYPES = frozenset([
     "deposit", "deposits",
 ])
 
-# INFLOW_TYPES = DEPOSIT_TYPES (only deposit adds to bank balance)
-INFLOW_TYPES = DEPOSIT_TYPES
-
 # FUND_TRANSFER_IN - Money transferred INTO this bank account
 FUND_TRANSFER_IN = frozenset([
     "fund_transfer_in",
@@ -24,18 +21,18 @@ FUND_TRANSFER_OUT = frozenset([
     "fund_transfer_out",
 ])
 
+# DISBURSEMENT_TYPES - Pure disbursements only (no transfers/charges/adjustments)
+# Used by compute_bank_daily_summary for the disbursements column
+DISBURSEMENT_TYPES = frozenset([
+    "disbursement", "disbursements",
+])
+
 # BANK_BALANCE_INFLOW - Types that add to bank balance (for BankAccount.recalculate_balance)
 # Same as Dashboard: deposits + fund_transfers_in + adjustment_in
 BANK_BALANCE_INFLOW = frozenset([
     "deposit", "deposits",
     "fund_transfer_in",
     "adjustment_in",
-])
-
-# DISBURSEMENT_TYPES - Pure disbursements only (no transfers/charges/adjustments)
-# Used by compute_bank_daily_summary for the disbursements column
-DISBURSEMENT_TYPES = frozenset([
-    "disbursement", "disbursements",
 ])
 
 # BANK_BALANCE_OUTFLOW - Types that subtract from bank balance (for BankAccount.recalculate_balance)
@@ -47,12 +44,16 @@ BANK_BALANCE_OUTFLOW = frozenset([
     "bank_charges", "bank_charge",
 ])
 
-# OUTFLOW_TYPES - Types that SUBTRACT from bank balance
-OUTFLOW_TYPES = frozenset([
-    "disbursement", "disbursements",
-    "bank_charges", "bank_charge",
+# RETURNED_TYPES
+RETURNED_TYPES = frozenset([
     "returned_check", "returned_checks",
 ])
+
+# INFLOW_TYPES - All types that ADD to bank balance (deposits + transfers_in + adjustments_in)
+INFLOW_TYPES = BANK_BALANCE_INFLOW
+
+# OUTFLOW_TYPES - All types that SUBTRACT from bank balance (disbursements + transfers_out + adjustments_out + bank_charges + returned_checks)
+OUTFLOW_TYPES = frozenset(BANK_BALANCE_OUTFLOW | RETURNED_TYPES)
 
 # LOCAL_DEPOSIT_TYPES - Tracking only (do NOT affect ending balance)
 # These show in Local Deposits column but don't calculate in ending balance
@@ -65,11 +66,6 @@ TRANSFER_TYPES = frozenset([
     "transfer", "fund_transfer", "fund_transfers",
     "interbank_transfer", "interbank_transfers",
     "fund_transfer_in", "fund_transfer_out",
-])
-
-# RETURNED_TYPES
-RETURNED_TYPES = frozenset([
-    "returned_check", "returned_checks",
 ])
 
 # ADJUSTMENT_TYPES
