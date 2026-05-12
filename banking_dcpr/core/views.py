@@ -2486,12 +2486,12 @@ def create_default_admin(request):
         })
 
 
-# API endpoint to create regular user
+# API endpoint to create user
 @api_view(['POST'])
-@permission_classes([permissions.IsAdminUser])
 def create_user(request):
     """
-    Create a user via POST. Admin only.
+    Create a user via POST. Open registration for regular users.
+    Admin creation is limited to 3 accounts unless requested by an existing admin.
     Usage: POST /api/create-user/ with username, password, is_staff (optional), email (optional)
     """
     from django.contrib.auth.models import User
@@ -2506,6 +2506,16 @@ def create_user(request):
     
     is_staff = str(is_staff_raw).lower() in ('true', '1', 'yes', 'on') if is_staff_raw else False
     is_superuser = str(is_superuser_raw).lower() in ('true', '1', 'yes', 'on') if is_superuser_raw else False
+    
+    # Enforce 3-admin limit for unauthenticated requests
+    is_admin_request = is_superuser
+    if is_admin_request:
+        admin_count = User.objects.filter(is_superuser=True).count()
+        if admin_count >= 3:
+            if not request.user.is_authenticated or not (request.user.is_staff or request.user.is_superuser):
+                return Response({
+                    'detail': 'Maximum 3 admin accounts reached. Contact an existing admin to create more.'
+                }, status=status.HTTP_403_FORBIDDEN)
     
     if not username or not password:
         return Response({

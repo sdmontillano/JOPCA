@@ -95,7 +95,7 @@ export default function Login() {
       setRegEmail("");
       setRegIsAdmin(false);
     } catch (err) {
-      const msg = err?.response?.data?.error || "Failed to create account";
+      const msg = err?.response?.data?.detail || err?.response?.data?.error || "Failed to create account";
       showToast(msg, "error");
     } finally {
       setRegLoading(false);
