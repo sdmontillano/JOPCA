@@ -802,7 +802,7 @@ def monthly_full_report(request):
     )
     
     # Apply signed amounts based on transaction type - import from constants
-    from .constants import INFLOW_TYPES, OUTFLOW_TYPES
+    from .constants import INFLOW_TYPES, OUTFLOW_TYPES, BANK_BALANCE_INFLOW, BANK_BALANCE_OUTFLOW, DISBURSEMENT_TYPES
     
     bank_by_type = []
     for item in bank_by_type_query:
@@ -884,8 +884,8 @@ def monthly_full_report(request):
         monthly_adjustment_in = bank_monthly_txns.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
         monthly_adjustment_out = bank_monthly_txns.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
-        # Monthly net change
-        bank_monthly_net = bank_monthly_inflows - bank_monthly_outflows + monthly_adjustment_in - monthly_adjustment_out
+        # Monthly net change (BANK_BALANCE_INFLOW/OUTFLOW already includes adjustments)
+        bank_monthly_net = bank_monthly_inflows - bank_monthly_outflows
         
         bank_balance_summary.append({
             "bank_name": bank.name,
@@ -938,7 +938,7 @@ def compute_collections_summary(target_date):
     (collection is tracking only, NOT in balance formula)
     """
     from django.db.models import Sum
-    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
+    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, OUTFLOW_TYPES, DISBURSEMENT_TYPES, BANK_BALANCE_OUTFLOW, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
     
     rows = []
     banks = BankAccount.objects.all().order_by("name", "account_number")
@@ -950,7 +950,7 @@ def compute_collections_summary(target_date):
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_disbursements = (
-            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=BANK_BALANCE_OUTFLOW)
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=DISBURSEMENT_TYPES)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
         prior_transfers_in = (
@@ -961,7 +961,19 @@ def compute_collections_summary(target_date):
             Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=FUND_TRANSFER_OUT)
             .aggregate(total=Sum("amount"))["total"] or Decimal("0")
         )
-        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out, Decimal("0"))
+        prior_adjustment_in = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type="adjustment_in")
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_adjustment_out = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type="adjustment_out")
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        prior_bank_charges = (
+            Transaction.objects.filter(bank_account=bank, date__lt=target_date, type__in=["bank_charges", "bank_charge"])
+            .aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        )
+        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out + prior_adjustment_in - prior_adjustment_out - prior_bank_charges, Decimal("0"))
 
         # Today's transactions
         today_txns = Transaction.objects.filter(bank_account=bank, date=target_date)
@@ -972,12 +984,15 @@ def compute_collections_summary(target_date):
         
         # For balance formula
         deposits = today_txns.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_txns.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_txns.filter(type__in=DISBURSEMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers_in = today_txns.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         transfers_out = today_txns.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        adjustment_in = today_txns.filter(type="adjustment_in").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        adjustment_out = today_txns.filter(type="adjustment_out").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        bank_charges = today_txns.filter(type__in=["bank_charges", "bank_charge"]).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut
-        ending = beginning + deposits - disbursements + transfers_in - transfers_out
+        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges
+        ending = beginning + deposits - disbursements + transfers_in - transfers_out + adjustment_in - adjustment_out - bank_charges
 
         # Get today's transactions with descriptions (collections and deposits for reporting)
         transactions = [

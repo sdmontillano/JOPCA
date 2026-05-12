@@ -167,29 +167,9 @@ export default function AdminLayout({ children, title, breadcrumbs }) {
             )}
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                localStorage.setItem("userRole", "user");
-                window.location.hash = "#/dashboard";
-                window.location.reload();
-              }}
-              startIcon={<ArrowBackIcon />}
-              sx={{ 
-                borderColor: "#1E293B", 
-                color: "#1E293B",
-                textTransform: "none",
-                "&:hover": { bgcolor: "#1E293B", color: "#FFFFFF" }
-              }}
-            >
-              Back to Dashboard
-            </Button>
-            <Typography variant="body2" sx={{ color: "#64748b", fontSize: 13 }}>
+          <Typography variant="body2" sx={{ color: "#64748b", fontSize: 13 }}>
               Welcome, <strong>{localStorage.getItem("username") || "Admin"}</strong>
             </Typography>
-          </Box>
         </Toolbar>
       </AppBar>
 

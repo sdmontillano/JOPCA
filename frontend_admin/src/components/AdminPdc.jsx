@@ -35,8 +35,8 @@ export default function AdminPdc() {
     check_number: "",
     date_received: "",
     maturity_date: "",
-    bank_account: "",
-    check_from: "",
+    deposit_bank_id: "",
+    customer: "",
     amount: "",
     status: "on_hand",
     remarks: ""
@@ -73,7 +73,7 @@ export default function AdminPdc() {
   const filteredPdcs = pdcs.filter(p => {
     const matchesSearch = !search ||
       p.check_number?.toLowerCase().includes(search.toLowerCase()) ||
-      p.check_from?.toLowerCase().includes(search.toLowerCase());
+      p.customer?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = !statusFilter || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -104,10 +104,10 @@ export default function AdminPdc() {
       setSelectedPdc(pdc);
       setFormData({
         check_number: pdc.check_number,
-        date_received: pdc.date_received,
+        date_received: pdc.date_received || "",
         maturity_date: pdc.maturity_date,
-        bank_account: pdc.bank_account?.id || pdc.bank_account || "",
-        check_from: pdc.check_from,
+        deposit_bank_id: pdc.deposit_bank?.id || "",
+        customer: pdc.customer,
         amount: pdc.amount,
         status: pdc.status,
         remarks: pdc.remarks || ""
@@ -119,8 +119,8 @@ export default function AdminPdc() {
         check_number: "",
         date_received: new Date().toISOString().split("T")[0],
         maturity_date: "",
-        bank_account: "",
-        check_from: "",
+        deposit_bank_id: "",
+        customer: "",
         amount: "",
         status: "on_hand",
         remarks: ""
@@ -205,7 +205,7 @@ export default function AdminPdc() {
               columns={[
                 { label: "ID", key: "id" },
                 { label: "Check #", key: "check_number" },
-                { label: "Customer", key: "client_name" },
+                { label: "Customer", key: "customer" },
                 { label: "Bank", key: "deposit_bank.name" },
                 { label: "Amount", key: "amount" },
                 { label: "Maturity Date", key: "maturity_date" },
@@ -232,7 +232,7 @@ export default function AdminPdc() {
                 <TableRow sx={{ bgcolor: "#f8fafc" }}>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>ID</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Check #</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Check From</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Customer Name</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Bank</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Amount</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Date Received</TableCell>
@@ -251,12 +251,12 @@ export default function AdminPdc() {
                     <TableRow key={pdc.id} hover>
                       <TableCell sx={{ color: "#64748b" }}>{pdc.id}</TableCell>
                       <TableCell sx={{ fontWeight: 500, fontFamily: "monospace" }}>{pdc.check_number}</TableCell>
-                      <TableCell>{pdc.check_from || "-"}</TableCell>
-                      <TableCell>{pdc.bank_account?.name || banks.find(b => b.id === pdc.bank_account)?.name || "-"}</TableCell>
+                      <TableCell>{pdc.customer || "-"}</TableCell>
+                      <TableCell>{pdc.deposit_bank?.name || banks.find(b => b.id === pdc.deposit_bank?.id)?.name || "-"}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
                         {formatAmount(pdc.amount)}
                       </TableCell>
-                      <TableCell>{pdc.date_received}</TableCell>
+                      <TableCell>{pdc.date_received || pdc.created_at?.slice(0, 10) || "-"}</TableCell>
                       <TableCell>{pdc.maturity_date || "-"}</TableCell>
                       <TableCell>
                         <Chip 
@@ -293,9 +293,9 @@ export default function AdminPdc() {
               required
             />
             <TextField
-              label="Check From (Payer)"
-              value={formData.check_from}
-              onChange={(e) => setFormData({ ...formData, check_from: e.target.value })}
+              label="Customer Name"
+              value={formData.customer}
+              onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
               fullWidth
             />
             <TextField
@@ -309,7 +309,7 @@ export default function AdminPdc() {
             />
             <FormControl fullWidth>
               <InputLabel>Bank</InputLabel>
-              <Select value={formData.bank_account} label="Bank" onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })}>
+              <Select value={formData.deposit_bank_id} label="Bank" onChange={(e) => setFormData({ ...formData, deposit_bank_id: e.target.value })}>
                 <MenuItem value="">Select Bank</MenuItem>
                 {banks.map(b => <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>)}
               </Select>

@@ -52,14 +52,18 @@ function groupLineItemsByBank(lineItems = []) {
     else if (t === "returned_check") row.returned_checks += total;
     else if (t === "adjustment_in") row.adjustment_in += total;
     else if (t === "adjustment_out") row.adjustment_out += total;
-    else if (t === "adjustments" || t === "bank_charges") row.adjustment_out += total;
+    else if (t === "bank_charges" || t === "bank_charge") row.bank_charges += total;
+    else if (t === "adjustments") row.adjustment_out += total;
 
     row.ending =
       (row.beginning || 0) +
       (row.deposits || 0) -
       (row.disbursements || 0) +
       (row.fund_transfers_in || 0) -
-      (row.fund_transfers_out || 0);
+      (row.fund_transfers_out || 0) +
+      (row.adjustment_in || 0) -
+      (row.adjustment_out || 0) -
+      (row.bank_charges || 0);
   });
 
   return Object.values(map);
@@ -196,6 +200,7 @@ export function mapDailyResponse(raw = {}) {
         account_number: r.account_number || null,
         beginning: toNumber(r.beginning),
         collections: toNumber(r.collections),
+        bank_charges: toNumber(r.bank_charges),
         local_deposits: toNumber(r.local_deposits),
         disbursements: toNumber(r.disbursements),
         fund_transfers_out: toNumber(r.fund_transfers_out || r.fund_transfers || 0),

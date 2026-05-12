@@ -226,6 +226,7 @@ class PdcSerializer(serializers.ModelSerializer):
             "id",
             "customer",          # maps to customer_name in model
             "check_number",      # maps to check_no in model
+            "date_received",
             "maturity_date",
             "amount",
             "status",

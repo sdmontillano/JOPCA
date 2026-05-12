@@ -79,7 +79,7 @@ def compute_bank_daily_summary(target_date):
     from decimal import Decimal
     from django.db.models import Sum
     from ..constants import (
-        DEPOSIT_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, 
+        DEPOSIT_TYPES, OUTFLOW_TYPES, BANK_BALANCE_OUTFLOW, DISBURSEMENT_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, 
         LOCAL_DEPOSIT_TYPES, ADJUSTMENT_TYPES, RETURNED_TYPES, PDC_TYPES
     )
     
@@ -104,7 +104,7 @@ def compute_bank_daily_summary(target_date):
         prior_disbursements_qs = Transaction.objects.filter(
             bank_account=bank, 
             date__lt=target_date, 
-            type__in=BANK_BALANCE_OUTFLOW
+            type__in=DISBURSEMENT_TYPES
         )
         if effective_start:
             prior_disbursements_qs = prior_disbursements_qs.filter(date__gte=effective_start)
@@ -150,13 +150,23 @@ def compute_bank_daily_summary(target_date):
             prior_adjustment_out_qs = prior_adjustment_out_qs.filter(date__gte=effective_start)
         prior_adjustment_out = prior_adjustment_out_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out + prior_adjustment_in - prior_adjustment_out, Decimal("0"))
+        # Prior bank charges
+        prior_bank_charges_qs = Transaction.objects.filter(
+            bank_account=bank,
+            date__lt=target_date,
+            type__in=["bank_charges", "bank_charge"]
+        )
+        if effective_start:
+            prior_bank_charges_qs = prior_bank_charges_qs.filter(date__gte=effective_start)
+        prior_bank_charges = prior_bank_charges_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+        beginning = max(bank.opening_balance + prior_deposits - prior_disbursements + prior_transfers_in - prior_transfers_out + prior_adjustment_in - prior_adjustment_out - prior_bank_charges, Decimal("0"))
 
         today_qs = Transaction.objects.filter(bank_account=bank, date=target_date)
 
         # CORRECT DCPR FORMULA: Deposit only, Disbursement only
         deposits = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        disbursements = today_qs.filter(type__in=BANK_BALANCE_OUTFLOW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        disbursements = today_qs.filter(type__in=DISBURSEMENT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers_in = today_qs.filter(type__in=FUND_TRANSFER_IN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         fund_transfers_out = today_qs.filter(type__in=FUND_TRANSFER_OUT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
@@ -166,6 +176,9 @@ def compute_bank_daily_summary(target_date):
         
         # For reporting only (not in balance formula)
         collections = today_qs.filter(type="collection").exclude(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        
+        # Bank charges (deducted from balance via BANK_BALANCE_OUTFLOW)
+        bank_charges = today_qs.filter(type__in=["bank_charges", "bank_charge"]).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         
         # Calculate local deposits (both deposit and local_deposit types)
         deposit_total = today_qs.filter(type__in=DEPOSIT_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -186,8 +199,8 @@ def compute_bank_daily_summary(target_date):
         
         pdc = today_qs.filter(type__in=PDC_TYPES).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut
-        ending = beginning + _safe_decimal(deposits) - _safe_decimal(disbursements) + _safe_decimal(fund_transfers_in) - _safe_decimal(fund_transfers_out) + _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out)
+        # CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges
+        ending = beginning + _safe_decimal(deposits) - _safe_decimal(disbursements) + _safe_decimal(fund_transfers_in) - _safe_decimal(fund_transfers_out) + _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out) - _safe_decimal(bank_charges)
 
         # Net adjustments for display: (adjustment_in - adjustment_out)
         net_adjustments = _safe_decimal(adjustment_in) - _safe_decimal(adjustment_out)
@@ -207,6 +220,7 @@ def compute_bank_daily_summary(target_date):
             "adjustment_in": _to_float(_safe_decimal(adjustment_in)),
             "adjustment_out": _to_float(_safe_decimal(adjustment_out)),
             "adjustments": _to_float(net_adjustments),
+            "bank_charges": _to_float(_safe_decimal(bank_charges)),
             "pdc": _to_float(_safe_decimal(pdc)),
             "ending": _to_float(ending),
         })

@@ -32,12 +32,19 @@ BANK_BALANCE_INFLOW = frozenset([
     "adjustment_in",
 ])
 
+# DISBURSEMENT_TYPES - Pure disbursements only (no transfers/charges/adjustments)
+# Used by compute_bank_daily_summary for the disbursements column
+DISBURSEMENT_TYPES = frozenset([
+    "disbursement", "disbursements",
+])
+
 # BANK_BALANCE_OUTFLOW - Types that subtract from bank balance (for BankAccount.recalculate_balance)
-# Same as Dashboard: disbursements + fund_transfers_out + adjustment_out
+# Same as Dashboard: disbursements + fund_transfers_out + adjustment_out + bank_charges
 BANK_BALANCE_OUTFLOW = frozenset([
     "disbursement", "disbursements",
     "fund_transfer_out",
     "adjustment_out",
+    "bank_charges", "bank_charge",
 ])
 
 # OUTFLOW_TYPES - Types that SUBTRACT from bank balance
