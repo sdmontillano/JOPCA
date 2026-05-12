@@ -803,9 +803,8 @@ function DashboardInner() {
   })();
 
   // Calculate totals for KPI cards
-  const bankCollections = cashInBank.reduce((sum, bank) => sum + Number(bank.collections || 0), 0);
   const cashCollections = collectionsData.reduce((sum, collection) => sum + Number(collection.amount || 0), 0);
-  const totalCollections = bankCollections + cashCollections;
+  const totalCollections = cashCollections;
   const undepositedCash = collectionsData
     .filter(c => c.status === "UNDEPOSITED")
     .reduce((sum, c) => sum + Number(c.amount || 0), 0);
