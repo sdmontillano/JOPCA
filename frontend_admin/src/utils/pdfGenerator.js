@@ -1115,6 +1115,14 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
         theme: "striped",
         headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 22, hAlign: "center" },
+          1: { cellWidth: 30, hAlign: "left" },
+          2: { cellWidth: 25, hAlign: "left" },
+          3: { cellWidth: 22, hAlign: "center" },
+          4: { cellWidth: 46, hAlign: "left" },
+          5: { cellWidth: 25, hAlign: "right" },
+        },
         margin: { left: marginL, right: marginRightL }
       });
     }
@@ -1152,12 +1160,12 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
         headStyles: { fillColor: [124, 58, 237], hAlign: "center", fontSize: 9 },
         bodyStyles: { fontSize: 8, hAlign: "center" },
         columnStyles: {
-          0: { cellWidth: 22, hAlign: "center" },
-          1: { cellWidth: 28, hAlign: "left" },
-          2: { cellWidth: 25, hAlign: "center" },
-          3: { cellWidth: 25, hAlign: "center" },
-          4: { cellWidth: 55, hAlign: "left" },
-          5: { cellWidth: 25, hAlign: "right" },
+          0: { cellWidth: 20, hAlign: "center" },
+          1: { cellWidth: 25, hAlign: "left" },
+          2: { cellWidth: 22, hAlign: "center" },
+          3: { cellWidth: 22, hAlign: "center" },
+          4: { cellWidth: 50, hAlign: "left" },
+          5: { cellWidth: 22, hAlign: "right" },
         },
         margin: { left: marginL, right: marginRightL }
       });
