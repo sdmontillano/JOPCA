@@ -185,7 +185,7 @@ export default function AdminAuditLogs() {
                         <TableCell sx={{ fontSize: "0.8rem", color: "#64748b", whiteSpace: "nowrap" }}>
                           {formatDate(log.timestamp)}
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#1E293B" }}>
                           {log.username || log.user?.username || "-"}
                         </TableCell>
                         <TableCell>
@@ -195,11 +195,11 @@ export default function AdminAuditLogs() {
                             sx={{ bgcolor: color.bg, color: color.color, fontWeight: 500, fontSize: "0.7rem" }}
                           />
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#1E293B" }}>
                           {log.entity}
                           {log.entity_id && <Typography component="span" sx={{ color: "#9CA3AF", ml: 0.5 }}>#{log.entity_id}</Typography>}
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.8rem", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "#1E293B", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
                           {log.description || "-"}
                         </TableCell>
                         <TableCell sx={{ fontSize: "0.8rem", color: "#64748b" }}>
