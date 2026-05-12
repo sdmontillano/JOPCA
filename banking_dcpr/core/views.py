@@ -2488,6 +2488,7 @@ def create_default_admin(request):
 
 # API endpoint to create user
 @api_view(['POST'])
+@permission_classes([])
 def create_user(request):
     """
     Create a user via POST. Open registration for regular users.
