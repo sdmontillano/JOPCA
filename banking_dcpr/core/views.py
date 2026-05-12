@@ -618,20 +618,21 @@ def detailed_monthly_summary(request):
     cash_on_hand = compute_pcf_summary(pcfs, target_date, month_date=month_date)
 
     # PDC Summary for the month
-    active_pdcs = Pdc.objects.exclude(status__in=['deposited', 'returned'])
-    this_month_pdcs = active_pdcs.filter(
-        maturity_date__year=month_date.year,
-        maturity_date__month=month_date.month
+    # "total" includes deposited PDCs, only excludes returned
+    all_pdcs = Pdc.objects.exclude(status='returned')
+    this_month_pdcs = all_pdcs.filter(
+        Q(maturity_date__year=month_date.year, maturity_date__month=month_date.month)
+        | Q(maturity_date__isnull=True)
     )
     matured_pdcs = Pdc.objects.filter(status='matured')
     
     this_month_total = this_month_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    total_active_total = active_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_all_total = all_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     matured_total = matured_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     pdc_summary = {
         'this_month': float(this_month_total),
-        'total': float(total_active_total),
+        'total': float(total_all_total),
         'matured': float(matured_total),
     }
 
@@ -975,30 +976,29 @@ def detailed_daily_summary(request):
     pcfs = list(PettyCashFund.objects.filter(is_active=True))
     cash_on_hand = compute_pcf_summary(pcfs, target_date)
 
-    # PDC Summary - Calculate from Pdc model, excluding returned PDCs
-    # "this_month" = Outstanding + Matured PDCs maturing this month
-    # "total" = All Outstanding + Matured PDCs (not deposited, not returned)
+    # PDC Summary
+    # "this_month" = Outstanding + Matured PDCs maturing this month (including unscheduled)
+    # "total" = All PDCs except returned (includes deposited)
     current_month = target_date.month
     current_year = target_date.year
     
-    active_pdcs = Pdc.objects.exclude(status__in=['deposited', 'returned'])
+    # Include deposited PDCs in total, only exclude returned
+    all_pdcs = Pdc.objects.exclude(status='returned')
     
-    this_month_pdcs = active_pdcs.filter(
-        maturity_date__year=current_year,
-        maturity_date__month=current_month
+    this_month_pdcs = all_pdcs.filter(
+        Q(maturity_date__year=current_year, maturity_date__month=current_month)
+        | Q(maturity_date__isnull=True)
     )
     
-    total_active_pdcs = active_pdcs
-    
     this_month_total = this_month_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    total_active_total = total_active_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_all_total = all_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     matured_pdcs = Pdc.objects.filter(status='matured')
     matured_total = matured_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     pdc_summary = {
         'this_month': float(this_month_total),
-        'total': float(total_active_total),
+        'total': float(total_all_total),
         'matured': float(matured_total),
     }
 
