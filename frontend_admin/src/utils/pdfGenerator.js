@@ -115,7 +115,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           1: { cellWidth: 55, hAlign: "center" },
           2: { cellWidth: 40, hAlign: "right" }
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
     }
     
@@ -173,7 +173,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           3: { cellWidth: 25, hAlign: "center" },
           4: { cellWidth: 32, hAlign: "right" } 
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
@@ -206,7 +206,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           2: { cellWidth: 65, hAlign: "left" }, 
           3: { cellWidth: 32, hAlign: "right" } 
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
@@ -239,7 +239,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           3: { cellWidth: 55, hAlign: "left" }, 
           4: { cellWidth: 28, hAlign: "right" } 
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
@@ -273,7 +273,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           3: { cellWidth: 45, hAlign: "left" }, 
           4: { cellWidth: 28, hAlign: "right" } 
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
@@ -305,7 +305,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           2: { cellWidth: 65, hAlign: "left" }, 
           3: { cellWidth: 28, hAlign: "right" } 
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
@@ -356,7 +356,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           4: { cellWidth: 28, hAlign: "right" }, 
           5: { cellWidth: 28, hAlign: "right" } 
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
     }
     
@@ -653,7 +653,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
             2: { cellWidth: 35 },
             3: { cellWidth: 20 }
           },
-          margin: { left: marginL, right: marginRightL }
+          margin: { left: marginL, right: 20 }
         });
         y = doc.lastAutoTable.finalY + 10;
       });
@@ -684,7 +684,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
           0: { cellWidth: 120, fontSize: 10, fontStyle: 'bold' },
           1: { cellWidth: 50, fontSize: 10, fontStyle: 'bold', hAlign: 'right' }
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 10;
      
@@ -899,7 +899,13 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
         theme: 'striped',
         headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
-        margin: { left: marginL, right: marginRightL },
+        columnStyles: {
+          0: { cellWidth: 80 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 20 }
+        },
+        margin: { left: marginL, right: 20 },
       });
       y = doc.lastAutoTable.finalY + 10;
     });
@@ -1023,7 +1029,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
            2: { cellWidth: 35 },
            3: { cellWidth: 20 }
          },
-         margin: { left: marginL, right: marginRightL }
+         margin: { left: marginL, right: 20 }
        });
       y = doc.lastAutoTable.finalY + 10;
     });
@@ -1054,7 +1060,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
         0: { cellWidth: 120, fontSize: 10, fontStyle: 'bold' },
         1: { cellWidth: 50, fontSize: 10, fontStyle: 'bold', hAlign: 'right' }
       },
-      margin: { left: marginL, right: marginRightL }
+      margin: { left: marginL, right: 20 }
     });
     y = doc.lastAutoTable.finalY + 10;
 
@@ -1123,7 +1129,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
           4: { cellWidth: 64, hAlign: "left" },
           5: { cellWidth: 25, hAlign: "right" },
         },
-        margin: { left: marginL, right: 190 }
+        margin: { left: marginL, right: 20 }
       });
     }
 
@@ -1167,7 +1173,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
           4: { cellWidth: 65, hAlign: "left" },
           5: { cellWidth: 25, hAlign: "right" },
         },
-        margin: { left: marginL, right: 190 }
+        margin: { left: marginL, right: 20 }
       });
     }
 
@@ -1209,7 +1215,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
           3: { cellWidth: 30, hAlign: "center" },
           4: { cellWidth: 30, hAlign: "center" },
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
     }
 
@@ -1251,7 +1257,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
           2: { cellWidth: 25, hAlign: "right" },
           3: { cellWidth: 30, hAlign: "right" },
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
       y = doc.lastAutoTable.finalY + 10;
     }
@@ -1285,7 +1291,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
           1: { cellWidth: 25, hAlign: "right" },
           2: { cellWidth: 30, hAlign: "right" },
         },
-        margin: { left: marginL, right: marginRightL }
+        margin: { left: marginL, right: 20 }
       });
     }
 
