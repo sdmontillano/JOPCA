@@ -67,6 +67,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
     { value: "adjustment_out", label: "Adjustment (-)" },
     { value: "bank_charges", label: "Bank Charges" },
     { value: "fund_transfer", label: "Fund Transfer" },
+    { value: "returned_check", label: "Returned Check" },
   ];
 
   const pdcStatuses = [

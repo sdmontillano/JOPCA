@@ -373,8 +373,38 @@ class TransactionViewSet(viewsets.ModelViewSet):
             except Exception:
                 logger.exception("Unexpected error creating deposit transaction")
                 return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        elif serializer.validated_data.get('type') == 'returned_check':
+            try:
+                with transaction.atomic():
+                    # Create negative collection reversal (deducts collections)
+                    reversal_data = serializer.validated_data.copy()
+                    reversal_data['type'] = 'collection'
+                    reversal_data['amount'] = -abs(serializer.validated_data['amount'])
+                    if 'bank_account' in reversal_data:
+                        reversal_data['bank_account_id'] = reversal_data['bank_account'].id
+                    reversal_serializer = self.get_serializer(data=reversal_data)
+                    reversal_serializer.is_valid(raise_exception=True)
+                    reversal_instance = reversal_serializer.save()
+                    self._log_audit('create', reversal_instance, f"Created collection reversal: {reversal_instance.type} - {reversal_instance.amount}")
+
+                    # Create returned check transaction (deducts bank balance)
+                    returned_instance = serializer.save()
+                    self._log_audit('create', returned_instance, f"Created returned check: {returned_instance.type} - {returned_instance.amount}")
+
+                headers = self.get_success_headers(serializer.data)
+                return Response({
+                    'collection_reversal': self.get_serializer(reversal_instance).data,
+                    'returned_check': self.get_serializer(returned_instance).data
+                }, status=status.HTTP_201_CREATED, headers=headers)
+
+            except DjangoValidationError as e:
+                messages = e.messages if hasattr(e, 'messages') else [str(e)]
+                return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception:
+                logger.exception("Unexpected error creating returned check transaction")
+                return Response({"detail": "Server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            # Non-deposit transactions - create normally
+            # Non-deposit/returned_check transactions - create normally
             try:
                 self.perform_create(serializer)
             except DjangoValidationError as e:
