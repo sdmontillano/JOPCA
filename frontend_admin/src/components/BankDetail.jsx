@@ -138,28 +138,12 @@ export default function BankDetail() {
       let results = data.results ?? [];
       const totalCount = data.count ?? results.length;
       
-      // Also fetch returned PDC for this bank (for display - no balance impact)
-      try {
-        const pdcRes = await api.get(`/pdc/by_bank/?bank_id=${id}`);
-        const returnedPdcs = pdcRes.data || [];
-        
-        // Convert returned PDC to transaction-like format and merge
-        const returnedItems = returnedPdcs.map(p => ({
-          id: `pdc-${p.id}`,
-          type: "returned_check",
-          amount: p.amount,
-          date: p.returned_date,
-          created_at: p.returned_date,
-          description: `Returned PDC - Check #${p.check_no || 'N/A'}${p.returned_reason ? ' - ' + p.returned_reason : ''}`,
-          check_no: p.check_no,
-          created_by_username: p.created_by_username || (p.created_by?.username) || '-'
-        }));
-        
-        // Merge: returned items first (most recent), then transactions
-        results = [...returnedItems, ...results];
-      } catch (pdcErr) {
-        console.log("No returned PDC found:", pdcErr.message);
-      }
+      // Sort by date descending (most recent first), then by created_at descending
+      results.sort((a, b) => {
+        const dateCmp = new Date(b.date) - new Date(a.date);
+        if (dateCmp !== 0) return dateCmp;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
       
       setTransactions(results);
       setCount(totalCount);
