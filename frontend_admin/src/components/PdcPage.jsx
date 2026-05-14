@@ -46,7 +46,7 @@ export default function PdcPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [returnDialog, setReturnDialog] = useState({ open: false, pdc: null, reason: "" });
+  const [returnDialog, setReturnDialog] = useState({ open: false, pdc: null, reason: "", returnedDate: "" });
   const [depositDialog, setDepositDialog] = useState({ open: false, pdc: null, bankId: null, depositDate: new Date().toISOString().slice(0, 10) });
   const [addTransactionOpen, setAddTransactionOpen] = useState(false);
   const [addBankOpen, setAddBankOpen] = useState(false);
@@ -140,11 +140,11 @@ export default function PdcPage() {
   };
 
   const handleOpenReturnDialog = (pdc) => {
-    setReturnDialog({ open: true, pdc, reason: "" });
+    setReturnDialog({ open: true, pdc, reason: "", returnedDate: new Date().toISOString().slice(0, 10) });
   };
 
   const handleCloseReturnDialog = () => {
-    setReturnDialog({ open: false, pdc: null, reason: "" });
+    setReturnDialog({ open: false, pdc: null, reason: "", returnedDate: "" });
   };
 
   const handleRecordReturned = async () => {
@@ -152,7 +152,7 @@ export default function PdcPage() {
     try {
       await pdcService.recordPdcReturned(
         returnDialog.pdc.id,
-        new Date().toISOString().slice(0, 10),
+        returnDialog.returnedDate,
         returnDialog.reason
       );
       showToast("Returned recorded successfully!", "success");
@@ -343,6 +343,15 @@ export default function PdcPage() {
               </Typography>
             </Box>
           )}
+          <TextField
+            label="Return Date"
+            type="date"
+            value={returnDialog.returnedDate}
+            onChange={(e) => setReturnDialog((prev) => ({ ...prev, returnedDate: e.target.value }))}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
           <TextField
             fullWidth
             multiline
