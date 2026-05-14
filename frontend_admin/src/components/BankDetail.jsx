@@ -99,9 +99,14 @@ export default function BankDetail() {
 
   const formatAmount = (amount, type) => {
     const num = Number(amount ?? 0);
-    // Returned check - no prefix (neutral, doesn't affect balance)
     if (type === "returned_check") {
       return `₱${Math.abs(num).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+    if (num < 0) {
+      return `-₱${Math.abs(num).toLocaleString("en-PH", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`;
@@ -326,7 +331,7 @@ export default function BankDetail() {
                       <TableCell sx={{ whiteSpace: "pre-wrap" }}>{t.description || "-"}</TableCell>
                       <TableCell align="right" sx={{ 
                         fontWeight: 600,
-                        color: INFLOW_TYPES.includes(t.type) ? "#166534" : "#991B1B"
+                        color: t.amount < 0 ? "#991B1B" : INFLOW_TYPES.includes(t.type) ? "#166534" : "#991B1B"
                       }}>
                         {formatAmount(t.amount, t.type)}
                       </TableCell>

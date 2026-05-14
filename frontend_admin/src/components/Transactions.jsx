@@ -231,13 +231,15 @@ export default function Transactions() {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
-  const getAmountColor = (type) => {
+  const getAmountColor = (amount, type) => {
+    if (Number(amount) < 0) return "#991B1B";
     if (INFLOW_TYPES.includes(type)) return "#166534";
     if (OUTFLOW_TYPES.includes(type)) return "#991B1B";
     return "#6B7280";
   };
 
-  const getAmountPrefix = (type) => {
+  const getAmountPrefix = (amount, type) => {
+    if (Number(amount) < 0) return "-";
     if (OUTFLOW_TYPES.includes(type)) return "-";
     if (INFLOW_TYPES.includes(type)) return "+";
     return "";
@@ -481,8 +483,8 @@ export default function Transactions() {
                 ) : recentTxns.length > 0 ? (
                   recentTxns.map((t) => {
                     const typeColor = getTypeColor(t.type);
-                    const amountColor = getAmountColor(t.type);
-                    const amountPrefix = getAmountPrefix(t.type);
+                    const amountColor = getAmountColor(t.amount, t.type);
+                    const amountPrefix = getAmountPrefix(t.amount, t.type);
                     return (
                       <TableRow key={t.id} sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
                         <TableCell sx={{ color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap" }}>

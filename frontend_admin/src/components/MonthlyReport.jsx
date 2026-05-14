@@ -88,14 +88,16 @@ function SectionHeader({ title, icon, count, total, expanded, onToggle }) {
 }
 
 function TransactionRow({ transaction, type = "bank" }) {
+  const isNegativeAmount = Number(transaction.amount) < 0;
   const isPositive = ["collection", "deposit", "replenishment"].includes(transaction.type?.toLowerCase());
   const isNegative = ["disbursement", "withdrawal", "returned_check", "bank_charges"].includes(transaction.type?.toLowerCase());
 
   let amountColor = "#6B7280";
-  if (isPositive) amountColor = "#166534";
-  if (isNegative) amountColor = "#991B1B";
+  if (isNegativeAmount) amountColor = "#991B1B";
+  else if (isPositive) amountColor = "#166534";
+  else if (isNegative) amountColor = "#991B1B";
 
-  const prefix = isNegative ? "-" : isPositive ? "+" : "";
+  const prefix = isNegativeAmount ? "-" : isNegative ? "-" : isPositive ? "+" : "";
 
   return (
     <TableRow sx={{ "&:hover": { bgcolor: "#F9FAFB" } }}>
