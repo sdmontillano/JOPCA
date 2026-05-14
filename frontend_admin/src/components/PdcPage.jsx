@@ -263,7 +263,7 @@ export default function PdcPage() {
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={0.5}>
-                      {(p.status === "outstanding" || p.status === "matured") && (
+                      {p.status === "deposited" && (
                         <Button 
                           size="small" 
                           variant="contained" 

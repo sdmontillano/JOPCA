@@ -1259,9 +1259,9 @@ class PdcViewSet(viewsets.ModelViewSet):
         """
         pdc = get_object_or_404(Pdc, pk=pk)
         
-        if pdc.status == Pdc.STATUS_RETURNED:
+        if pdc.status != Pdc.STATUS_DEPOSITED:
             return Response(
-                {"detail": f"Cannot mark as returned: PDC is already {pdc.status}"},
+                {"detail": f"Cannot mark as returned: PDC is {pdc.status}, must be deposited first"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
