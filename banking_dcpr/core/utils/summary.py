@@ -94,6 +94,7 @@ def compute_bank_daily_summary(target_date):
         adj_in=Sum('amount', filter=Q(type='adjustment_in')),
         adj_out=Sum('amount', filter=Q(type='adjustment_out')),
         bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
+        returned=Sum('amount', filter=Q(type__in=RETURNED_TYPES)),
     )
     prior_map = {r['bank_account']: r for r in prior_agg}
 
@@ -130,7 +131,8 @@ def compute_bank_daily_summary(target_date):
             - _safe_decimal(p.get('ft_out'))
             + _safe_decimal(p.get('adj_in'))
             - _safe_decimal(p.get('adj_out'))
-            - _safe_decimal(p.get('bank_charges')),
+            - _safe_decimal(p.get('bank_charges'))
+            - _safe_decimal(p.get('returned')),
             Decimal("0")
         )
         
@@ -157,8 +159,8 @@ def compute_bank_daily_summary(target_date):
         
         pdc = _safe_decimal(t.get('pdc'))
         
-        # CORRECT FORMULA: Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges
-        ending = beginning + deposits - disbursements + fund_transfers_in - fund_transfers_out + adjustment_in - adjustment_out - bank_charges
+        # CORRECT FORMULA: Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjustmentIn - AdjustmentOut - BankCharges - ReturnedChecks
+        ending = beginning + deposits - disbursements + fund_transfers_in - fund_transfers_out + adjustment_in - adjustment_out - bank_charges - returned_checks
         
         net_adjustments = adjustment_in - adjustment_out
         

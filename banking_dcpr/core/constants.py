@@ -42,6 +42,7 @@ BANK_BALANCE_OUTFLOW = frozenset([
     "fund_transfer_out",
     "adjustment_out",
     "bank_charges", "bank_charge",
+    "returned_check", "returned_checks",
 ])
 
 # RETURNED_TYPES

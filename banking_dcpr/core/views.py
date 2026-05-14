@@ -1287,6 +1287,16 @@ class PdcViewSet(viewsets.ModelViewSet):
                 created_by=request.user if request.user.is_authenticated else None
             )
 
+            # Reverse the original collection created during PDC deposit
+            Transaction.objects.create(
+                bank_account=pdc.deposit_bank,
+                date=effective_date,
+                type="collection",
+                amount=-pdc.amount,
+                description=f"Returned PDC reversal ref:{pdc.check_no or ''} pdc_id:{pdc.id}",
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
         # Update PDC status
         pdc.status = Pdc.STATUS_RETURNED
         pdc.returned_date = effective_date
