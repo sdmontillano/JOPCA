@@ -68,7 +68,7 @@ export default function PdcPage() {
         bank: p.deposit_bank?.name ?? "-",
         deposit_bank_id: p.deposit_bank?.id ?? null,
         amount: p.amount ?? 0,
-        issue_date: p.issue_date ?? null,
+        issue_date: p.date_received ?? null,
         maturity_date: p.maturity_date ?? null,
         status: (p.status || "outstanding").toLowerCase(),
       }));
@@ -173,7 +173,14 @@ export default function PdcPage() {
     );
   if (error) return <Alert severity="error">{String(error)}</Alert>;
 
-  const getStatusColor = (status) => {
+  const STATUS_LABELS = {
+  outstanding: "POST DATED CHECK",
+  matured: "FOR DEPOSIT",
+  deposited: "DEPOSITED",
+  returned: "RETURNED",
+};
+
+const getStatusColor = (status) => {
     switch (status) {
       case "outstanding": return "warning";
       case "matured": return "success";
@@ -233,14 +240,14 @@ export default function PdcPage() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Client</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Check #</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Bank</TableCell>
-              <TableCell align="right" sx={{ color: "white", fontWeight: 700 }}>Amount</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Issue Date</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Maturity Date</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: 700 }}>Actions</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Client</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Check #</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Bank</TableCell>
+              <TableCell align="right" sx={{ color: "text.primary", fontWeight: 700 }}>Amount</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Issue Date</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Check Date</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Status</TableCell>
+              <TableCell sx={{ color: "text.primary", fontWeight: 700 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -255,7 +262,7 @@ export default function PdcPage() {
                   <TableCell>{p.maturity_date ?? "-"}</TableCell>
                   <TableCell>
                     <Chip
-                      label={p.status.toUpperCase()}
+                      label={STATUS_LABELS[p.status] || p.status.toUpperCase()}
                       size="small"
                       color={getStatusColor(p.status)}
                       sx={{ fontWeight: 600 }}

@@ -15,7 +15,7 @@ import ExportButtons from "./ExportButtons";
 
 const PDC_STATUSES = [
   { value: "", label: "All Statuses" },
-  { value: "on_hand", label: "On Hand" },
+  { value: "outstanding", label: "Post Dated Check" },
   { value: "matured", label: "Matured" },
   { value: "deposited", label: "Deposited" },
   { value: "returned", label: "Returned" },
@@ -38,7 +38,7 @@ export default function AdminPdc() {
     deposit_bank_id: "",
     customer: "",
     amount: "",
-    status: "on_hand",
+    status: "outstanding",
     remarks: ""
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -80,7 +80,7 @@ export default function AdminPdc() {
 
   const getStatusColor = (status) => {
     const colors = {
-      on_hand: "#fef3c7",
+      outstanding: "#fef3c7",
       matured: "#dbeafe",
       deposited: "#dcfce7",
       returned: "#fee2e2",
@@ -90,7 +90,7 @@ export default function AdminPdc() {
 
   const getStatusTextColor = (status) => {
     const colors = {
-      on_hand: "#92400e",
+      outstanding: "#92400e",
       matured: "#1e40af",
       deposited: "#166534",
       returned: "#991b1b",
@@ -122,7 +122,7 @@ export default function AdminPdc() {
         deposit_bank_id: "",
         customer: "",
         amount: "",
-        status: "on_hand",
+    status: "outstanding",
         remarks: ""
       });
     }
@@ -236,7 +236,7 @@ export default function AdminPdc() {
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Bank</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Amount</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Date Received</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Maturity Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Check Date</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: "#f1f5f9" }} align="right">Actions</TableCell>
                 </TableRow>
@@ -260,7 +260,7 @@ export default function AdminPdc() {
                       <TableCell>{pdc.maturity_date || "-"}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={pdc.status?.replace(/_/g, " ").toUpperCase()} 
+                          label={({ outstanding: "POST DATED CHECK", matured: "FOR DEPOSIT", deposited: "DEPOSITED", returned: "RETURNED" }[pdc.status] || pdc.status?.replace(/_/g, " ").toUpperCase())} 
                           size="small"
                           sx={{ bgcolor: getStatusColor(pdc.status), color: getStatusTextColor(pdc.status), fontWeight: 500, fontSize: 11 }}
                         />
@@ -334,7 +334,7 @@ export default function AdminPdc() {
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select value={formData.status} label="Status" onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                <MenuItem value="on_hand">On Hand</MenuItem>
+                <MenuItem value="outstanding">Post Dated Check</MenuItem>
                 <MenuItem value="matured">Matured</MenuItem>
                 <MenuItem value="deposited">Deposited</MenuItem>
                 <MenuItem value="returned">Returned</MenuItem>

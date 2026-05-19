@@ -72,7 +72,7 @@ export default function AddTransaction({ open: openProp = undefined, onClose = u
 
   const pdcStatuses = [
     { value: "", label: "-- PDC Status --" },
-    { value: "outstanding", label: "Outstanding" },
+    { value: "outstanding", label: "Post Dated Check" },
     { value: "cleared", label: "Cleared" },
     { value: "bounced", label: "Bounced" },
   ];

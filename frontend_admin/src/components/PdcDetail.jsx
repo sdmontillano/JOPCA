@@ -487,7 +487,7 @@ export default function PdcDetail({
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={p.status?.toUpperCase()} 
+          label={({ outstanding: "POST DATED CHECK", matured: "FOR DEPOSIT", deposited: "DEPOSITED", returned: "RETURNED" }[p.status] || p.status?.toUpperCase())}
                           size="small" 
                           color={p.status === "deposited" ? "info" : p.status === "returned" ? "error" : "success"}
                         />
