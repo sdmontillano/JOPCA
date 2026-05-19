@@ -68,6 +68,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
      const disbursements = bankTxns.filter(t => t.type === 'disbursement' || t.type === 'withdrawal');
      const adjustments = bankTxns.filter(t => t.type === 'adjustments' || t.type === 'adjustment_in' || t.type === 'adjustment_out');
      const bankCharges = bankTxns.filter(t => t.type === 'bank_charges');
+     const returnedChecks = bankTxns.filter(t => t.type === 'returned_check');
      
      const totalDisbursement = disbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
      const totalAdjustments = adjustments.reduce((sum, t) => {
@@ -75,6 +76,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
        return sum + Number(t.amount || 0);
      }, 0);
      const totalBankCharges = bankCharges.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+     const totalReturnedChecks = returnedChecks.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
     const pcfDisbursements = pcfTxns.filter(t => t.type === 'disbursement');
     const pcfReplenishments = pcfTxns.filter(t => t.type === 'replenishment');
@@ -315,6 +317,38 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       y += 6;
     }
     
+    // RETURNED CHECKS Section - match Analysis style
+    y += 4;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("RETURNED CHECKS", marginL, y);
+    doc.text(`Total: ${formatCurrency(totalReturnedChecks)}`, marginRightL, y, { align: "right" });
+    y += 8;
+    if (returnedChecks.length > 0) {
+      const tableData = returnedChecks.map(t => [t.date ? formatDate(t.date) : "-", t.bank_account?.name || "-", t.description || "-", formatCurrency(t.amount)]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Date", "Bank", "Description", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 
+          0: { cellWidth: 28, hAlign: "center" }, 
+          1: { cellWidth: 28, hAlign: "left" }, 
+          2: { cellWidth: 65, hAlign: "left" }, 
+          3: { cellWidth: 28, hAlign: "right" } 
+        },
+        margin: { left: marginL, right: 20 }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("(No returned checks)", marginL, y);
+      y += 6;
+    }
+    
     // =============================================
     // PAGE 3: PCF
     // =============================================
@@ -476,16 +510,10 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
         formatCurrency(mainDisb + partsDisb)
       ],
       [
-        "Outstanding Checks Due",
-        mainChecks > 0 ? formatCurrency(mainChecks) : "-",
-        partsChecks > 0 ? formatCurrency(partsChecks) : "-",
-        (mainChecks + partsChecks) > 0 ? formatCurrency(mainChecks + partsChecks) : "-"
-      ],
-      [
         "GRAND TOTAL",
-        formatCurrency(mainDisb + mainChecks),
-        formatCurrency(partsDisb + partsChecks),
-        formatCurrency(mainDisb + mainChecks + partsDisb + partsChecks)
+        formatCurrency(mainDisb),
+        formatCurrency(partsDisb),
+        formatCurrency(mainDisb + partsDisb)
       ],
     ];
 
@@ -493,6 +521,46 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       startY: y,
       head: [["DESCRIPTION", "MAIN OFFICE", "PARTS", "TOTAL"]],
       body: payablesData,
+      theme: "grid",
+      headStyles: { fillColor: [180, 83, 9], textColor: 255, fontSize: 9, hAlign: "center" },
+      bodyStyles: { fontSize: 8, hAlign: "center" },
+      margin: { left: marginLP4, right: marginLP4 },
+      columnStyles: {
+        0: { cellWidth: 120, hAlign: "left" },
+        1: { cellWidth: 50, hAlign: "right" },
+        2: { cellWidth: 50, hAlign: "right" },
+        3: { cellWidth: 47, hAlign: "right" },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+
+    // OUTSTANDING CHECKS DUE Section
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("OUTSTANDING CHECKS DUE:", marginLP4, y);
+    y += 6;
+
+    const checksData = [
+      [
+        "Outstanding Checks Due",
+        mainChecks > 0 ? formatCurrency(mainChecks) : "-",
+        partsChecks > 0 ? formatCurrency(partsChecks) : "-",
+        (mainChecks + partsChecks) > 0 ? formatCurrency(mainChecks + partsChecks) : "-"
+      ],
+      [
+        "GRAND TOTAL",
+        formatCurrency(mainChecks),
+        formatCurrency(partsChecks),
+        formatCurrency(mainChecks + partsChecks)
+      ],
+    ];
+
+    autoTable(doc, {
+      startY: y,
+      head: [["DESCRIPTION", "MAIN OFFICE", "PARTS", "TOTAL"]],
+      body: checksData,
       theme: "grid",
       headStyles: { fillColor: [180, 83, 9], textColor: 255, fontSize: 9, hAlign: "center" },
       bodyStyles: { fontSize: 8, hAlign: "center" },
@@ -696,7 +764,7 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
      
      doc.setFontSize(10);
      doc.setFont("helvetica", "normal");
-     const userName = localStorage.getItem("userName") || "User";
+     const userName = localStorage.getItem("username") || "User";
      doc.text(`Prepared by: ${userName}`, marginL, y);
      doc.text("Approved by: JOHN P. CABAÑOG", marginRightL, y, { align: "right" });
      
@@ -929,7 +997,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     doc.setFont("helvetica", "bold");
     doc.text("Prepared by:", marginL, y);
     doc.setFont("helvetica", "normal");
-    const preparedByUser = "User";
+    const preparedByUser = localStorage.getItem("username") || "User";
     doc.text(preparedByUser, marginL + 30, y);
 
     // Approved by
