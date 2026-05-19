@@ -14,6 +14,9 @@ import {
   Button,
   TextField,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -222,13 +225,15 @@ const getStatusColor = (status) => {
             onChange={(e) => setToDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
-          <TextField 
-            size="small" 
-            label="Status" 
-            value={filterStatus} 
-            onChange={(e) => setFilterStatus(e.target.value)} 
-            placeholder="outstanding|matured"
-          />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Status</InputLabel>
+            <Select value={filterStatus} label="Status" onChange={(e) => setFilterStatus(e.target.value)}>
+              <MenuItem value="">All Statuses</MenuItem>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <Button variant="contained" onClick={fetchPdcs}>Filter</Button>
           <Button variant="outlined" onClick={() => navigate(-1)}>Back</Button>
         </Stack>
