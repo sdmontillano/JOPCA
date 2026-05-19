@@ -16,7 +16,7 @@ import ExportButtons from "./ExportButtons";
 const PDC_STATUSES = [
   { value: "", label: "All Statuses" },
   { value: "outstanding", label: "Post Dated Check" },
-  { value: "matured", label: "Matured" },
+
   { value: "deposited", label: "Deposited" },
   { value: "returned", label: "Returned" },
 ];
@@ -256,7 +256,7 @@ export default function AdminPdc() {
                       <TableCell align="right" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
                         {formatAmount(pdc.amount)}
                       </TableCell>
-                      <TableCell>{pdc.date_received || pdc.created_at?.slice(0, 10) || "-"}</TableCell>
+                      <TableCell>{pdc.created_at?.slice(0, 10) || "-"}</TableCell>
                       <TableCell>{pdc.maturity_date || "-"}</TableCell>
                       <TableCell>
                         <Chip 
@@ -324,7 +324,7 @@ export default function AdminPdc() {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Maturity Date"
+              label="Check Date"
               type="date"
               value={formData.maturity_date}
               onChange={(e) => setFormData({ ...formData, maturity_date: e.target.value })}
@@ -335,7 +335,6 @@ export default function AdminPdc() {
               <InputLabel>Status</InputLabel>
               <Select value={formData.status} label="Status" onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
                 <MenuItem value="outstanding">Post Dated Check</MenuItem>
-                <MenuItem value="matured">Matured</MenuItem>
                 <MenuItem value="deposited">Deposited</MenuItem>
                 <MenuItem value="returned">Returned</MenuItem>
               </Select>

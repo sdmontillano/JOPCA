@@ -24,7 +24,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
   const [form, setForm] = useState({
     customer_name: "",
     check_number: "",
-    check_date: "",
+    date_received: "",
     maturity_date: today,
     amount: "",
     deposit_bank_id: "",
@@ -69,7 +69,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
     setForm({
       customer_name: "",
       check_number: "",
-      check_date: "",
+      date_received: "",
       maturity_date: today,
       amount: "",
       deposit_bank_id: "",
@@ -121,7 +121,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
       const payload = {
         customer: form.customer_name.trim(),
         check_number: form.check_number.trim(),
-        date_received: form.check_date || null,
+        date_received: form.date_received || null,
         maturity_date: form.maturity_date,
         amount: Number(form.amount),
         deposit_bank_id: Number(form.deposit_bank_id),
@@ -189,8 +189,8 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
 
             <TextField label="Customer Name" name="customer_name" value={form.customer_name} onChange={handleChange} fullWidth required />
             <TextField label="Check Number" name="check_number" value={form.check_number} onChange={handleChange} fullWidth required />
-            <TextField label="Check Date (optional)" name="check_date" type="date" value={form.check_date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Maturity Date" name="maturity_date" type="date" value={form.maturity_date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth required />
+            <TextField label="Date Received" name="date_received" type="date" value={form.date_received} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
+            <TextField label="Check Date" name="maturity_date" type="date" value={form.maturity_date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth required />
             <TextField label="Amount (₱)" name="amount" type="number" inputProps={{ step: "0.01", min: 0 }} value={form.amount} onChange={handleChange} fullWidth required />
 
             <TextField

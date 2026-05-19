@@ -35,7 +35,9 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import WalletIcon from "@mui/icons-material/Wallet";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PdfReportModal from "./PdfReportModal";
+import PdcCreateModal from "./PdcCreateModal";
 
 export default function PdcPage() {
   const { showToast } = useToast();
@@ -52,6 +54,7 @@ export default function PdcPage() {
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [addPcfOpen, setAddPcfOpen] = useState(false);
   const [pdfReportOpen, setPdfReportOpen] = useState(false);
+  const [addPdcOpen, setAddPdcOpen] = useState(false);
   const navigate = useNavigate();
 
   const fetchPdcs = async () => {
@@ -68,7 +71,7 @@ export default function PdcPage() {
         bank: p.deposit_bank?.name ?? "-",
         deposit_bank_id: p.deposit_bank?.id ?? null,
         amount: p.amount ?? 0,
-        issue_date: p.date_received ?? p.created_at?.split("T")[0] ?? null,
+        issue_date: p.created_at?.split("T")[0] ?? null,
         maturity_date: p.maturity_date ?? null,
         status: (p.status || "outstanding").toLowerCase(),
       }));
@@ -429,6 +432,7 @@ const getStatusColor = (status) => {
 
       <QuickActionFAB
         customActions={[
+          { label: "Add PDC", icon: <ReceiptLongIcon />, onClick: () => setAddPdcOpen(true) },
           { label: "Add Transaction", icon: <AddCircleOutlineIcon />, onClick: () => setAddTransactionOpen(true) },
           { label: "Add Bank Account", icon: <AccountBalanceIcon />, onClick: () => setAddBankOpen(true) },
           { label: "Add PCF", icon: <WalletIcon />, onClick: () => setAddPcfOpen(true) },
@@ -440,6 +444,7 @@ const getStatusColor = (status) => {
       <AddBankAccount open={addBankOpen} onClose={() => setAddBankOpen(false)} refreshData={fetchPdcs} />
       <AddPcfModal open={addPcfOpen} onClose={() => setAddPcfOpen(false)} refreshData={fetchPdcs} />
       <PdfReportModal open={pdfReportOpen} onClose={() => setPdfReportOpen(false)} />
+      <PdcCreateModal open={addPdcOpen} onClose={() => setAddPdcOpen(false)} refreshData={fetchPdcs} />
     </Box>
   );
 }
