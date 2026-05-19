@@ -39,6 +39,47 @@ const CENTER_X = PAGE_WIDTH / 2;
 const LEFT_MARGIN = 15;
 const RIGHT_MARGIN = PAGE_WIDTH - LEFT_MARGIN;
 
+/**
+ * Adds a professional footer section to the PDF with consistent alignment and spacing
+ * @param {jsPDF} doc - The jsPDF document object
+ * @param {number} y - Current y position on the page
+ * @param {number} pageWidth - Page width (e.g., 210 for A4)
+ * @param {number} marginL - Left margin
+ * @param {number} marginR - Right margin
+ * @param {string} preparedByUser - Username to display in "Prepared by" section
+ * @returns {number} - New y position after footer
+ */
+const addFooterSection = (doc, y, pageWidth, marginL, marginR, preparedByUser) => {
+  const footerTopSpacing = 12;  // Vertical space above footer (separates from content)
+  const labelFontSize = 10;
+  const nameFontSize = 10;
+  const labelSpacing = 4;       // Vertical space between label and name
+  
+  // Add spacing above footer
+  y += footerTopSpacing;
+  
+  // Left side: "Prepared by" section
+  doc.setFontSize(labelFontSize);
+  doc.setFont("helvetica", "bold");
+  doc.text("Prepared by:", marginL, y);
+  
+  doc.setFont("helvetica", "normal");
+  doc.text(preparedByUser, marginL, y + labelSpacing);
+  
+  // Right side: "Approved by" section
+  // Calculate right-column position relative to page width (no hardcoded values)
+  const rightColumnX = (pageWidth / 2) + (pageWidth / 4);  // Position in right third of page
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Approved by:", rightColumnX, y);
+  
+  doc.setFont("helvetica", "normal");
+  doc.text("JOHN P. CABAÑOG", rightColumnX, y + labelSpacing);
+  
+  // Return new y position for any subsequent content
+  return y + (labelSpacing * 2) + 5;
+};
+
 export const generatePdfReport = async (selectedDate, api, showToast) => {
   try {
     showToast("Generating report...", "info");
@@ -470,15 +511,15 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       body: areasData,
       theme: "grid",
       headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9, hAlign: "center" },
-      bodyStyles: { fontSize: 8, hAlign: "center" },
+      bodyStyles: { fontSize: 8 },
       margin: { left: marginLP4, right: marginLP4 },
       columnStyles: {
-        0: { cellWidth: 48, hAlign: "left" },
-        1: { cellWidth: 40, hAlign: "left" },
-        2: { cellWidth: 37, hAlign: "left" },
-        3: { cellWidth: 47, hAlign: "right" },
-        4: { cellWidth: 47, hAlign: "right" },
-        5: { cellWidth: 47, hAlign: "right" },
+        0: { cellWidth: 35, hAlign: "left" },
+        1: { cellWidth: 42, hAlign: "left" },
+        2: { cellWidth: 28, hAlign: "center" },
+        3: { cellWidth: 50, hAlign: "right" },
+        4: { cellWidth: 50, hAlign: "right" },
+        5: { cellWidth: 50, hAlign: "right" },
       },
     });
 
@@ -756,17 +797,14 @@ export const generatePdfReport = async (selectedDate, api, showToast) => {
       });
       y = doc.lastAutoTable.finalY + 10;
      
-     // Signature section with proper margins
-     if (y > pageHeight - 40) {
-       doc.addPage();
-       y = 20;
-     }
-     
-     doc.setFontSize(10);
-     doc.setFont("helvetica", "normal");
-     const userName = localStorage.getItem("username") || "User";
-     doc.text(`Prepared by: ${userName}`, marginL, y);
-     doc.text("Approved by: JOHN P. CABAÑOG", marginRightL, y, { align: "right" });
+      // Signature section with proper margins
+      if (y > pageHeight - 40) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      const userName = localStorage.getItem("username") || "User";
+      addFooterSection(doc, y, pageWidth, marginL, marginRightL, userName);
      
      // Save the PDF
      const fileName = `jopca-report-${dateStr}.pdf`;
@@ -984,27 +1022,15 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
       y = 20;
     }
 
-    // Signature section
-    if (y > pageHeight - 40) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-
-    // Prepared by
-    doc.setFont("helvetica", "bold");
-    doc.text("Prepared by:", marginL, y);
-    doc.setFont("helvetica", "normal");
-    const preparedByUser = localStorage.getItem("username") || "User";
-    doc.text(preparedByUser, marginL + 30, y);
-
-    // Approved by
-    doc.setFont("helvetica", "bold");
-    doc.text("Approved by:", marginL + 120, y);
-    doc.setFont("helvetica", "normal");
-    doc.text("JOHN P. CABANOG", marginL + 150, y);
+     // Signature section
+     if (y > pageHeight - 40) {
+       doc.addPage();
+       y = 20;
+     }
+     
+     const preparedByUser = localStorage.getItem("username") || "User";
+     const pageWidth = doc.internal.pageSize.getWidth();
+     addFooterSection(doc, y, pageWidth, marginL, marginRightL, preparedByUser);
 
     // =============================================
     // PAGE 6: BANK BALANCE SUMMARY
@@ -1138,20 +1164,7 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
        y = 20;
      }
      
-     doc.setFontSize(10);
-     doc.setFont("helvetica", "normal");
-     
-     // Prepared by
-     doc.setFont("helvetica", "bold");
-     doc.text("Prepared by:", marginL, y);
-     doc.setFont("helvetica", "normal");
-     doc.text(preparedByUser, marginL + 30, y);
-     
-     // Approved by
-     doc.setFont("helvetica", "bold");
-     doc.text("Approved by:", marginL + 120, y);
-     doc.setFont("helvetica", "normal");
-     doc.text("JOHN P. CABAÑOG", marginL + 150, y);
+     addFooterSection(doc, y, pageWidth, marginL, marginRightL, preparedByUser);
 
 
 
@@ -1364,23 +1377,9 @@ export const generateMonthlyPdfReport = async (data, selectedMonth, showToast) =
     }
 
     // Signature section - match Analysis page style
-    if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+     if (y > pageHeight - 40) { doc.addPage(); y = 20; }
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-
-    // Prepared by
-    doc.setFont("helvetica", "bold");
-    doc.text("Prepared by:", marginL, y);
-    doc.setFont("helvetica", "normal");
-    // preparedByUser is already declared at line 840
-    doc.text(preparedByUser, marginL + 30, y);
-
-    // Approved by
-    doc.setFont("helvetica", "bold");
-    doc.text("Approved by:", marginL + 120, y);
-    doc.setFont("helvetica", "normal");
-    doc.text("JOHN P. CABAÑOG", marginL + 150, y);
+     addFooterSection(doc, y, pageWidth, marginL, marginRightL, preparedByUser);
 
     // Save PDF
     const fileName = `jopca-monthly-${selectedMonth}.pdf`;
