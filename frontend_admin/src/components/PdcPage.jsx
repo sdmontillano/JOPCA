@@ -68,7 +68,7 @@ export default function PdcPage() {
         bank: p.deposit_bank?.name ?? "-",
         deposit_bank_id: p.deposit_bank?.id ?? null,
         amount: p.amount ?? 0,
-        issue_date: p.date_received ?? null,
+        issue_date: p.date_received ?? p.created_at?.split("T")[0] ?? null,
         maturity_date: p.maturity_date ?? null,
         status: (p.status || "outstanding").toLowerCase(),
       }));
