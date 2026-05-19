@@ -742,7 +742,7 @@ export default function MonthlyReport() {
                   sx={{ minWidth: 250 }}
                 />
                 <Stack direction="row" spacing={1}>
-                  {["all", "collections", "deposit", "disbursement", "returned_check", "bank_charges", "adjustments", "fund_transfer", "transfer", "interbank_transfer"].map((type) => (
+                  {["all", "collection", "deposit", "disbursement", "returned_check", "bank_charges", "adjustments", "fund_transfer", "transfer", "interbank_transfer"].map((type) => (
                     <Chip
                       key={type}
                       label={type === "all" ? "All" : type.replace(/_/g, " ")}

@@ -33,7 +33,7 @@ import WalletIcon from "@mui/icons-material/Wallet";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PdfReportModal from "./PdfReportModal";
 
-const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'fund_transfer_in', 'adjustment_in'];
+const INFLOW_TYPES = ['collection', 'deposit', 'fund_transfer_in', 'adjustment_in'];
 const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'fund_transfer_out', 'transfer', 'interbank_transfer', 'adjustment_out'];
 
 const typeColors = {
@@ -75,7 +75,7 @@ export default function BankDetail() {
 
   const transactionTypes = [
     { value: "deposit", label: "Deposit" },
-    { value: "collections", label: "Collections" },
+    { value: "collection", label: "Collection" },
     { value: "disbursement", label: "Disbursement" },
     { value: "returned_check", label: "Returned Check" },
     { value: "bank_charges", label: "Bank Charges" },

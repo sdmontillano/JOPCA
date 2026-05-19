@@ -199,7 +199,7 @@ export default function CollectCash() {
       });
 
       // Create a transaction record for the deposit
-      await api.post("/transactions/", {
+      await api.post("/api/transactions-crud/", {
         amount: selectedCollection.amount,
         type: "deposit",
         description: `Deposit from collection: ${selectedCollection.description || "Cash collection"}`,

@@ -40,7 +40,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import WalletIcon from "@mui/icons-material/Wallet";
 import api from "../services/tokenService";
 
-const INFLOW_TYPES = ['collection', 'deposit', 'collections', 'adjustment_in'];
+const INFLOW_TYPES = ['collection', 'deposit', 'adjustment_in'];
 const OUTFLOW_TYPES = ['disbursement', 'withdrawal', 'bank_charges', 'adjustments', 'fund_transfer', 'transfer', 'interbank_transfer', 'adjustment_out'];
 
 const typeColors = {
@@ -96,7 +96,7 @@ export default function Transactions() {
 
   const transactionTypes = [
     { value: "", label: "All Types" },
-    { value: "collections", label: "Collections" },
+    { value: "collection", label: "Collection" },
     { value: "deposit", label: "Deposit" },
     { value: "disbursement", label: "Disbursement" },
     { value: "returned_check", label: "Returned Check" },

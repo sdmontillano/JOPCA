@@ -878,7 +878,7 @@ def compute_collections_summary(target_date):
     CORRECT FORMULA: Ending = Beginning + Deposits - Disbursements + TransfersIn - TransfersOut + AdjIn - AdjOut - BankCharges
     (collection is tracking only, NOT in balance formula)
     """
-    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, DISBURSEMENT_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT
+    from .constants import DEPOSIT_TYPES, LOCAL_DEPOSIT_TYPES, DISBURSEMENT_TYPES, FUND_TRANSFER_IN, FUND_TRANSFER_OUT, RETURNED_TYPES
 
     # Bulk aggregate all prior transactions (date < target_date) by bank_account
     prior_qs = Transaction.objects.filter(date__lt=target_date)
@@ -890,6 +890,7 @@ def compute_collections_summary(target_date):
         adj_in=Sum('amount', filter=Q(type='adjustment_in')),
         adj_out=Sum('amount', filter=Q(type='adjustment_out')),
         bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
+        returned=Sum('amount', filter=Q(type__in=RETURNED_TYPES)),
     )
     prior_map = {r['bank_account']: r for r in prior_agg}
 
@@ -905,6 +906,7 @@ def compute_collections_summary(target_date):
         bank_charges=Sum('amount', filter=Q(type__in=['bank_charges', 'bank_charge'])),
         collections=Sum('amount', filter=Q(type='collection')),
         local_deposits=Sum('amount', filter=Q(type__in=DEPOSIT_TYPES | LOCAL_DEPOSIT_TYPES)),
+        returned=Sum('amount', filter=Q(type__in=RETURNED_TYPES)),
     )
     today_map = {r['bank_account']: r for r in today_agg}
 
@@ -924,7 +926,7 @@ def compute_collections_summary(target_date):
         p = prior_map.get(bank.id, {})
         t = today_map.get(bank.id, {})
 
-        beginning = max(
+        beginning = (
             bank.opening_balance
             + _safe_decimal(p.get('deposits'))
             - _safe_decimal(p.get('disbursements'))
@@ -932,8 +934,7 @@ def compute_collections_summary(target_date):
             - _safe_decimal(p.get('ft_out'))
             + _safe_decimal(p.get('adj_in'))
             - _safe_decimal(p.get('adj_out'))
-            - _safe_decimal(p.get('bank_charges')),
-            Decimal("0")
+            - _safe_decimal(p.get('bank_charges'))
         )
 
         collections = _safe_decimal(t.get('collections'))
@@ -945,8 +946,9 @@ def compute_collections_summary(target_date):
         adjustment_in = _safe_decimal(t.get('adj_in'))
         adjustment_out = _safe_decimal(t.get('adj_out'))
         bank_charges = _safe_decimal(t.get('bank_charges'))
+        returned_checks = _safe_decimal(t.get('returned'))
 
-        ending = beginning + deposits - disbursements + transfers_in - transfers_out + adjustment_in - adjustment_out - bank_charges
+        ending = beginning + deposits - disbursements + transfers_in - transfers_out + adjustment_in - adjustment_out - bank_charges - returned_checks
 
         bank_txns = [txn for txn in today_detail_txns if txn.bank_account_id == bank.id]
         transactions = [
@@ -2323,25 +2325,19 @@ def bank_analysis(request):
             ).exclude(status__in=['deposited', 'returned'])
             outstanding_checks = outstanding_pdcs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
-            # Deposit in Transit: collections, deposit transactions for this bank (up to target date)
+            # Deposit in Transit: deposit transactions for this bank on target date only
             deposit_in_transit = Transaction.objects.filter(
                 bank_account=bank,
-                date__lte=target_date,
-                type__in=['collection', 'deposit', 'local_deposits']
+                date=target_date,
+                type__in=['deposit', 'local_deposits']
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
-            # Returned Checks: returned_check transactions + Pdc records with returned status
-            returned_checks_txns = Transaction.objects.filter(
+            # Returned Checks: returned_check transactions only (PDC records already create Transaction entries, so no double-count)
+            returned_checks = Transaction.objects.filter(
                 bank_account=bank,
                 date__lte=target_date,
                 type='returned_check'
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-            returned_checks_pdc = Pdc.objects.filter(
-                deposit_bank=bank,
-                status='returned',
-                returned_date__lte=target_date
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-            returned_checks = returned_checks_txns + returned_checks_pdc
             
             # Bank Charges: bank_charges transactions
             bank_charges = Transaction.objects.filter(

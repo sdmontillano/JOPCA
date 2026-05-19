@@ -15,7 +15,7 @@ import ExportButtons from "./ExportButtons";
 
 const TRANSACTION_TYPES = [
   { value: "", label: "All Types" },
-  { value: "collections", label: "Collections" },
+  { value: "collection", label: "Collection" },
   { value: "deposit", label: "Deposit" },
   { value: "disbursement", label: "Disbursement" },
   { value: "fund_transfer", label: "Fund Transfer" },
@@ -41,7 +41,7 @@ export default function AdminTransactions() {
   const [formData, setFormData] = useState({ 
     bank_account: "", 
     date: "", 
-    type: "collections", 
+    type: "collection", 
     amount: "", 
     description: "" 
   });
@@ -131,7 +131,7 @@ export default function AdminTransactions() {
       setSelectedTransaction(null);
       const today = new Date();
       const localDate = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
-      setFormData({ bank_account: "", date: localDate, type: "collections", amount: "", description: "" });
+      setFormData({ bank_account: "", date: localDate, type: "collection", amount: "", description: "" });
     }
     setDialogOpen(true);
   };

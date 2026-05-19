@@ -290,7 +290,7 @@ function CollectionsHistory({ defaultExpanded = false }) {
 
 // Transaction Row Component - strictly maps to 6 columns
 function CollectionTransactionRow({ transaction }) {
-  const isCollection = transaction.type === "collections";
+  const isCollection = transaction.type === "collection";
   const isLocalDeposit = transaction.type === "local_deposits";
   const hasUnfundedWarning = transaction.unfunded_warning != null;
   const collectionType = transaction.collection_type;

@@ -265,8 +265,6 @@ class DailyCashPosition(models.Model):
             self.beginning_balance + self.collections
             - self.disbursements - returned_checks + self.adjustments
         )
-        if self.ending_balance < 0:
-            self.ending_balance = Decimal('0.00')
         super().save(*args, **kwargs)
 
     def __str__(self):

@@ -123,7 +123,7 @@ def compute_bank_daily_summary(target_date):
         p = prior_map.get(bank.id, {})
         t = today_map.get(bank.id, {})
         
-        beginning = max(
+        beginning = (
             bank.opening_balance
             + _safe_decimal(p.get('deposits'))
             - _safe_decimal(p.get('disbursements'))
@@ -132,8 +132,7 @@ def compute_bank_daily_summary(target_date):
             + _safe_decimal(p.get('adj_in'))
             - _safe_decimal(p.get('adj_out'))
             - _safe_decimal(p.get('bank_charges'))
-            - _safe_decimal(p.get('returned')),
-            Decimal("0")
+            - _safe_decimal(p.get('returned'))
         )
         
         deposits = _safe_decimal(t.get('deposits'))
