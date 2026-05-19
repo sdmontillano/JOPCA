@@ -121,7 +121,7 @@ export default function PdcCreateModal({ open, onClose, onCreated = null }) {
       const payload = {
         customer: form.customer_name.trim(),
         check_number: form.check_number.trim(),
-        check_date: form.check_date || null,
+        date_received: form.check_date || null,
         maturity_date: form.maturity_date,
         amount: Number(form.amount),
         deposit_bank_id: Number(form.deposit_bank_id),
